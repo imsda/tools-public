@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Archivos locales (misma carpeta):
+    - tools-nav.css  (opcional - estilos de la navegación superior compartida; la página funciona sin él)
+    - tools-nav.js  (opcional - navegación superior compartida + lista de herramientas; la página funciona sin él)
+  Externos (internet):
+    (ninguno)
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de equipo para transmisión en vivo</title>
+  <style>
+    :root {
+      --bg: #f4f7f9;
+      --surface: #ffffff;
+      --surface-soft: #f8fbfc;
+      --text-main: #1a2b3c;
+      --text-muted: #5e7185;
+      --primary: #087e8b;
+      --primary-dark: #0b3954;
+      --border: #e2e8f0;
+      --danger: #b91c1c;
+      --shadow-sm: 0 2px 8px rgba(11, 57, 84, 0.05);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      color: var(--text-main);
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 100% 0%, rgba(8, 126, 139, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 0% 100%, rgba(11, 57, 84, 0.03) 0%, transparent 45%);
+      background-attachment: fixed;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem 1rem 2rem;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+      letter-spacing: 0.02em;
+    }
+
+    .back-link {
+      text-decoration: none;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #eef3f7;
+      color: var(--primary-dark);
+      font-size: 0.86rem;
+      font-weight: 700;
+      padding: 0.45rem 0.9rem;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.15rem;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 1rem;
+    }
+
+    h1, h2, h3, h4 { margin: 0; color: var(--primary-dark); }
+    h1 { font-size: 1.65rem; line-height: 1.2; margin-bottom: 0.45rem; }
+    h2 { font-size: 1.15rem; margin-bottom: 0.6rem; }
+    h3 { font-size: 1.05rem; }
+    h4 { font-size: 0.95rem; }
+
+    .intro,
+    .muted {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .section-stack { display: grid; gap: 0.95rem; }
+
+    .chip-grid {
+      display: grid;
+      gap: 0.55rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .chip {
+      border: 1px solid #d4dee9;
+      border-radius: 10px;
+      background: #fff;
+      padding: 0.58rem 0.62rem;
+      display: flex;
+      gap: 0.45rem;
+      align-items: flex-start;
+      font-size: 0.9rem;
+      color: #31475a;
+    }
+
+    .chip input { margin-top: 0.2rem; }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-top: 0.85rem;
+    }
+
+    .btn {
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0.56rem 0.88rem;
+      font-family: inherit;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-muted { background: #eef3f7; color: var(--primary-dark); border-color: var(--border); }
+    .btn-danger { background: #fef2f2; color: var(--danger); border-color: #fecaca; }
+
+    .inline-note {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+    }
+
+    .result-wrap { display: none; }
+
+    .summary {
+      background: #f0fafb;
+      border: 1px solid #cfeef1;
+      border-radius: 12px;
+      padding: 0.8rem;
+      margin-bottom: 0.85rem;
+      color: #244257;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.6rem;
+    }
+
+    .results-layout {
+      display: grid;
+      gap: 0.85rem;
+      grid-template-columns: 1.35fr 0.85fr;
+    }
+
+    .still-need-panel {
+      border: 1px solid #f4d4d4;
+      background: #fff9f9;
+    }
+
+    .section-box {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      padding: 0.85rem;
+    }
+
+    .group-block {
+      margin-bottom: 0.7rem;
+      border: 1px solid #e5edf5;
+      border-radius: 12px;
+      background: #fbfdff;
+      padding: 0.65rem;
+    }
+
+    .group-block:last-child { margin-bottom: 0; }
+
+    .need-card {
+      background: #fff;
+      border: 1px solid #dbe6f1;
+      border-radius: 12px;
+      padding: 0.65rem;
+      margin-top: 0.55rem;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .field-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 0.15rem;
+      display: block;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      border: 1px solid #cfd8e3;
+      border-radius: 10px;
+      background: #fff;
+      color: inherit;
+      font-family: inherit;
+      padding: 0.5rem 0.6rem;
+      font-size: 0.9rem;
+    }
+
+    textarea { min-height: 62px; resize: vertical; }
+
+    .have-list {
+      margin: 0;
+      padding-left: 1.15rem;
+      display: grid;
+      gap: 0.25rem;
+      color: #2b4357;
+    }
+
+    .empty { margin: 0; color: var(--text-muted); }
+
+    .hidden { display: none; }
+
+    @media (max-width: 900px) {
+      .chip-grid,
+      .results-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .topbar,
+      .controls,
+      .btn,
+      #toggleAdvancedBtn,
+      #generateBtn,
+      #resetBtn,
+      #addCustomBtn {
+        display: none !important;
+      }
+      .page { max-width: 100%; padding: 0.15rem; }
+      .panel,
+      .section-box,
+      .need-card,
+      .group-block {
+        box-shadow: none;
+        border-color: #d1d5db;
+      }
+      .result-wrap { display: block !important; }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <p class="brand">Herramientas ministeriales IMSDA</p>
+      
+    </header>
+
+    <section class="panel">
+      <h1>Lista de equipo para transmisión en vivo</h1>
+      <p class="intro">Aquí vemos juntos, con una lista sencilla, lo que nuestra iglesia ya tiene y lo que todavía nos puede faltar para transmitir en vivo.</p>
+      <div class="btn-row" style="margin-top:0.75rem;">
+        <button type="button" class="btn btn-muted" id="printBtn">Imprimir</button>
+        <button type="button" class="btn btn-muted" id="copyBtn">Copiar</button>
+        <button type="button" class="btn btn-muted" id="downloadBtn">Descargar texto</button>
+      </div>
+    </section>
+
+    <section class="panel controls">
+      <div class="section-stack">
+        <div>
+          <h2>1) ¿Qué tenemos ya?</h2>
+          <div class="chip-grid" id="ownedMainGrid"></div>
+          <div class="btn-row" style="margin-top:0.65rem;">
+            <button type="button" class="btn btn-muted" id="toggleAdvancedBtn">Mostrar más opciones de equipo</button>
+          </div>
+          <div id="ownedAdvancedWrap" class="hidden" style="margin-top:0.55rem;">
+            <div class="chip-grid" id="ownedAdvancedGrid"></div>
+          </div>
+        </div>
+
+        <div>
+          <h2>2) Necesidades adicionales (opcional)</h2>
+          <div class="chip-grid" id="extrasGrid"></div>
+          <p class="inline-note">Son opcionales y nos pueden sumar algunas recomendaciones más.</p>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="generateBtn">Generar resultados</button>
+        <button type="button" class="btn btn-muted" id="addCustomBtn">Agregar artículo</button>
+        <button type="button" class="btn btn-danger" id="resetBtn">Restablecer</button>
+      </div>
+    </section>
+
+    <section class="panel result-wrap" id="resultWrap">
+      <div class="summary">
+        <strong id="summaryText"></strong>
+        <span id="generatedMeta"></span>
+      </div>
+
+      <div class="results-layout">
+        <div class="section-box still-need-panel">
+          <h3>Todavía necesitamos</h3>
+          <p class="muted" style="margin-top:0.25rem;">Esta es nuestra lista principal de pendientes.</p>
+          <div id="stillNeedGroups" style="margin-top:0.65rem;"></div>
+          <p class="empty" id="stillNeedEmpty">Por ahora no nos falta nada. ¡Excelente trabajo!</p>
+        </div>
+
+        <div class="section-box">
+          <h3>Ya tenemos</h3>
+          <p class="muted" style="margin-top:0.25rem;">Lo que marcamos como que ya tenemos.</p>
+          <ul class="have-list" id="alreadyHaveList" style="margin-top:0.65rem;"></ul>
+          <p class="empty" id="alreadyHaveEmpty">Todavía no hemos marcado nada.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = "imsda_livestream_equipment_checklist_simple_v2";
+      const baseRequirements = ["camera", "tripod", "audioBoard", "streamingComputer", "internet", "hdmi", "audioCables", "powerStrips"];
+
+      const ownedMain = [
+        ["camera", "Cámara"],
+        ["tripod", "Trípode"],
+        ["audioBoard", "Audio desde la consola de sonido"],
+        ["microphone", "Micrófono"],
+        ["streamingComputer", "Computadora/dispositivo de transmisión"],
+        ["internet", "Conexión a internet"],
+        ["monitor", "TV o monitor"],
+        ["hdmi", "Cables HDMI"],
+        ["audioCables", "Cables de audio"],
+        ["powerStrips", "Regletas / extensiones eléctricas"]
+      ];
+
+      const ownedAdvanced = [
+        ["captureDevice", "Dispositivo de captura"],
+        ["hardwareEncoder", "Codificador por hardware"],
+        ["switcher", "Mezclador de video (switcher)"],
+        ["atem", "ATEM"],
+        ["presentationComputer", "Computadora de presentaciones"],
+        ["confidenceMonitor", "Monitor de referencia"],
+        ["sdi", "Cables SDI"],
+        ["backupPower", "Energía de respaldo"],
+        ["adapters", "Adaptadores"]
+      ];
+
+      const extraNeeds = [
+        ["slides", "Queremos diapositivas en la transmisión"],
+        ["moreCameras", "Queremos más de una cámara"],
+        ["recording", "Queremos grabar el culto"],
+        ["longRuns", "Necesitamos cables más largos"],
+        ["simpleWorkflow", "Queremos algo más sencillo para nuestros voluntarios"]
+      ];
+
+      const itemCatalog = {
+        camera: {
+          name: "Cámara",
+          category: "Video",
+          reason: "Nos da el video principal de la transmisión en vivo.",
+          recommendation: "Canon Vixia HF G70, Canon PTZ CR-N300, PTZOptics Move SE 20x o una cámara existente con salida HDMI limpia.",
+          ownedKey: "camera"
+        },
+        tripod: {
+          name: "Trípode",
+          category: "Video",
+          reason: "Mantiene firme la toma de nuestra cámara.",
+          recommendation: "Un trípode confiable con cabezal fluido que aguante el peso de nuestra cámara.",
+          ownedKey: "tripod"
+        },
+        captureDevice: {
+          name: "Dispositivo de captura",
+          category: "Video",
+          reason: "Hace que la señal de la cámara entre a nuestra computadora de transmisión.",
+          recommendation: "Elgato Cam Link 4K o Black Magic Atem",
+          ownedKey: "captureDevice"
+        },
+        switcher: {
+          name: "Mezclador de video (switcher)",
+          category: "Video",
+          reason: "Nos ayuda a cambiar entre cámaras y fuentes durante el culto.",
+          recommendation: "Blackmagic ATEM Mini Pro o Blackmagic ATEM Mini Extreme.",
+          ownedKey: "switcher"
+        },
+        atem: {
+          name: "ATEM",
+          category: "Video",
+          reason: "Un mezclador común y práctico cuando usamos varias cámaras en la iglesia.",
+          recommendation: "Blackmagic ATEM Mini Pro o ATEM Mini Extreme.",
+          ownedKey: "atem"
+        },
+        presentationComputer: {
+          name: "Computadora de presentaciones",
+          category: "Video",
+          reason: "La necesitamos para mostrar diapositivas o gráficos en la transmisión.",
+          recommendation: "Una laptop o computadora de escritorio confiable solo para diapositivas y gráficos.",
+          ownedKey: "presentationComputer"
+        },
+        confidenceMonitor: {
+          name: "Monitor de referencia",
+          category: "Video",
+          reason: "Les deja ver claramente a nuestros oradores y voluntarios las diapositivas o lo que sale en la transmisión.",
+          recommendation: "Cualquier TV/monitor confiable con entrada HDMI.",
+          ownedKey: "confidenceMonitor"
+        },
+        audioBoard: {
+          name: "Audio desde la consola de sonido",
+          category: "Audio",
+          reason: "Casi siempre nos da un sonido más claro que un solo micrófono de ambiente.",
+          recommendation: "Una salida propia de la consola de sonido para la mezcla de la transmisión.",
+          ownedKey: "audioBoard"
+        },
+        microphone: {
+          name: "Micrófono",
+          category: "Audio",
+          reason: "Hace que la predicación y la alabanza se escuchen mejor en la transmisión.",
+          recommendation: "Usamos los micrófonos que ya tenemos y, si podemos, agregamos uno de respaldo.",
+          ownedKey: "microphone"
+        },
+        audioCables: {
+          name: "Cables de audio",
+          category: "Audio",
+          reason: "Los necesitamos para conectar el audio de forma segura y confiable.",
+          recommendation: "Tener cables de audio de repuesto listos y etiquetados.",
+          ownedKey: "audioCables"
+        },
+        headphones: {
+          name: "Audífonos de monitoreo",
+          category: "Audio",
+          reason: "Así un voluntario escucha el audio de la transmisión y nota rápido cualquier problema.",
+          recommendation: "Audífonos cerrados para monitoreo.",
+          ownedKey: "headphones"
+        },
+        streamingComputer: {
+          name: "Computadora de transmisión",
+          category: "Transmisión",
+          reason: "Usa nuestro programa de transmisión y envía la señal en vivo a internet.",
+          recommendation: "Una computadora de escritorio o laptop confiable solo para la transmisión. O un Black Magic Atem",
+          ownedKey: "streamingComputer"
+        },
+        hardwareEncoder: {
+          name: "Codificador por hardware",
+          category: "Transmisión",
+          reason: "Hace más fáciles los pasos de la transmisión para nuestros voluntarios.",
+          recommendation: "Un dispositivo de transmisión por hardware, si nuestro equipo quiere algo más sencillo.",
+          ownedKey: "hardwareEncoder"
+        },
+        internet: {
+          name: "Conexión a internet",
+          category: "Transmisión",
+          reason: "La necesitamos para enviar nuestra transmisión en vivo a YouTube, Facebook u otra plataforma.",
+          recommendation: "Una conexión a internet por cable, estable y cerca de donde transmitimos.",
+          ownedKey: "internet"
+        },
+        recordingStorage: {
+          name: "Equipo de grabación",
+          category: "Transmisión",
+          reason: "Lo necesitamos si queremos guardar una copia del culto.",
+          recommendation: "Grabar con nuestro mezclador o programa en un SSD, una tarjeta SD o una unidad confiable.",
+          ownedKey: "recordingStorage"
+        },
+        monitor: {
+          name: "TV o monitor",
+          category: "Accesorios",
+          reason: "Ayuda a nuestros voluntarios a ver las fuentes de video y lo que sale en vivo.",
+          recommendation: "Un monitor o TV nítido con entrada HDMI.",
+          ownedKey: "monitor"
+        },
+        hdmi: {
+          name: "Cables HDMI",
+          category: "Accesorios",
+          reason: "Conectan nuestras cámaras, computadoras y pantallas.",
+          recommendation: "Cables HDMI certificados del largo que necesita nuestro salón.",
+          ownedKey: "hdmi"
+        },
+        sdi: {
+          name: "Cables SDI",
+          category: "Accesorios",
+          reason: "Nos sirven para distancias largas en espacios grandes.",
+          recommendation: "Cables SDI confiables para conexiones de video a larga distancia.",
+          ownedKey: "sdi"
+        },
+        powerStrips: {
+          name: "Regletas / extensiones eléctricas",
+          category: "Accesorios",
+          reason: "Llevan la electricidad a nuestro equipo donde la necesitamos.",
+          recommendation: "Regletas y extensiones eléctricas con protección contra sobretensiones.",
+          ownedKey: "powerStrips"
+        },
+        backupPower: {
+          name: "Energía de respaldo",
+          category: "Accesorios",
+          reason: "Protege nuestra transmisión cuando se va la luz por un momento.",
+          recommendation: "Respaldo de batería UPS para los dispositivos clave.",
+          ownedKey: "backupPower"
+        },
+        adapters: {
+          name: "Adaptadores",
+          category: "Accesorios",
+          reason: "Nos ayudan a unir distintos tipos de conectores cuando hace falta.",
+          recommendation: "Adaptadores comunes de HDMI, USB y audio, y algunos de repuesto.",
+          ownedKey: "adapters"
+        },
+        cableLabels: {
+          name: "Etiquetas y amarres para cables",
+          category: "Accesorios",
+          reason: "Hacen más fácil la instalación para nuestros voluntarios y evitan errores.",
+          recommendation: "Amarres de velcro y etiquetas sencillas para cada cable.",
+          ownedKey: "cableLabels"
+        }
+      };
+
+      const extraRules = {
+        slides: ["presentationComputer", "monitor", "hdmi"],
+        moreCameras: ["switcher", "atem", "tripod"],
+        recording: ["recordingStorage"],
+        longRuns: ["sdi", "adapters"],
+        simpleWorkflow: ["hardwareEncoder", "cableLabels"]
+      };
+
+      const ownedMainGrid = document.getElementById("ownedMainGrid");
+      const ownedAdvancedGrid = document.getElementById("ownedAdvancedGrid");
+      const ownedAdvancedWrap = document.getElementById("ownedAdvancedWrap");
+      const toggleAdvancedBtn = document.getElementById("toggleAdvancedBtn");
+      const extrasGrid = document.getElementById("extrasGrid");
+      const resultWrap = document.getElementById("resultWrap");
+      const stillNeedGroups = document.getElementById("stillNeedGroups");
+      const alreadyHaveList = document.getElementById("alreadyHaveList");
+      const stillNeedEmpty = document.getElementById("stillNeedEmpty");
+      const alreadyHaveEmpty = document.getElementById("alreadyHaveEmpty");
+      const summaryText = document.getElementById("summaryText");
+      const generatedMeta = document.getElementById("generatedMeta");
+
+      function createCheckboxes(container, items, prefix) {
+        items.forEach(([key, label]) => {
+          const wrapper = document.createElement("label");
+          wrapper.className = "chip";
+
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.id = `${prefix}_${key}`;
+          input.dataset.key = key;
+
+          const text = document.createElement("span");
+          text.textContent = label;
+
+          wrapper.append(input, text);
+          container.appendChild(wrapper);
+        });
+      }
+
+      function selectedKeys(prefix) {
+        return new Set(
+          Array.from(document.querySelectorAll(`input[id^='${prefix}_']:checked`)).map((el) => el.dataset.key)
+        );
+      }
+
+      function saveState() {
+        const state = {
+          owned: Array.from(selectedKeys("owned")),
+          extras: Array.from(selectedKeys("extra")),
+          showAdvanced: !ownedAdvancedWrap.classList.contains("hidden")
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function restoreState() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+
+        try {
+          const state = JSON.parse(raw);
+
+          (state.owned || []).forEach((key) => {
+            const box = document.getElementById(`owned_${key}`);
+            if (box) box.checked = true;
+          });
+
+          (state.extras || []).forEach((key) => {
+            const box = document.getElementById(`extra_${key}`);
+            if (box) box.checked = true;
+          });
+
+          if (state.showAdvanced) {
+            ownedAdvancedWrap.classList.remove("hidden");
+            toggleAdvancedBtn.textContent = "Ocultar más opciones de equipo";
+          }
+        } catch (_error) {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+
+      function createNeedCard(item) {
+        const card = document.createElement("article");
+        card.className = "need-card";
+
+        const nameWrap = document.createElement("div");
+        const nameLabel = document.createElement("label");
+        nameLabel.className = "field-label";
+        nameLabel.textContent = "Artículo";
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.value = item.name;
+        nameInput.className = "need-name";
+        nameWrap.append(nameLabel, nameInput);
+
+        const reason = document.createElement("p");
+        reason.className = "muted";
+        reason.innerHTML = `<strong>Por qué se necesita:</strong> ${item.reason}`;
+
+        const recWrap = document.createElement("div");
+        const recLabel = document.createElement("label");
+        recLabel.className = "field-label";
+        recLabel.textContent = "Equipo recomendado";
+        const recInput = document.createElement("textarea");
+        recInput.className = "need-recommendation";
+        recInput.value = item.recommendation;
+        recWrap.append(recLabel, recInput);
+
+        const notesWrap = document.createElement("div");
+        const notesLabel = document.createElement("label");
+        notesLabel.className = "field-label";
+        notesLabel.textContent = "Notas (opcional)";
+        const notesInput = document.createElement("input");
+        notesInput.type = "text";
+        notesInput.className = "need-notes";
+        notesInput.placeholder = "Agrega aquí tus notas";
+        notesWrap.append(notesLabel, notesInput);
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "btn btn-danger";
+        removeBtn.textContent = "Quitar";
+        removeBtn.style.justifySelf = "start";
+        removeBtn.addEventListener("click", () => {
+          card.remove();
+          refreshEmptyStates();
+        });
+
+        card.append(nameWrap, reason, recWrap, notesWrap, removeBtn);
+        return card;
+      }
+
+      function renderMissingByCategory(items) {
+        stillNeedGroups.replaceChildren();
+
+        const categoryOrder = ["Video", "Audio", "Transmisión", "Accesorios"];
+        categoryOrder.forEach((category) => {
+          const categoryItems = items.filter((item) => item.category === category);
+          if (!categoryItems.length) return;
+
+          const group = document.createElement("section");
+          group.className = "group-block";
+          const title = document.createElement("h4");
+          title.textContent = category;
+          group.appendChild(title);
+
+          categoryItems.forEach((item) => {
+            group.appendChild(createNeedCard(item));
+          });
+
+          stillNeedGroups.appendChild(group);
+        });
+      }
+
+      function renderAlreadyHave(ownedKeys) {
+        alreadyHaveList.replaceChildren();
+
+        const allOwned = [...ownedMain, ...ownedAdvanced];
+        allOwned.forEach(([key, label]) => {
+          if (!ownedKeys.has(key)) return;
+          const li = document.createElement("li");
+          li.textContent = label;
+          alreadyHaveList.appendChild(li);
+        });
+      }
+
+      function refreshEmptyStates() {
+        const hasMissing = stillNeedGroups.querySelectorAll(".need-card").length > 0;
+        const hasOwned = alreadyHaveList.children.length > 0;
+
+        stillNeedEmpty.style.display = hasMissing ? "none" : "block";
+        alreadyHaveEmpty.style.display = hasOwned ? "none" : "block";
+      }
+
+      function generateResults() {
+        const owned = selectedKeys("owned");
+        const extras = selectedKeys("extra");
+        const required = new Set(baseRequirements);
+
+        extras.forEach((extraKey) => {
+          (extraRules[extraKey] || []).forEach((requiredKey) => required.add(requiredKey));
+        });
+
+        const missingItems = [];
+        required.forEach((key) => {
+          const item = itemCatalog[key];
+          if (!item) return;
+          if (owned.has(item.ownedKey || key)) return;
+          missingItems.push(item);
+        });
+
+        renderMissingByCategory(missingItems);
+        renderAlreadyHave(owned);
+
+        summaryText.textContent = `Ya tenemos ${owned.size} artículo${owned.size === 1 ? "" : "s"} principal${owned.size === 1 ? "" : "es"}. Según lo que marcamos, todavía nos puede${missingItems.length === 1 ? "" : "n"} faltar ${missingItems.length} artículo${missingItems.length === 1 ? "" : "s"}.`;
+        generatedMeta.textContent = `Generado: ${new Date().toLocaleString("es-US")}`;
+
+        resultWrap.style.display = "block";
+        refreshEmptyStates();
+        saveState();
+      }
+
+      function addCustomItem() {
+        resultWrap.style.display = "block";
+
+        let accessoriesGroup = Array.from(stillNeedGroups.querySelectorAll(".group-block")).find((group) => {
+          const title = group.querySelector("h4");
+          return title && title.textContent === "Accesorios";
+        });
+
+        if (!accessoriesGroup) {
+          accessoriesGroup = document.createElement("section");
+          accessoriesGroup.className = "group-block";
+          const title = document.createElement("h4");
+          title.textContent = "Accesorios";
+          accessoriesGroup.appendChild(title);
+          stillNeedGroups.appendChild(accessoriesGroup);
+        }
+
+        accessoriesGroup.appendChild(createNeedCard({
+          name: "Artículo personalizado",
+          reason: "Agrega cualquier otra cosa que necesitemos y queramos tener en cuenta.",
+          recommendation: ""
+        }));
+
+        refreshEmptyStates();
+      }
+
+      function extractText() {
+        const lines = [];
+        lines.push("Lista de equipo para transmisión en vivo");
+        lines.push(generatedMeta.textContent || `Generado: ${new Date().toLocaleString("es-US")}`);
+        lines.push("");
+
+        lines.push("Todavía necesitamos");
+        lines.push("-------------------");
+        const groups = Array.from(stillNeedGroups.querySelectorAll(".group-block"));
+        if (!groups.length) {
+          lines.push("- Por ahora no nos falta nada.");
+        }
+
+        groups.forEach((group) => {
+          const category = group.querySelector("h4").textContent;
+          lines.push(category + ":");
+          const cards = Array.from(group.querySelectorAll(".need-card"));
+          cards.forEach((card) => {
+            const item = card.querySelector(".need-name").value || "Artículo personalizado";
+            const recommendation = card.querySelector(".need-recommendation").value;
+            const notes = card.querySelector(".need-notes").value;
+
+            lines.push(`- ${item}`);
+            if (recommendation) lines.push(`  Recomendado: ${recommendation}`);
+            if (notes) lines.push(`  Notas: ${notes}`);
+          });
+          lines.push("");
+        });
+
+        lines.push("Ya tenemos");
+        lines.push("----------");
+        if (!alreadyHaveList.children.length) {
+          lines.push("- Nada marcado");
+        } else {
+          Array.from(alreadyHaveList.children).forEach((li) => lines.push(`- ${li.textContent}`));
+        }
+
+        return lines.join("\n");
+      }
+
+      function resetAll() {
+        document.querySelectorAll("input[type='checkbox']").forEach((el) => { el.checked = false; });
+
+        ownedAdvancedWrap.classList.add("hidden");
+        toggleAdvancedBtn.textContent = "Mostrar más opciones de equipo";
+
+        stillNeedGroups.replaceChildren();
+        alreadyHaveList.replaceChildren();
+        resultWrap.style.display = "none";
+        localStorage.removeItem(STORAGE_KEY);
+      }
+
+      document.getElementById("generateBtn").addEventListener("click", generateResults);
+      document.getElementById("addCustomBtn").addEventListener("click", addCustomItem);
+      document.getElementById("resetBtn").addEventListener("click", resetAll);
+
+      document.getElementById("printBtn").addEventListener("click", () => window.print());
+      document.getElementById("copyBtn").addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(extractText());
+          alert("Lista copiada al portapapeles.");
+        } catch (_error) {
+          alert("No pudimos copiarla automáticamente. Usa Descargar texto.");
+        }
+      });
+
+      document.getElementById("downloadBtn").addEventListener("click", () => {
+        const blob = new Blob([extractText()], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `livestream-equipment-checklist-${new Date().toISOString().slice(0, 10)}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      });
+
+      toggleAdvancedBtn.addEventListener("click", () => {
+        const isHidden = ownedAdvancedWrap.classList.toggle("hidden");
+        toggleAdvancedBtn.textContent = isHidden ? "Mostrar más opciones de equipo" : "Ocultar más opciones de equipo";
+        saveState();
+      });
+
+      createCheckboxes(ownedMainGrid, ownedMain, "owned");
+      createCheckboxes(ownedAdvancedGrid, ownedAdvanced, "owned");
+      createCheckboxes(extrasGrid, extraNeeds, "extra");
+
+      document.addEventListener("change", (event) => {
+        const target = event.target;
+        if (target.matches("input[type='checkbox']")) {
+          saveState();
+        }
+      });
+
+      restoreState();
+    })();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

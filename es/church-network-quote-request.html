@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Archivos locales (misma carpeta):
+    - tools-nav.css  (opcional - estilos de la barra de navegación compartida; la página funciona sin él)
+    - tools-nav.js  (opcional - barra de navegación compartida + lista de herramientas; la página funciona sin él)
+  Externos (internet):
+    (ninguno)
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solicitud de cotización de red</title>
+  <style>
+    :root{
+      --bg:#f4f7f9;
+      --surface:#ffffff;
+      --surface-soft:#eef6f7;
+      --text:#183042;
+      --muted:#5f7385;
+      --primary:#087E8B;
+      --primary-dark:#0B3954;
+      --border:#d9e5ec;
+      --shadow:0 18px 40px rgba(11,57,84,.08);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:'Manrope',sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(8,126,139,.08), transparent 32%),
+        linear-gradient(180deg, #f9fbfc, var(--bg));
+      color:var(--text);
+      min-height:100vh;
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:1.4rem 1rem 2rem}
+    .hero,.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .hero{padding:1.3rem 1.35rem;margin-bottom:1rem}
+    .eyebrow{font-size:.74rem;letter-spacing:1.8px;text-transform:uppercase;color:var(--primary);font-weight:800}
+    h1{margin:.35rem 0 .55rem;font:800 clamp(1.8rem,4vw,2.6rem)/1.05 'Syne',sans-serif;color:var(--primary-dark)}
+    .hero p{margin:0;color:var(--muted);max-width:72ch;line-height:1.6}
+    .hero-actions{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:1rem}
+    .layout{display:grid;grid-template-columns:1.05fr .95fr;gap:1rem}
+    .panel{padding:1rem}
+    h2{margin:.1rem 0 .85rem;font:700 1.02rem/1.2 'Syne',sans-serif;color:var(--primary-dark)}
+    .group{margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px dashed var(--border)}
+    .group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+    .field{display:flex;flex-direction:column;gap:.35rem}
+    label{font-size:.84rem;font-weight:700;color:#274457}
+    input,select,textarea{width:100%;border:1px solid #c8d7e1;border-radius:12px;padding:.72rem .78rem;font:inherit;color:var(--text);background:#fff}
+    input[type="checkbox"],input[type="radio"]{width:auto}
+    textarea{resize:vertical;min-height:90px}
+    .tool-section{border:1px solid var(--border);border-radius:14px;padding:.8rem;background:linear-gradient(180deg,#fff,#fbfdfe);margin-bottom:.75rem}
+    .tool-head{display:flex;gap:.6rem;align-items:flex-start;margin-bottom:.6rem}
+    .tool-head label{font-size:.92rem;color:var(--primary-dark)}
+    .tool-content{display:none;padding-top:.2rem}
+    .tool-section.active .tool-content{display:block}
+    .recommendation{margin:.35rem 0 .65rem;border-left:3px solid #6cb9c0;background:#eff8fa;border-radius:8px;padding:.5rem .65rem;font-size:.82rem;color:#31566a}
+    .stack{display:flex;flex-direction:column;gap:.55rem}
+    .line-item{border:1px solid #d8e6ee;border-radius:12px;padding:.65rem;background:#fcfeff}
+    .line-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem;gap:.5rem}
+    .line-title{font-size:.8rem;font-weight:800;color:#31566a;letter-spacing:.3px;text-transform:uppercase}
+    .mini-btn{border:1px solid #cfe0ea;border-radius:999px;background:#fff;color:#2b4f64;padding:.35rem .65rem;font:700 .76rem 'Manrope',sans-serif;cursor:pointer}
+    .line-cost{margin-top:.4rem;font-size:.8rem;color:#3b6074;display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+    .field-note{margin-top:.35rem;font-size:.76rem;color:#557184}
+    .disabled-section{opacity:.56;background:linear-gradient(180deg,#f4f6f8,#edf1f4)}
+    .disabled-section .tool-content{display:block}
+    .disabled-overlay-note{margin-top:.45rem;padding:.55rem .65rem;border-radius:10px;border:1px dashed #b5c4cf;background:#f7fafc;color:#506879;font-size:.8rem}
+    .actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1rem}
+    button,.mailto,.back{border:1px solid transparent;border-radius:999px;padding:.72rem 1rem;font:700 .92rem 'Manrope',sans-serif;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+    button{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+    .mailto{background:#eaf5f6;color:var(--primary-dark);border-color:#c6dfe3}
+    .back{color:var(--primary-dark);background:#f4f8fa;border-color:#d5e2ea}
+    .results-shell{background:linear-gradient(160deg,#f9fcfd,#eef7f8);border:1px solid #d6e6ea;border-radius:18px;padding:1rem}
+    .quote-sheet{background:#fff;border:1px solid #dbe6ec;border-radius:16px;padding:1.1rem}
+    .sheet-top{display:flex;justify-content:space-between;gap:1rem;padding-bottom:.9rem;margin-bottom:.9rem;border-bottom:1px solid #e5edf2}
+    .sheet-title{font:800 1.28rem/1.1 'Syne',sans-serif;color:var(--primary-dark)}
+    .sheet-sub{font-size:.83rem;color:var(--muted);margin-top:.3rem}
+    .meta-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;margin-bottom:1rem}
+    .meta-item{padding:.8rem;border:1px solid #e1ebf1;border-radius:14px;background:#fbfdfe}
+    .meta-item strong{display:block;font-size:.73rem;letter-spacing:1px;text-transform:uppercase;color:var(--primary);margin-bottom:.3rem}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:.72rem;border-bottom:1px solid #e4edf2;vertical-align:top;text-align:left}
+    th{font-size:.72rem;letter-spacing:1.1px;text-transform:uppercase;color:#5c7283}
+    .empty{padding:1rem;border:1px dashed #c7d9e0;border-radius:14px;color:var(--muted);background:#fbfdfe}
+    .total-box{margin-top:.9rem;padding:.8rem;border-radius:12px;background:#edf8f8;border:1px solid #cfe7ea;font-weight:800;color:var(--primary-dark)}
+    .notes{margin-top:1rem;padding:1rem;border-radius:14px;background:#f8fbfc;border:1px solid #e2edf2;color:#436073;line-height:1.6}
+    .info-note{margin:.85rem 0 1rem;padding:.85rem 1rem;border-radius:12px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-size:.92rem;line-height:1.45;font-weight:600}
+    .footer-note{margin-top:1rem;font-size:.82rem;color:var(--muted)}
+    .poe-panel{margin-top:1rem;padding:.8rem;border:1px solid #d5e3ec;border-radius:12px;background:#f8fbfd}
+    .poe-status{font-weight:800}
+    @media (max-width:980px){.layout,.grid,.meta-list{grid-template-columns:1fr}.sheet-top{flex-direction:column}}
+    @media print{
+      body{background:#fff}
+      .hero,.panel,.results-shell,.quote-sheet{box-shadow:none}
+      .hero,.panel,.results-shell{border:0;background:#fff;padding:0}
+      .layout{display:block}
+      .panel:first-of-type,.actions,.back{display:none!important}
+      .quote-sheet{border:1px solid #bbb;border-radius:0}
+      body::after{content:'Asociación Iowa-Missouri de los Adventistas del Séptimo Día · tools.imsda.org';display:block;text-align:center;margin-top:1rem;font:600 11px 'Manrope',sans-serif;color:#555}
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">IMSDA Asesoría para iglesias</div>
+      <h1>Generador de solicitudes de cotización de red</h1>
+      <p>Aquí preparamos juntos la solicitud de cotización de red para nuestra iglesia. Puedes imprimirla para que nuestra junta la revise o abrir un borrador de correo ya lleno para enviarlo a la oficina de la Asociación.</p>
+    </section>
+
+    <section class="layout">
+      <article class="panel">
+        <div class="info-note" id="pricingNoteTop"></div>
+        <div class="info-note" id="plannerPrefillNote" style="display:none;"></div>
+        <div class="info-note" id="plannerDebugPanel" style="display:none;margin-top:.5rem;"></div>
+
+        <div class="group">
+          <h2>Datos de la iglesia</h2>
+          <div class="grid">
+            <div class="field"><label for="churchName">Nombre de la iglesia</label><input id="churchName" type="text" placeholder="Iglesia Adventista Ejemplo" /></div>
+            <div class="field"><label for="cityState">Ciudad / Estado</label><input id="cityState" type="text" placeholder="Springfield, Missouri" /></div>
+            <div class="field"><label for="contactName">Nombre del contacto principal</label><input id="contactName" type="text" placeholder="María González" /></div>
+            <div class="field"><label for="contactEmail">Correo del contacto principal</label><input id="contactEmail" type="email" placeholder="maria@example.org" /></div>
+            <div class="field"><label for="facilitySize">Tamaño del edificio (pies²)</label><input id="facilitySize" type="number" min="500" step="100" value="6000" /></div>
+            <div class="field"><label for="timeline">Plazo</label><select id="timeline"><option>Lo antes posible</option><option selected>Dentro de 3 meses</option><option>Dentro de 6 meses</option><option>Lo estamos planeando para el próximo año</option></select></div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h2>Selección del alcance de la red</h2>
+
+          <div class="field" style="margin-bottom:.85rem;">
+            <label for="stackType">Opción de sistema de red</label>
+            <select id="stackType">
+              <option value="unifi">Sistema UniFi</option>
+              <option value="tplink">Sistema TP-Link</option>
+              <option value="allinone">Todo en uno</option>
+            </select>
+          </div>
+
+          <div class="field" id="stackModeField" style="margin-bottom:.85rem;">
+            <label for="stackMode">Modo de configuración</label>
+            <select id="stackMode">
+              <option value="simple">Opción 1: Configuración sencilla</option>
+              <option value="custom">Opción 2: Personalizada</option>
+            </select>
+          </div>
+
+          <section class="tool-section" id="routerSection">
+            <div class="tool-head"><input id="includeRouter" type="checkbox" /><label for="includeRouter">Routers</label></div>
+            <div class="tool-content">
+              <div class="recommendation" id="routerRecommendation"></div>
+              <div class="field"><label for="routerOption">Modelo de router</label><select id="routerOption"></select></div>
+              <div class="field"><label for="routerQty">Cantidad</label><input id="routerQty" type="number" min="1" step="1" value="1" /></div>
+              <div class="line-cost"><span id="routerUnitCost"></span><span id="routerLineTotal"></span></div>
+            </div>
+          </section>
+
+          <section class="tool-section" id="switchSection">
+            <div class="tool-head"><input id="includeSwitch" type="checkbox" /><label for="includeSwitch">Switches</label></div>
+            <div class="tool-content">
+              <div class="field-note" id="switchUnifiNote" style="display:none;">Te recomendamos la versión estándar del switch, a menos que sepas que necesitas un puerto de 10G para conectar otro equipo o más potencia PoE.</div>
+              <div class="stack" id="switchLineItems"></div>
+              <div style="margin-top:.55rem;">
+                <button id="addSwitchLineBtn" type="button" class="mini-btn">+ Agregar switch</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="tool-section" id="accessPointSection">
+            <div class="tool-head"><input id="includeAccessPoint" type="checkbox" /><label for="includeAccessPoint">Puntos de acceso</label></div>
+            <div class="tool-content">
+              <div class="field-note" id="accessPointUnifiNote" style="display:none;">La diferencia entre el U7 Lite y los otros dos es que no tiene la banda de 6GHz. Si no estás seguro, te recomendamos el U7 Lite.</div>
+              <div class="stack" id="accessPointLineItems"></div>
+              <div style="margin-top:.55rem;">
+                <button id="addAccessPointLineBtn" type="button" class="mini-btn">+ Agregar punto de acceso</button>
+              </div>
+              <div class="disabled-overlay-note" id="apDisabledNote" style="display:none;">Con la opción Todo en uno no se usan puntos de acceso.</div>
+            </div>
+          </section>
+
+          <section class="tool-section" id="upsSection">
+            <div class="tool-head"><input id="includeUps" type="checkbox" /><label for="includeUps">UPS</label></div>
+            <div class="tool-content">
+              <div class="field"><label for="upsOption">Modelo de UPS</label><select id="upsOption"></select></div>
+              <div class="field"><label for="upsQty">Cantidad</label><input id="upsQty" type="number" min="1" step="1" value="1" /></div>
+              <div class="line-cost"><span id="upsUnitCost"></span><span id="upsLineTotal"></span></div>
+            </div>
+          </section>
+
+          <section class="tool-section" id="rackSection">
+            <div class="tool-head"><input id="includeRack" type="checkbox" /><label for="includeRack">Racks</label></div>
+            <div class="tool-content">
+              <div class="recommendation">Estas opciones de rack son temporales; más adelante las vamos a cambiar por productos aprobados.</div>
+              <div class="field"><label for="rackOption">Opción de rack</label><select id="rackOption"></select></div>
+              <div class="field"><label for="rackQty">Cantidad</label><input id="rackQty" type="number" min="1" step="1" value="1" /></div>
+              <div class="line-cost"><span id="rackUnitCost"></span><span id="rackLineTotal"></span></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="group">
+          <h2>Notas adicionales</h2>
+          <div class="field">
+            <label for="notes">Notas para la oficina de la Asociación</label>
+            <textarea id="notes" placeholder="Cuéntanos la historia del proyecto, lo que nos limita, dónde necesitamos señal, el plazo o cualquier cosa que la Asociación deba saber."></textarea>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Solicitud de cotización en vivo</h2>
+        <div class="results-shell">
+          <div class="quote-sheet" id="quoteSheet">
+            <div class="sheet-top">
+              <div>
+                <div class="sheet-title">Solicitud de cotización de red</div>
+                <div class="sheet-sub">Asociación Iowa-Missouri de los Adventistas del Séptimo Día</div>
+              </div>
+              <div class="sheet-sub" id="generatedDate"></div>
+            </div>
+            <div class="info-note" id="pricingNoteSummary"></div>
+
+            <div class="meta-list">
+              <div class="meta-item"><strong>Iglesia</strong><span id="outChurch">No indicado</span></div>
+              <div class="meta-item"><strong>Contacto</strong><span id="outContact">No indicado</span></div>
+              <div class="meta-item"><strong>Perfil del edificio</strong><span id="outFacility">Edificio de 6,000 pies² · Plazo: Dentro de 3 meses</span></div>
+              <div class="meta-item"><strong>Sistema de red</strong><span id="outStack">Sistema UniFi</span></div>
+            </div>
+
+            <table>
+              <thead>
+                <tr><th>Sección</th><th>Selección</th><th>Detalles</th><th>Subtotal</th></tr>
+              </thead>
+              <tbody id="requestRows"></tbody>
+            </table>
+
+            <div class="total-box" id="totalOutput">Total estimado: $0</div>
+            <div class="poe-panel" id="poeCapacityPanel">
+              <strong>Verificación de capacidad PoE</strong>
+              <div id="poeCapacityContent" class="sheet-sub" style="margin-top:.45rem;">Todavía no hay puntos de acceso que necesiten PoE.</div>
+            </div>
+            <div class="notes" id="outNotes">No agregamos notas adicionales.</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="printBtn" type="button">Imprimir / Guardar como PDF</button>
+          <a class="mailto" id="mailtoLink" href="#">Enviar por correo a la oficina de la Asociación</a>
+        </div>
+        <p class="footer-note">El borrador de correo va a <code>technology@imsda.org</code> e incluye un resumen sencillo de lo que llenamos en el formulario.</p>
+      </article>
+    </section>
+
+    
+  </main>
+
+  <script>
+    /*
+      MSRP maintenance notes:
+      - Update MSRP values directly in NETWORK_CATALOG.
+      - RACK ITEMS ARE PLACEHOLDERS and should be replaced with approved products later.
+    */
+    const NETWORK_CATALOG = {
+      unifi: {
+        label: 'Sistema UniFi',
+        routers: [
+          { id: 'udm-pro', name: 'UniFi Dream Machine Pro (UDM-Pro)', msrp: 379 },
+          { id: 'udr', name: 'Dream Router (UDR / UDR7): $279', msrp: 279 },
+          { id: 'gateway-ultra', name: 'Cloud Gateway Ultra: $129', msrp: 129 },
+          { id: 'gateway-max', name: 'Gateway Max: $199', msrp: 199 },
+          { id: 'gateway-fiber', name: 'Gateway Fiber: $249', msrp: 249 }
+        ],
+        switches: [
+          { id: 'usw-pro-48-poe', name: 'UniFi Pro 48 PoE', msrp: 1099, totalPorts: 48, isPoe: true, poePorts: 48, poeBudgetWatts: 600, notes: 'PoE++ capable' },
+          { id: 'usw-48-poe', name: 'UniFi Standard 48 PoE', msrp: 589, totalPorts: 48, isPoe: true, poePorts: 32, poeBudgetWatts: 195, notes: '195W PoE budget' },
+          { id: 'usw-pro-24-poe', name: 'UniFi Pro 24 PoE', msrp: 699, totalPorts: 24, isPoe: true, poePorts: 24, poeBudgetWatts: 400, notes: 'PoE++ capable' },
+          { id: 'usw-24-poe', name: 'UniFi Standard 24 PoE', msrp: 379, totalPorts: 24, isPoe: true, poePorts: 16, poeBudgetWatts: 95, notes: '95W PoE budget' },
+          { id: 'usw-ultra-210w', name: 'UniFi Ultra 210W', msrp: 199, totalPorts: 8, isPoe: true, poePorts: 7, poeBudgetWatts: 202, notes: '8-port switch with 202W PoE budget' },
+          { id: 'usw-ultra-60w', name: 'UniFi Ultra 60W', msrp: 159, totalPorts: 8, isPoe: true, poePorts: 7, poeBudgetWatts: 52, notes: '8-port switch with 52W PoE budget' },
+          { id: 'usw-pro-8-poe', name: 'UniFi Pro 8 PoE', msrp: 349, totalPorts: 8, isPoe: true, poePorts: 8, poeBudgetWatts: 120, notes: '120W PoE budget' },
+          { id: 'usw-lite-8-poe', name: 'UniFi Lite 8 PoE', msrp: 109, totalPorts: 8, isPoe: true, poePorts: 4, poeBudgetWatts: 52, notes: '4 PoE+ ports' },
+
+          { id: 'usw-pro-48', name: 'UniFi Pro 48', msrp: 599, totalPorts: 48, isPoe: false, poePorts: 0, poeBudgetWatts: 0 },
+          { id: 'usw-48', name: 'UniFi Standard 48', msrp: 399, totalPorts: 48, isPoe: false, poePorts: 0, poeBudgetWatts: 0 },
+          { id: 'usw-pro-24', name: 'UniFi Pro 24', msrp: 399, totalPorts: 24, isPoe: false, poePorts: 0, poeBudgetWatts: 0 },
+          { id: 'usw-24', name: 'UniFi Standard 24', msrp: 225, totalPorts: 24, isPoe: false, poePorts: 0, poeBudgetWatts: 0 },
+          { id: 'usw-ultra', name: 'UniFi Ultra', msrp: 129, totalPorts: 8, isPoe: false, poePorts: 0, poeBudgetWatts: 0 },
+          { id: 'usw-flex-mini', name: 'UniFi Flex Mini', msrp: 29, totalPorts: 5, isPoe: false, poePorts: 0, poeBudgetWatts: 0 },
+          { id: 'usw-flex-mini-2-5g', name: 'UniFi Flex Mini 2.5G', msrp: 129, totalPorts: 5, isPoe: false, poePorts: 0, poeBudgetWatts: 0 }
+        ],
+        accessPoints: [
+          { id: 'u7-lite', name: 'U7 Lite Dual Band: $99', msrp: 99, isPoePowered: true, estimatedWatts: 13, indoorOutdoor:'indoor', vendor:'unifi' },
+          { id: 'u7-pro-xg', name: 'U7 Pro XG Tri-band: $199', msrp: 199, isPoePowered: true, estimatedWatts: 21, indoorOutdoor:'outdoor', vendor:'unifi' },
+          { id: 'u7-pro-wall', name: 'U7 Pro Wall Tri-band: $199', msrp: 189, isPoePowered: true, estimatedWatts: 21, indoorOutdoor:'indoor', vendor:'unifi' },
+        ],
+        ups: [
+          { id: 'unifi-ups-2U-rack', name: 'Unifi UPS 2U (montaje en rack): $279', msrp: 279 },
+          { id: 'unifi-ups-tower', name: 'Unifi UPS torre: $159', msrp: 159 },
+          { id: 'apc-1500', name: 'APC Back-UPS Pro 1500VA torre: $219.99', msrp: 219.99 },
+          { id: 'cyber-CP1500PFCLCD', name: 'CyberPower 1500VA CP1500PFCLCD torre: $274.95', msrp: 274.95 },
+          { id: 'cyber-CP1500PFCRM2U', name: 'CyberPower 1500VA CP1500PFCRM2U rack: $359.95', msrp: 359.95 },
+          { id: 'cyber-OR1500PFCRT2U', name: 'CyberPower OR1500PFCRT2U rack: $719.95', msrp: 719.95 }
+        ],
+        racks: [
+          { id: 'rack-6u', name: 'RackPath 6u, 17.7 de profundidad: $129.99', msrp: 129.99 },
+          { id: 'rack-12u', name: 'Sysracks 12u rack de pared 24 de profundidad: $250.00', msrp: 250 },
+          { id: 'rack-18u', name: 'Systrack 18u, 24 de profundidad: $459.00', msrp: 459 }
+        ]
+      },
+      tplink: {
+        label: 'TP-Link Omada',
+        routers: [
+          { id: 'er605', name: 'ER605: $59.99', msrp: 59.99 },
+          { id: 'er707', name: 'ER707-M2: $99.99', msrp: 99.99 },
+          { id: 'er7206', name: 'ER7206: 139.99', msrp: 139.99 },
+          { id: 'er7412', name: 'ER7412-M2: $249.99', msrp: 249.99 },
+          { id: 'er8411', name: 'ER8411: $399.99', msrp: 399.99 }
+        ],
+        switches: [
+          { id: 'sg3452xp', name: 'TP-Link TL-SG3452XP', msrp: 849.99, totalPorts: 48, isPoe: true, poePorts: 48, poeBudgetWatts: 500, notes: 'PoE+ on all 48 RJ45 ports' },
+          { id: 'sg2452lp', name: 'TP-Link TL-SG2452LP', msrp: 399.99, totalPorts: 48, isPoe: true, poePorts: 32, poeBudgetWatts: 230, notes: 'PoE+ on first 32 RJ45 ports' },
+          { id: 'sg3428xmp', name: 'TP-Link TL-SG3428XMP', msrp: 619.99, totalPorts: 24, isPoe: true, poePorts: 24, poeBudgetWatts: 384, notes: 'PoE+ on all 24 RJ45 ports' },
+          { id: 'sg2428p', name: 'TP-Link TL-SG2428P', msrp: 309.99, totalPorts: 24, isPoe: true, poePorts: 24, poeBudgetWatts: 250, notes: 'PoE+ on all 24 RJ45 ports' },
+          { id: 'sg2210mp', name: 'TP-Link TL-SG2210MP', msrp: 174.99, totalPorts: 10, isPoe: true, poePorts: 8, poeBudgetWatts: 150, notes: '8 PoE+ ports, 2 uplink-only ports' },
+          { id: 'sg3210', name: 'TP-Link TL-SG3210', msrp: 114.99, totalPorts: 8, isPoe: false, poePorts: 0, poeBudgetWatts: 0 }
+        ],
+        accessPoints: [
+          { id: 'eap720', name: 'EAP720 Dual Band: $99.99', msrp: 99.99, isPoePowered: true, estimatedWatts: 13, indoorOutdoor:'indoor', vendor:'tplink' },
+          { id: 'eap773', name: 'EAP773 Tri-band: $189.99', msrp: 189.99, isPoePowered: true, estimatedWatts: 21, indoorOutdoor:'outdoor', vendor:'tplink' },
+          { id: 'eap775', name: 'EAP775-Wall Tri-band: $179.99', msrp: 179.99, isPoePowered: true, estimatedWatts: 21, indoorOutdoor:'indoor', vendor:'tplink' }
+        ],
+        ups: [
+          { id: 'apc-1500', name: 'APC Back-UPS Pro 1500VA torre: $219.99', msrp: 219.99 },
+          { id: 'cyber-CP1500PFCLCD', name: 'CyberPower 1500VA CP1500PFCLCD torre: $274.95', msrp: 274.95 },
+          { id: 'cyber-CP1500PFCRM2U', name: 'CyberPower 1500VA CP1500PFCRM2U rack: $359.95', msrp: 359.95 },
+          { id: 'cyber-OR1500PFCRT2U', name: 'CyberPower 1500VA OR1500PFCRT2U rack: $719.95', msrp: 719.95 }
+        ],
+        racks: [
+          { id: 'rack-6u', name: 'RackPath 6u, 17.7 de profundidad: $129.99', msrp: 129.99 },
+          { id: 'rack-12u', name: 'Sysracks 12u rack de pared 24 de profundidad: $250.00', msrp: 250 },
+          { id: 'rack-18u', name: 'Systrack 18u, 24 de profundidad: $459.00', msrp: 459 }
+        ]
+      },
+      allinone: {
+        label: 'Todo en uno',
+        routers: [
+          { id: 'udr7', name: 'UniFi UDR7', msrp: 279 },
+          { id: 'express-7', name: 'UniFi Express 7', msrp: 199 },
+          { id: 'er706w', name: 'TP-Link ER706W', msrp: 129.99 },
+          { id: 'archer-be3600-pro', name: 'Archer BE3600 Pro', msrp: 99.99 },
+          { id: 'archer-be800', name: 'Archer BE800', msrp: 425.99 },
+          { id: 'archer-be400', name: 'Archer BE400', msrp: 149.99 },
+          { id: 'rt-be3600', name: 'Asus RT-BE3600', msrp: 129.99 },
+          { id: 'rt-be82u', name: 'RT-BE82U', msrp: 167.99 }
+        ],
+        switches: [
+          { id: 'simple-5-port', name: 'Switch no administrable de 5 puertos (provisional)', msrp: 29.99, totalPorts: 5, isPoe: false, poePorts: 0, poeBudgetWatts: 0 },
+          { id: 'simple-8-port', name: 'Switch no administrable de 8 puertos (provisional)', msrp: 49.99, totalPorts: 8, isPoe: false, poePorts: 0, poeBudgetWatts: 0 }
+        ],
+        accessPoints: [],
+        ups: [
+          { id: 'apc-1500', name: 'APC Back-UPS Pro 1500VA torre: $219.99', msrp: 219.99 },
+          { id: 'cyber-CP1500PFCLCD', name: 'CyberPower 1500VA CP1500PFCLCD torre: $274.95', msrp: 274.95 },
+          { id: 'cyber-CP1500PFCRM2U', name: 'CyberPower 1500VA CP1500PFCRM2U rack: $359.95', msrp: 359.95 },
+          { id: 'cyber-OR1500PFCRT2U', name: 'CyberPower 1500VA OR1500PFCRT2U rack: $719.95', msrp: 719.95 }
+        ],
+        racks: [
+          { id: 'rack-6u', name: 'RackPath 6u, 17.7 de profundidad: $129.99', msrp: 129.99 },
+          { id: 'rack-12u', name: 'Sysracks 12u rack de pared 24 de profundidad: $250.00', msrp: 250 },
+          { id: 'rack-18u', name: 'Systrack 18u, 24 de profundidad: $459.00', msrp: 459 }
+        ]
+      }
+    };
+
+    /*
+    STACK DEFAULTS:
+    Edit the default starting equipment for each stack here.
+    When a user selects a stack, these defaults auto-populate the quote.
+    */
+    const STACK_DEFAULTS = {
+      unifi: {
+        router: 'gateway-ultra',
+        switches: [
+          { productId: 'usw-ultra-210w', qty: 1 }
+        ],
+        accessPoints: [
+          { productId: 'u7-lite', qty: 3 }
+        ],
+        ups: [
+          { productId: 'unifi-ups-tower', qty: 1 }
+        ],
+        racks: [ ]
+      },
+      tplink: {
+        router: 'er7206',
+        switches: [
+          { productId: 'sg2210mp', qty: 1 }
+        ],
+        accessPoints: [
+          { productId: 'eap720', qty: 3 }
+        ],
+        ups: [
+          { productId: 'apc-850', qty: 1 }
+        ],
+        racks: []
+      },
+      allinone: {
+        router: 'udr7',
+        switches: [],
+        accessPoints: [],
+        ups: [
+          { productId: 'apc-850', qty: 1 }
+        ],
+        racks: []
+      }
+    };
+
+    const MSRP_NOTE = 'Precios de lista (MSRP) y precios comunes en tiendas al 13 de abril de 2026. El precio final puede cambiar según el proveedor, el envío y la disponibilidad.';
+    const $ = (id) => document.getElementById(id);
+    const currency = (v) => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(v||0));
+
+    const NETWORK_PRODUCTS = Object.entries(NETWORK_CATALOG).flatMap(([system, config]) => ([
+      ...config.routers.map((item) => ({ ...item, system, category: 'router' })),
+      ...config.switches.map((item) => ({ ...item, system, category: 'switch' })),
+      ...config.accessPoints.map((item) => ({ ...item, system, category: 'ap' })),
+      ...config.ups.map((item) => ({ ...item, system, category: 'ups' })),
+      ...config.racks.map((item) => ({ ...item, system, category: 'rack' }))
+    ]));
+    const WIFI_PLANNER_KEY = 'imsdaWifiPlannerEstimate';
+    let plannerEstimate = null;
+    let plannerApplied = false;
+    const AP_METADATA = { 'u7-lite':{estimatedWatts:13,indoorOutdoor:'indoor'}, 'u7-pro-xg':{estimatedWatts:21,indoorOutdoor:'outdoor'}, 'u7-pro-wall':{estimatedWatts:21,indoorOutdoor:'indoor'}, 'eap720':{estimatedWatts:13,indoorOutdoor:'indoor'}, 'eap773':{estimatedWatts:21,indoorOutdoor:'outdoor'}, 'eap775':{estimatedWatts:21,indoorOutdoor:'indoor'} };
+
+    const baseSectionConfig = [
+      { key: 'routers', include: 'includeRouter', section: 'routerSection', select: 'routerOption', qty: 'routerQty', unit: 'routerUnitCost', total: 'routerLineTotal', label: 'Routers', recommendation: 'routerRecommendation' },
+      { key: 'ups', include: 'includeUps', section: 'upsSection', select: 'upsOption', qty: 'upsQty', unit: 'upsUnitCost', total: 'upsLineTotal', label: 'UPS' },
+      { key: 'racks', include: 'includeRack', section: 'rackSection', select: 'rackOption', qty: 'rackQty', unit: 'rackUnitCost', total: 'rackLineTotal', label: 'Racks' }
+    ];
+
+    window.switchLines = [{ productId: '', qty: 1 }];
+    window.accessPointLines = [{ productId: '', qty: 1 }];
+    validateSwitchMetadata();
+
+    function currentStack(){ return $('stackType').value; }
+    function currentMode(){ return $('stackMode').value; }
+    function isDualModeStack(stackKey = currentStack()){ return stackKey === 'unifi' || stackKey === 'tplink'; }
+    function getItems(key){ return NETWORK_CATALOG[currentStack()][key] || []; }
+    function catalogProductsFor(category){
+      return NETWORK_PRODUCTS.filter((item) => item.system === currentStack() && item.category === category).map((item) => {
+        if(category === 'switch') return item;
+        if(category === 'ap'){
+          const md = AP_METADATA[item.id] || {};
+          return { ...item, isPoePowered: true, estimatedWatts: md.estimatedWatts ?? item.estimatedWatts ?? 20, indoorOutdoor: md.indoorOutdoor ?? item.indoorOutdoor ?? 'indoor' };
+        }
+        return item;
+      });
+    }
+
+    function validateSwitchMetadata(){
+      const warnings = [];
+      const seenIds = new Set();
+      Object.entries(NETWORK_CATALOG).forEach(([stackKey, config]) => {
+        (config.switches || []).forEach((sw, index) => {
+          const label = `${stackKey}.switches[${index}]`;
+          if(!sw.id){ warnings.push(`${label} missing id`); return; }
+          if(seenIds.has(sw.id)) warnings.push(`Duplicate switch id: ${sw.id}`);
+          seenIds.add(sw.id);
+          if(typeof sw.totalPorts !== 'number') warnings.push(`${sw.id} missing totalPorts`);
+          if(typeof sw.isPoe !== 'boolean') warnings.push(`${sw.id} missing isPoe`);
+          if(typeof sw.poePorts !== 'number') warnings.push(`${sw.id} missing poePorts`);
+          if(typeof sw.poeBudgetWatts !== 'number') warnings.push(`${sw.id} missing poeBudgetWatts`);
+          if(sw.isPoe === true && sw.poePorts <= 0) warnings.push(`${sw.id} isPoe true but poePorts <= 0`);
+          if(sw.isPoe === true && sw.poeBudgetWatts <= 0) warnings.push(`${sw.id} isPoe true but poeBudgetWatts <= 0`);
+          if(sw.isPoe === false && (sw.poePorts > 0 || sw.poeBudgetWatts > 0)) warnings.push(`${sw.id} isPoe false but PoE values are > 0`);
+        });
+      });
+      if(warnings.length){
+        console.warn('Network Quote Generator switch metadata validation warnings:');
+        warnings.forEach((w) => console.warn(`- ${w}`));
+      }
+      return warnings;
+    }
+
+    function parsePositiveInt(value){
+      const n = Number(value);
+      return Number.isInteger(n) && n >= 0 ? n : null;
+    }
+    function computePoeCapacity(){
+      const switchProducts = catalogProductsFor('switch');
+      const apProducts = catalogProductsFor('ap');
+      let availablePorts = 0, availableBudget = 0, apsNeedingPoe = 0, estimatedApWatts = 0;
+      if($('includeSwitch').checked){
+        window.switchLines.forEach((line) => {
+          const sw = switchProducts.find((s) => s.id === line.productId);
+          if(!sw) return;
+          availablePorts += (sw.poePorts || 0) * line.qty;
+          availableBudget += (sw.poeBudgetWatts || 0) * line.qty;
+        });
+      }
+      if($('includeAccessPoint').checked && currentStack()!=='allinone'){
+        window.accessPointLines.forEach((line) => {
+          const ap = apProducts.find((a) => a.id === line.productId);
+          if(!ap || !ap.isPoePowered) return;
+          apsNeedingPoe += line.qty;
+          estimatedApWatts += (ap.estimatedWatts || 20) * line.qty;
+        });
+      } else if(plannerEstimate?.totalApCount){
+        apsNeedingPoe = plannerEstimate.totalApCount;
+        estimatedApWatts = plannerEstimate.totalApCount * 20;
+      }
+      const requiredWithBuffer = Math.ceil(estimatedApWatts * 1.25);
+      return { availablePorts, availableBudget, apsNeedingPoe, estimatedApWatts, requiredWithBuffer };
+    }
+
+    function recommendSwitchSetupFromPlanner(apCount, recommendedSwitchPorts = 0){
+      const apDemand = Math.max(0, Math.trunc(Number(apCount) || 0));
+      if(apDemand <= 0) return null;
+
+      const switchProducts = catalogProductsFor('switch')
+        .filter((sw) => sw.isPoe === true && sw.poePorts > 0 && sw.poeBudgetWatts > 0 && sw.totalPorts > 0);
+      if(!switchProducts.length) return null;
+
+      const estimatedApWatts = apDemand * 20;
+      const requiredWithBuffer = Math.ceil(estimatedApWatts * 1.25);
+      const requestedPortCapacity = Math.max(0, Math.trunc(Number(recommendedSwitchPorts) || 0));
+      const requiredTotalPorts = Math.max(apDemand + 2, requestedPortCapacity);
+
+      let best = null;
+      switchProducts.forEach((sw) => {
+        const minQtyByPoePorts = Math.ceil(apDemand / sw.poePorts);
+        const minQtyByPoeBudget = Math.ceil(requiredWithBuffer / sw.poeBudgetWatts);
+        const minQtyByTotalPorts = Math.ceil(requiredTotalPorts / sw.totalPorts);
+        const qty = Math.max(1, minQtyByPoePorts, minQtyByPoeBudget, minQtyByTotalPorts);
+        const setup = {
+          productId: sw.id,
+          switchName: sw.name,
+          qty,
+          poePorts: sw.poePorts * qty,
+          poeBudgetWatts: sw.poeBudgetWatts * qty,
+          totalPorts: sw.totalPorts * qty,
+          cost: sw.msrp * qty,
+          requiredWithBuffer,
+          apDemand
+        };
+        setup.portSpare = setup.totalPorts - apDemand;
+
+        if(
+          setup.poePorts < apDemand ||
+          setup.poeBudgetWatts < requiredWithBuffer ||
+          setup.totalPorts < requiredTotalPorts
+        ) return;
+
+        if(!best){ best = setup; return; }
+        const costDelta = setup.cost - best.cost;
+        const isReasonablyPriced = costDelta <= 150;
+        const shouldReplace =
+          (setup.qty < best.qty && isReasonablyPriced) ||
+          (setup.qty === best.qty && setup.cost < best.cost) ||
+          (setup.qty === best.qty && setup.cost === best.cost && setup.portSpare > best.portSpare);
+        if(shouldReplace) best = setup;
+      });
+
+      if(best) return best;
+
+      // Fallback: choose the cheapest valid option if preference balancing didn't select one.
+      const fallback = switchProducts
+        .map((sw) => {
+          const qty = Math.max(
+            1,
+            Math.ceil(apDemand / sw.poePorts),
+            Math.ceil(requiredWithBuffer / sw.poeBudgetWatts),
+            Math.ceil(requiredTotalPorts / sw.totalPorts)
+          );
+          return {
+            productId: sw.id,
+            switchName: sw.name,
+            qty,
+            poePorts: sw.poePorts * qty,
+            poeBudgetWatts: sw.poeBudgetWatts * qty,
+            totalPorts: sw.totalPorts * qty,
+            cost: sw.msrp * qty,
+            requiredWithBuffer,
+            apDemand
+          };
+        })
+        .filter((setup) => (
+          setup.poePorts >= apDemand &&
+          setup.poeBudgetWatts >= requiredWithBuffer &&
+          setup.totalPorts >= requiredTotalPorts
+        ))
+        .sort((a, b) => a.cost - b.cost || a.qty - b.qty)[0] || null;
+      return fallback;
+    }
+    function renderPoePanel(){
+      const s = computePoeCapacity();
+      let status = 'Parece adecuado', tone = '#166534';
+      const warnings = [];
+      if(s.apsNeedingPoe > 0 && s.availablePorts === 0){ status = 'Capacidad PoE insuficiente'; tone = '#991b1b'; warnings.push('Puede que los switches PoE que elegimos no alcancen para la cantidad estimada de puntos de acceso.'); }
+      if(s.availablePorts < s.apsNeedingPoe){ status = 'Capacidad PoE insuficiente'; tone = '#991b1b'; warnings.push(`Puntos de acceso que requieren PoE: ${s.apsNeedingPoe}. Puertos PoE disponibles: ${s.availablePorts}.`); }
+      if(s.availableBudget < s.requiredWithBuffer){ status = status === 'Parece adecuado' ? 'Se recomienda revisar' : status; tone = '#92400e'; warnings.push(`Presupuesto PoE estimado necesario con margen: ${s.requiredWithBuffer}W. Presupuesto PoE seleccionado: ${s.availableBudget}W.`); }
+      $('poeCapacityContent').innerHTML = `
+        <div>Puntos de acceso que requieren PoE: <strong>${s.apsNeedingPoe}</strong> · Puertos PoE disponibles: <strong>${s.availablePorts}</strong></div>
+        <div>Potencia estimada para puntos de acceso: <strong>${s.estimatedApWatts}W</strong> · Requerida con margen del 25%: <strong>${s.requiredWithBuffer}W</strong></div>
+        <div>Presupuesto PoE seleccionado: <strong>${s.availableBudget}W</strong></div>
+        <div class="poe-status" style="color:${tone};">Estado: ${status}</div>
+        ${warnings.length ? `<div>${warnings.join(' ')} Te recomendamos usar un switch PoE más grande, agregar otro switch PoE o usar inyectores PoE.</div>` : ''}
+      `;
+    }
+
+    function fillSelect(selectId, items, { includeNone = false, noneLabel = 'Elige una opción' } = {}){
+      const select = $(selectId);
+      const options = items.map((item)=>`<option value="${item.id}">${item.name}</option>`).join('');
+      select.innerHTML = includeNone ? `<option value="">${noneLabel}</option>${options}` : options;
+    }
+
+    function findItem(key, id){ return getItems(key).find((item)=>item.id===id) || getItems(key)[0] || null; }
+
+    function updateLine(section){
+      const enabled = $(section.include).checked;
+      const items = getItems(section.key);
+      const selectedId = $(section.select).value;
+      const chosen = selectedId ? (items.find((item)=>item.id===selectedId) || null) : null;
+      const qty = Math.max(1, Number($(section.qty).value || 1));
+      const lineTotal = enabled && chosen ? chosen.msrp * qty : 0;
+      $(section.unit).textContent = chosen ? `MSRP: ${currency(chosen.msrp)} c/u` : 'No hay opciones disponibles';
+      $(section.total).textContent = enabled && chosen ? `Total de la línea: ${currency(lineTotal)}` : 'Total de la línea: $0.00';
+      return { chosen, qty, subtotal: lineTotal };
+    }
+
+    function setSectionActiveState(section){
+      const panel = $(section.section);
+      panel.classList.toggle('active', $(section.include).checked);
+    }
+
+    function updateAPSectionState(){
+      const simple = currentStack()==='allinone';
+      const apSection = $('accessPointSection');
+      const apToggle = $('includeAccessPoint');
+      const addApButton = $('addAccessPointLineBtn');
+      $('apDisabledNote').style.display = simple ? 'block' : 'none';
+
+      if(simple){
+        apSection.classList.add('disabled-section');
+        apToggle.checked = false;
+        apToggle.disabled = true;
+        addApButton.disabled = true;
+      } else {
+        apSection.classList.remove('disabled-section');
+        apToggle.disabled = false;
+        addApButton.disabled = false;
+      }
+      document.querySelectorAll('#accessPointLineItems select, #accessPointLineItems input, #accessPointLineItems button').forEach((el) => {
+        el.disabled = simple;
+      });
+    }
+
+    function updateUnifiConditionalNotes(){
+      const isUnifi = currentStack() === 'unifi';
+      $('switchUnifiNote').style.display = isUnifi ? 'block' : 'none';
+      $('accessPointUnifiNote').style.display = isUnifi ? 'block' : 'none';
+    }
+
+    function cloneDefaultLines(lines){
+      return (lines || []).map((line) => ({
+        productId: line?.productId || '',
+        qty: Math.max(1, Number(line?.qty) || 1)
+      }));
+    }
+
+    function applySingleLineDefault({ key, includeId, selectId, qtyId, defaults }){
+      const availableItems = getItems(key);
+      const firstDefault = defaults?.[0] || null;
+      const hasDefault = Boolean(firstDefault?.productId) && availableItems.some((item) => item.id === firstDefault.productId);
+      $(includeId).checked = hasDefault;
+      $(selectId).value = hasDefault ? firstDefault.productId : '';
+      $(qtyId).value = hasDefault ? Math.max(1, Number(firstDefault.qty) || 1) : 1;
+    }
+
+    function clearStackSelections(){
+      $('includeRouter').checked = false;
+      $('routerOption').value = '';
+      $('routerQty').value = 1;
+      $('includeSwitch').checked = false;
+      $('includeAccessPoint').checked = false;
+      $('includeUps').checked = false;
+      $('upsQty').value = 1;
+      $('includeRack').checked = false;
+      $('rackQty').value = 1;
+      window.switchLines = [{ productId: catalogProductsFor('switch')[0]?.id || '', qty: 1 }];
+      window.accessPointLines = [{ productId: catalogProductsFor('ap')[0]?.id || '', qty: 1 }];
+    }
+
+    function applyStackDefaults(stackKey){
+      const defaults = STACK_DEFAULTS[stackKey] || {};
+      const isAllInOne = stackKey === 'allinone';
+
+      // Always refresh stack-filtered dropdown options first.
+      fillSelect('routerOption', getItems('routers'), { includeNone: true, noneLabel: 'Elige un router' });
+      fillSelect('upsOption', getItems('ups'));
+      fillSelect('rackOption', getItems('racks'));
+
+      clearStackSelections();
+
+      // Router default (single dropdown).
+      const routerId = defaults.router || '';
+      const hasRouterDefault = Boolean(routerId) && getItems('routers').some((item) => item.id === routerId);
+      $('includeRouter').checked = hasRouterDefault;
+      $('routerOption').value = hasRouterDefault ? routerId : '';
+      $('routerQty').value = 1;
+
+      // Switch defaults (multi-row behavior).
+      const switchDefaults = cloneDefaultLines(defaults.switches).filter((line) => catalogProductsFor('switch').some((item) => item.id === line.productId));
+      window.switchLines = switchDefaults.length ? switchDefaults : [{ productId: catalogProductsFor('switch')[0]?.id || '', qty: 1 }];
+      $('includeSwitch').checked = switchDefaults.length > 0;
+
+      // Access point defaults (multi-row behavior; skipped for All-in-One disabled behavior).
+      const accessPointDefaults = cloneDefaultLines(defaults.accessPoints).filter((line) => catalogProductsFor('ap').some((item) => item.id === line.productId));
+      if(isAllInOne){
+        window.accessPointLines = [{ productId: catalogProductsFor('ap')[0]?.id || '', qty: 1 }];
+        $('includeAccessPoint').checked = false;
+      } else {
+        window.accessPointLines = accessPointDefaults.length ? accessPointDefaults : [{ productId: catalogProductsFor('ap')[0]?.id || '', qty: 1 }];
+        $('includeAccessPoint').checked = accessPointDefaults.length > 0;
+      }
+
+      // UPS defaults.
+      applySingleLineDefault({
+        key: 'ups',
+        includeId: 'includeUps',
+        selectId: 'upsOption',
+        qtyId: 'upsQty',
+        defaults: cloneDefaultLines(defaults.ups)
+      });
+
+      // Rack defaults.
+      applySingleLineDefault({
+        key: 'racks',
+        includeId: 'includeRack',
+        selectId: 'rackOption',
+        qtyId: 'rackQty',
+        defaults: cloneDefaultLines(defaults.racks)
+      });
+
+      $('routerRecommendation').textContent = `Sistema seleccionado: ${NETWORK_CATALOG[currentStack()].label}. Elige el router, los switches, el UPS y el rack para preparar nuestra solicitud.`;
+      renderSwitchLines();
+      renderAccessPointLines();
+      updateAPSectionState();
+      updateUnifiConditionalNotes();
+      render();
+    }
+
+    function updateModeSelectorVisibility(){
+      $('stackModeField').style.display = isDualModeStack() ? 'flex' : 'none';
+    }
+
+    function handleModeSelectorChange(){
+      if(!isDualModeStack()) return;
+      if(currentMode() === 'simple'){
+        applyStackDefaults(currentStack());
+        return;
+      }
+      clearStackSelections();
+      renderSwitchLines();
+      renderAccessPointLines();
+      updateAPSectionState();
+      updateUnifiConditionalNotes();
+      render();
+    }
+
+    function handleTopStackChange(){
+      const stackKey = currentStack();
+      const useModeSelector = isDualModeStack(stackKey);
+      if(useModeSelector){
+        $('stackMode').value = 'simple';
+      }
+      updateModeSelectorVisibility();
+      repopulateByStack();
+    }
+
+    function repopulateByStack(){
+      baseSectionConfig.forEach((section)=>{
+        if(section.select === 'routerOption'){
+          fillSelect(section.select, getItems(section.key), { includeNone: true, noneLabel: 'Elige un router' });
+          return;
+        }
+        fillSelect(section.select, getItems(section.key));
+      });
+      if(isDualModeStack()){
+        if(currentMode() === 'simple'){
+          applyStackDefaults(currentStack());
+        } else {
+          clearStackSelections();
+          renderSwitchLines();
+          renderAccessPointLines();
+          updateAPSectionState();
+          updateUnifiConditionalNotes();
+          render();
+        }
+        return;
+      }
+      applyStackDefaults(currentStack());
+    }
+
+    function ensureLineCompatibility(line, category){
+      const products = catalogProductsFor(category);
+      if(!products.some((item) => item.id === line.productId)) line.productId = products[0]?.id || '';
+      line.qty = Math.max(1, Number(line.qty) || 1);
+    }
+
+    function renderLineItems({ containerId, category, lines, includeLabel, removeClass, selectClass, qtyClass, disabled }){
+      $(containerId).innerHTML = lines.map((line, index) => {
+        ensureLineCompatibility(line, category);
+        const products = catalogProductsFor(category);
+        const selected = products.find((item) => item.id === line.productId) || null;
+        const lineTotal = selected ? selected.msrp * line.qty : 0;
+        const apRole = category === 'ap' ? (selected?.indoorOutdoor || 'indoor') : '';
+        const apRoleAttr = category === 'ap' ? `data-ap-role="${apRole}" data-stack="${currentStack()}"` : '';
+        const apQtyAttr = category === 'ap' ? `data-ap-qty="${apRole}" data-stack="${currentStack()}"` : '';
+        return `<div class="line-item" data-line-index="${index}" ${apRoleAttr}>
+          <div class="line-item-head">
+            <span class="line-title">Línea ${index + 1}</span>
+            ${lines.length > 1 ? `<button type="button" class="mini-btn ${removeClass}" data-remove-index="${index}" ${disabled ? 'disabled' : ''}>Quitar</button>` : ''}
+          </div>
+          <div class="grid">
+            <div class="field">
+              <label>Modelo de ${includeLabel}</label>
+              <select class="${selectClass}" data-line-index="${index}" ${apRoleAttr} ${disabled ? 'disabled' : ''}>
+                ${products.map((item) => `<option value="${item.id}" ${line.productId === item.id ? 'selected' : ''}>${item.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field">
+              <label>Cantidad</label>
+              <input class="${qtyClass}" data-line-index="${index}" ${apQtyAttr} type="number" min="1" step="1" value="${line.qty}" ${disabled ? 'disabled' : ''} />
+            </div>
+          </div>
+          <div class="line-cost"><span>Costo unitario: ${currency(selected?.msrp || 0)}</span><span>Total de la línea: ${currency(disabled ? 0 : lineTotal)}</span></div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderSwitchLines(){
+      renderLineItems({
+        containerId: 'switchLineItems',
+        category: 'switch',
+        lines: window.switchLines,
+        includeLabel: 'switch',
+        removeClass: 'switch-remove-btn',
+        selectClass: 'switch-model-select',
+        qtyClass: 'switch-qty-input',
+        disabled: false
+      });
+    }
+
+    function renderAccessPointLines(){
+      renderLineItems({
+        containerId: 'accessPointLineItems',
+        category: 'ap',
+        lines: window.accessPointLines,
+        includeLabel: 'punto de acceso',
+        removeClass: 'ap-remove-btn',
+        selectClass: 'ap-model-select',
+        qtyClass: 'ap-qty-input',
+        disabled: currentStack()==='allinone'
+      });
+    }
+
+    function render(){
+      baseSectionConfig.forEach((section)=>setSectionActiveState(section));
+      setSectionActiveState({ include: 'includeSwitch', section: 'switchSection' });
+      setSectionActiveState({ include: 'includeAccessPoint', section: 'accessPointSection' });
+
+      const rows = [];
+      let total = 0;
+      baseSectionConfig.forEach((section)=>{
+        const { chosen, qty, subtotal } = updateLine(section);
+        const enabled = $(section.include).checked;
+        if(enabled && chosen && qty>0){
+          total += subtotal;
+          rows.push(`<tr><td>${section.label}</td><td>${chosen.name}</td><td>Cant. ${qty} · ${currency(chosen.msrp)} c/u</td><td>${currency(subtotal)}</td></tr>`);
+        }
+      });
+
+      if($('includeSwitch').checked){
+        window.switchLines.forEach((line) => {
+          ensureLineCompatibility(line, 'switch');
+          const selected = catalogProductsFor('switch').find((item) => item.id === line.productId);
+          if(!selected || !line.productId) return;
+          const subtotal = selected.msrp * line.qty;
+          total += subtotal;
+          rows.push(`<tr><td>Switches</td><td>${selected.name}</td><td>Cant. ${line.qty} · ${currency(selected.msrp)} c/u</td><td>${currency(subtotal)}</td></tr>`);
+        });
+      }
+
+      if($('includeAccessPoint').checked && currentStack()!=='allinone'){
+        window.accessPointLines.forEach((line) => {
+          ensureLineCompatibility(line, 'ap');
+          const selected = catalogProductsFor('ap').find((item) => item.id === line.productId);
+          if(!selected || !line.productId) return;
+          const subtotal = selected.msrp * line.qty;
+          total += subtotal;
+          rows.push(`<tr><td>Puntos de acceso</td><td>${selected.name}</td><td>Cant. ${line.qty} · ${currency(selected.msrp)} c/u</td><td>${currency(subtotal)}</td></tr>`);
+        });
+      }
+
+      $('outChurch').textContent = $('churchName').value.trim() || 'No indicado';
+      const contact = `${$('contactName').value.trim() || 'No indicado'}${$('contactEmail').value.trim() ? ' · '+$('contactEmail').value.trim() : ''}`;
+      $('outContact').textContent = contact;
+      $('outFacility').textContent = `Edificio de ${Number($('facilitySize').value||0).toLocaleString()} pies² · Plazo: ${$('timeline').value}`;
+      $('outStack').textContent = NETWORK_CATALOG[currentStack()].label;
+      $('outNotes').textContent = $('notes').value.trim() || 'No agregamos notas adicionales.';
+      $('requestRows').innerHTML = rows.length ? rows.join('') : '<tr><td colspan="4" class="empty">Todavía no hemos elegido ninguna sección.</td></tr>';
+      $('totalOutput').textContent = `Total estimado: ${currency(total)}`;
+      renderPoePanel();
+
+      const bodyLines = [
+        `Solicitud de cotización de red`,
+        `Fecha: ${new Date().toLocaleDateString('es-US',{year:'numeric',month:'long',day:'numeric'})}`,
+        '',
+        `Iglesia: ${$('outChurch').textContent}`,
+        `Contacto: ${$('outContact').textContent}`,
+        `Edificio: ${$('outFacility').textContent}`,
+        `Sistema: ${$('outStack').textContent}`,
+        '',
+        'Selecciones:'
+      ];
+
+      if(rows.length===0){
+        bodyLines.push('- Todavía no hemos elegido ninguna sección.');
+      } else {
+        baseSectionConfig.forEach((section)=>{
+          const { chosen, qty, subtotal } = updateLine(section);
+          const enabled = $(section.include).checked;
+          if(enabled && chosen && qty>0){
+            bodyLines.push(`- ${section.label}: ${chosen.name} | Cant. ${qty} | ${currency(subtotal)}`);
+          }
+        });
+
+        if($('includeSwitch').checked){
+          window.switchLines.forEach((line) => {
+            const selected = catalogProductsFor('switch').find((item) => item.id === line.productId);
+            if(selected && line.productId){
+              bodyLines.push(`- Switches: ${selected.name} | Cant. ${line.qty} | ${currency(selected.msrp * line.qty)}`);
+            }
+          });
+        }
+
+        if($('includeAccessPoint').checked && currentStack()!=='allinone'){
+          window.accessPointLines.forEach((line) => {
+            const selected = catalogProductsFor('ap').find((item) => item.id === line.productId);
+            if(selected && line.productId){
+              bodyLines.push(`- Puntos de acceso: ${selected.name} | Cant. ${line.qty} | ${currency(selected.msrp * line.qty)}`);
+            }
+          });
+        }
+      }
+      bodyLines.push('', `Total estimado: ${currency(total)}`, '', `Notas: ${$('outNotes').textContent}`);
+
+      $('mailtoLink').href = `mailto:technology@imsda.org?subject=${encodeURIComponent(`Solicitud de cotización de red - ${$('outChurch').textContent}`)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+    }
+
+
+    function sanitizePlannerEstimate(payload){
+      if(!payload || payload.source !== 'wifi-planner') return null;
+      const indoor = Math.max(0, Math.trunc(Number(payload.indoorApCount) || 0));
+      const outdoor = Math.max(0, Math.trunc(Number(payload.outdoorApCount) || 0));
+      const computedTotal = indoor + outdoor;
+      const rawTotal = Math.max(0, Math.trunc(Number(payload.totalApCount) || 0));
+      return {
+        source: 'wifi-planner',
+        version: Number(payload.version) || 1,
+        timestamp: payload.timestamp || '',
+        preferredStack: payload.preferredStack || 'unsure',
+        indoorApCount: indoor,
+        outdoorApCount: outdoor,
+        totalApCount: rawTotal === computedTotal ? rawTotal : computedTotal,
+        constructionDifficulty: payload.constructionDifficulty || 'medium',
+        usageLevel: payload.usageLevel || 'basic',
+        recommendedRouterId: typeof payload.recommendedRouterId === 'string' ? payload.recommendedRouterId : '',
+        facilitySize: Math.max(0, Math.trunc(Number(payload.facilitySize) || 0)),
+        estimatedDevices: Math.max(0, Math.trunc(Number(payload.estimatedDevices) || 0)),
+        recommendedSwitchPorts: Math.max(0, Math.trunc(Number(payload.recommendedSwitchPorts) || 0)),
+        allInOneEligible: Boolean(payload.allInOneEligible),
+        notes: Array.isArray(payload.notes) ? payload.notes : []
+      };
+    }
+
+    function readWifiPlannerPayload(){
+      const raw = localStorage.getItem(WIFI_PLANNER_KEY);
+      console.log('WiFi planner raw localStorage value:', raw);
+      if(!raw) return null;
+      try {
+        const parsed = JSON.parse(raw);
+        console.log('WiFi planner parsed object:', parsed);
+        return sanitizePlannerEstimate(parsed);
+      } catch (error) {
+        console.warn('Failed to parse WiFi planner estimate:', error);
+        return null;
+      }
+    }
+
+    function setPlannerDebugPanel(debug){
+      const panel = $('plannerDebugPanel');
+      if(new URLSearchParams(window.location.search).get('debugWifi') !== '1'){
+        panel.style.display = 'none';
+        return;
+      }
+      panel.style.display = 'block';
+      panel.innerHTML = `<strong>Depuración de importación del planificador WiFi</strong><br>Sistema preferido: ${debug.preferredStack}<br>Puntos de acceso interiores recibidos: ${debug.indoor}<br>Puntos de acceso exteriores recibidos: ${debug.outdoor}<br>Selección del sistema exitosa: ${debug.stackSelected ? 'sí' : 'no'}<br>Autollenado de puntos de acceso interiores exitoso: ${debug.indoorSet ? 'sí' : 'no'}<br>Autollenado de puntos de acceso exteriores exitoso: ${debug.outdoorSet ? 'sí' : 'no'}<br>IDs de selector/campo faltantes: ${debug.missing.length ? debug.missing.join(', ') : 'ninguno'}`;
+    }
+
+    function applyWifiPlannerEstimate(force = false){
+      if(plannerApplied && !force) return;
+      const payload = readWifiPlannerPayload();
+      if(!payload) return;
+      plannerEstimate = payload;
+      console.log('Detected preferredStack:', payload.preferredStack);
+      console.log('Detected indoorApCount:', payload.indoorApCount);
+      console.log('Detected outdoorApCount:', payload.outdoorApCount);
+
+      const debug = { preferredStack: payload.preferredStack, indoor: payload.indoorApCount, outdoor: payload.outdoorApCount, stackSelected: false, indoorSet: false, outdoorSet: payload.outdoorApCount === 0, missing: [] };
+      const mappedStack = payload.preferredStack === 'unifi' ? 'unifi' : payload.preferredStack === 'tplink' ? 'tplink' : payload.preferredStack === 'all-in-one' ? 'allinone' : '';
+
+      if(mappedStack){
+        $('stackType').value = mappedStack;
+        $('stackType').dispatchEvent(new Event('change', { bubbles: true }));
+        debug.stackSelected = true;
+      }
+
+      $('plannerPrefillNote').style.display = 'block';
+      $('plannerPrefillNote').textContent = 'Trajimos la recomendación del estimador de red. Llenamos el router, los puntos de acceso y los switches donde fue posible. Revísalos antes de terminar.';
+      if(payload.preferredStack === 'unsure'){
+        $('plannerPrefillNote').textContent += ' El planificador no eligió un sistema. Elige UniFi o TP-Link antes de terminar.';
+      }
+      if(payload.preferredStack === 'all-in-one' && !payload.allInOneEligible){
+        $('plannerPrefillNote').textContent += ' Aviso del estimador: este edificio podría funcionar mejor con un sistema completo UniFi o TP-Link.';
+      }
+
+      if(payload.facilitySize){
+        $('facilitySize').value = payload.facilitySize;
+      }
+      if(payload.recommendedRouterId){
+        const routerExists = getItems('routers').some((router) => router.id === payload.recommendedRouterId);
+        if(routerExists){
+          $('includeRouter').checked = true;
+          $('routerOption').value = payload.recommendedRouterId;
+          $('routerQty').value = 1;
+          $('plannerPrefillNote').textContent += ` Elegimos el router recomendado: ${$('routerOption').selectedOptions[0]?.textContent || payload.recommendedRouterId}.`;
+        }
+      }
+
+      if(currentStack() === 'unifi' || currentStack() === 'tplink'){
+        $('includeAccessPoint').checked = true;
+        $('includeAccessPoint').dispatchEvent(new Event('change', { bubbles: true }));
+        const aps = catalogProductsFor('ap');
+        const indoorOption = aps.find((ap) => ap.indoorOutdoor === 'indoor') || aps[0];
+        const outdoorOption = aps.find((ap) => ap.indoorOutdoor === 'outdoor');
+
+        console.log('Trying AP option/quantity input for indoor:', indoorOption?.id, payload.indoorApCount);
+        window.accessPointLines = [{ productId: indoorOption?.id || '', qty: Math.max(1, payload.indoorApCount) }];
+        debug.indoorSet = Boolean(indoorOption);
+        if(!indoorOption) debug.missing.push('selector/campo de punto de acceso interior');
+
+        if(payload.outdoorApCount > 0){
+          console.log('Trying AP option/quantity input for outdoor:', outdoorOption?.id, payload.outdoorApCount);
+          if(outdoorOption){
+            window.accessPointLines.push({ productId: outdoorOption.id, qty: payload.outdoorApCount });
+            debug.outdoorSet = true;
+          } else {
+            debug.outdoorSet = false;
+            debug.missing.push('selector/campo de punto de acceso exterior');
+          }
+        }
+
+        const switchRecommendation = recommendSwitchSetupFromPlanner(payload.totalApCount, payload.recommendedSwitchPorts);
+        if(switchRecommendation){
+          $('includeSwitch').checked = true;
+          $('includeSwitch').dispatchEvent(new Event('change', { bubbles: true }));
+          window.switchLines = [{
+            productId: switchRecommendation.productId,
+            qty: switchRecommendation.qty
+          }];
+          renderSwitchLines();
+          document.querySelectorAll('.switch-model-select').forEach((el) => el.dispatchEvent(new Event('change', { bubbles: true })));
+          document.querySelectorAll('.switch-qty-input').forEach((el) => el.dispatchEvent(new Event('input', { bubbles: true })));
+          $('plannerPrefillNote').textContent += ` Elegimos ${switchRecommendation.switchName} × ${switchRecommendation.qty}. Capacidad de switch recomendada: ${payload.recommendedSwitchPorts || switchRecommendation.totalPorts} puertos. Puntos de acceso que requieren PoE: ${switchRecommendation.apDemand}. Puertos PoE disponibles: ${switchRecommendation.poePorts}. Presupuesto PoE requerido: ${switchRecommendation.requiredWithBuffer}W. Presupuesto PoE seleccionado: ${switchRecommendation.poeBudgetWatts}W.`;
+        } else {
+          $('plannerPrefillNote').textContent += ' No pudimos elegir un switch automáticamente para esta cantidad de puntos de acceso. Elige los switches a mano.';
+        }
+      }
+
+      renderAccessPointLines();
+      document.querySelectorAll('.ap-model-select').forEach((el) => el.dispatchEvent(new Event('change', { bubbles: true })));
+      document.querySelectorAll('.ap-qty-input').forEach((el) => el.dispatchEvent(new Event('input', { bubbles: true })));
+      render();
+      if(payload.notes.length){
+        const estimatorNotes = `Estimador de red:\n${payload.notes.map((note) => `• ${note}`).join('\n')}`;
+        $('notes').value = $('notes').value.trim() ? `${$('notes').value.trim()}\n\n${estimatorNotes}` : estimatorNotes;
+        render();
+      }
+      setPlannerDebugPanel(debug);
+      plannerApplied = true;
+    }
+
+    function scheduleWifiPlannerEstimateImport(){
+      const start = Date.now();
+      const attempt = () => {
+        if(document.querySelector('.ap-qty-input') || (Date.now() - start) > 2000){
+          applyWifiPlannerEstimate();
+          return;
+        }
+        requestAnimationFrame(attempt);
+      };
+      requestAnimationFrame(attempt);
+    }
+
+function init(){
+      $('generatedDate').textContent = `Generado el ${new Date().toLocaleDateString('es-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
+      $('pricingNoteTop').textContent = MSRP_NOTE;
+      $('pricingNoteSummary').textContent = MSRP_NOTE;
+
+      baseSectionConfig.forEach((section)=>{
+        $(section.include).addEventListener('change', render);
+        $(section.select).addEventListener('change', render);
+        $(section.qty).addEventListener('input', render);
+      });
+
+      $('includeSwitch').addEventListener('change', render);
+      $('includeAccessPoint').addEventListener('change', render);
+      $('addSwitchLineBtn').addEventListener('click', () => {
+        window.switchLines.push({ productId: catalogProductsFor('switch')[0]?.id || '', qty: 1 });
+        renderSwitchLines();
+        render();
+      });
+      $('addAccessPointLineBtn').addEventListener('click', () => {
+        if(currentStack()==='allinone') return;
+        window.accessPointLines.push({ productId: catalogProductsFor('ap')[0]?.id || '', qty: 1 });
+        renderAccessPointLines();
+        render();
+      });
+
+      $('switchLineItems').addEventListener('input', (event) => {
+        const index = Number(event.target.dataset.lineIndex);
+        const line = window.switchLines[index];
+        if(!line) return;
+        if(event.target.classList.contains('switch-model-select')) line.productId = event.target.value;
+        if(event.target.classList.contains('switch-qty-input')) line.qty = Math.max(1, Number(event.target.value) || 1);
+        ensureLineCompatibility(line, 'switch');
+        renderSwitchLines();
+        render();
+      });
+
+      $('switchLineItems').addEventListener('click', (event) => {
+        if(!event.target.classList.contains('switch-remove-btn')) return;
+        const removeIndex = Number(event.target.dataset.removeIndex);
+        window.switchLines.splice(removeIndex, 1);
+        if(!window.switchLines.length) window.switchLines.push({ productId: catalogProductsFor('switch')[0]?.id || '', qty: 1 });
+        renderSwitchLines();
+        render();
+      });
+
+      $('accessPointLineItems').addEventListener('input', (event) => {
+        const index = Number(event.target.dataset.lineIndex);
+        const line = window.accessPointLines[index];
+        if(!line) return;
+        if(event.target.classList.contains('ap-model-select')) line.productId = event.target.value;
+        if(event.target.classList.contains('ap-qty-input')) line.qty = Math.max(1, Number(event.target.value) || 1);
+        ensureLineCompatibility(line, 'ap');
+        renderAccessPointLines();
+        render();
+      });
+
+      $('accessPointLineItems').addEventListener('click', (event) => {
+        if(!event.target.classList.contains('ap-remove-btn')) return;
+        const removeIndex = Number(event.target.dataset.removeIndex);
+        window.accessPointLines.splice(removeIndex, 1);
+        if(!window.accessPointLines.length) window.accessPointLines.push({ productId: catalogProductsFor('ap')[0]?.id || '', qty: 1 });
+        renderAccessPointLines();
+        render();
+      });
+
+      ['churchName','cityState','contactName','contactEmail','facilitySize','timeline','notes'].forEach((id)=>{
+        $(id).addEventListener('input', render);
+        $(id).addEventListener('change', render);
+      });
+
+      $('stackType').addEventListener('change', handleTopStackChange);
+      $('stackMode').addEventListener('change', handleModeSelectorChange);
+      $('printBtn').addEventListener('click', ()=>window.print());
+      $('plannerPrefillNote').insertAdjacentHTML('afterend','<button id="reapplyPlannerBtn" type="button" class="mini-btn" style="display:none;margin-bottom:.85rem;">Aplicar de nuevo la estimación del planificador WiFi</button>');
+      $('reapplyPlannerBtn').addEventListener('click', () => applyWifiPlannerEstimate(true));
+
+      updateModeSelectorVisibility();
+      repopulateByStack();
+      scheduleWifiPlannerEstimateImport();
+      if(readWifiPlannerPayload()) $('reapplyPlannerBtn').style.display = 'inline-flex';
+    }
+
+    init();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

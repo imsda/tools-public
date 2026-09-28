@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Archivos locales (misma carpeta):
+    - Logos/Logo Template White.png  (logotipo predeterminado)
+    - Logos/SDA Logo.png  (logotipo predeterminado)
+    - Logos/facebook.png  (logotipo predeterminado)
+    - Logos/instagram.png  (logotipo predeterminado)
+    - Logos/link.png  (logotipo predeterminado)
+    - tools-nav.css  (opcional - estilos de la navegación superior compartida; la página funciona sin él)
+    - tools-nav.js  (opcional - navegación superior compartida + lista de herramientas; la página funciona sin él)
+  Externas (internet):
+    - html-to-image - necesario para exportar imagen/PDF: https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js
+    - jsPDF - necesario para exportar PDF: https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js
+    - Google Fonts - opcional, usa fuentes del sistema si no está disponible
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generador de tarjetas de presentación</title>
+  <!--
+    Rutas de los logotipos para las plantillas de tarjeta.
+    Actualiza estos dos valores src si cambia la ubicación oficial de los logotipos en el repositorio:
+    - Logotipo frontal: Logos/Logo Template White.png
+    - Símbolo posterior: Logos/SDA Logo.png
+  -->
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;1,400&display=swap");
+
+    :root {
+      --nad-denim: #003B5C;
+      --white: #ffffff;
+      --paper: #f4f5f6;
+      --surface: #ffffff;
+      --surface-muted: #fafbfc;
+      --ink: #14232f;
+      --ink-soft: #475864;
+      --border: #cfd7dd;
+      --border-strong: #adb9c4;
+      --danger: #b42318;
+      --success: #0f6b45;
+      --card-width: 3.5in;
+      --card-height: 2in;
+      --safe-pad-x: 0.18in;
+      --safe-pad-y: 0.15in;
+      --preview-radius: 4px;
+      --font-sans: "Noto Sans", Arial, Helvetica, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.45;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .app-shell {
+      width: min(1360px, calc(100% - 2rem));
+      margin: 1rem auto;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .app-header {
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      background: #f8fafb;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .app-header-left {
+      min-width: 0;
+    }
+
+    .app-header h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2.1vw, 1.85rem);
+      font-weight: 700;
+      color: var(--nad-denim);
+    }
+
+    .app-header p {
+      margin: 0.35rem 0 0;
+      max-width: 72ch;
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+    }
+
+    .app-header .back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      margin-top: 0.35rem;
+      width: fit-content;
+      padding: 0.7rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f4f8fa;
+      color: var(--nad-denim);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .app-header .back:hover {
+      background: #edf4f7;
+      text-decoration: none;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
+      min-height: 780px;
+    }
+
+    .controls {
+      padding: 1rem;
+      border-right: 1px solid var(--border);
+      background: var(--surface-muted);
+      overflow-y: auto;
+      max-height: calc(100vh - 2rem);
+    }
+
+    .panel {
+      margin-bottom: 0.9rem;
+      padding: 0.95rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .panel h2 {
+      margin: 0 0 0.8rem;
+      font-size: 0.97rem;
+      font-weight: 700;
+      color: var(--nad-denim);
+      letter-spacing: 0.01em;
+    }
+
+    .panel p.helper,
+    .status,
+    .inline-note,
+    .footnote,
+    .preview-meta p {
+      font-size: 0.82rem;
+      color: var(--ink-soft);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .field.full,
+    .toggle-row,
+    .button-row,
+    .status,
+    .share-row,
+    .guide-row {
+      grid-column: 1 / -1;
+    }
+
+    label,
+    legend {
+      font-size: 0.79rem;
+      font-weight: 700;
+      color: #234153;
+    }
+
+    input,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="file"],
+    textarea {
+      width: 100%;
+      border: 1px solid var(--border-strong);
+      padding: 0.62rem 0.7rem;
+      background: #fff;
+      color: var(--ink);
+      border-radius: 0;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    input[type="file"]:focus,
+    textarea:focus,
+    button:focus-visible,
+    input[type="checkbox"]:focus-visible {
+      outline: none;
+      border-color: var(--nad-denim);
+      box-shadow: 0 0 0 3px rgba(0, 59, 92, 0.12);
+    }
+
+    input[aria-invalid="true"],
+    textarea[aria-invalid="true"] {
+      border-color: rgba(180, 35, 24, 0.85);
+      box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.12);
+    }
+
+    .toggle-row,
+    .guide-row {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      min-height: 40px;
+    }
+
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.6rem 1rem;
+      align-items: start;
+    }
+
+    .toggle-grid .toggle-row {
+      grid-column: auto;
+      min-height: 0;
+      padding: 0.08rem 0;
+    }
+
+    .toggle-row input,
+    .guide-row input {
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--nad-denim);
+      margin: 0;
+    }
+
+    .button-row,
+    .share-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      border-radius: 0;
+      padding: 0.68rem 0.92rem;
+      background: #fff;
+      color: var(--ink);
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    button:hover {
+      border-color: var(--nad-denim);
+    }
+
+    button.primary {
+      background: var(--nad-denim);
+      color: var(--white);
+      border-color: var(--nad-denim);
+    }
+
+    button.secondary {
+      background: #f6f8fa;
+    }
+
+    .status {
+      margin-top: 0.2rem;
+      min-height: 1.15rem;
+    }
+
+    .status.error { color: var(--danger); }
+    .status.success { color: var(--success); }
+
+    .file-hint {
+      margin: 0;
+      font-size: 0.77rem;
+      color: var(--ink-soft);
+    }
+
+    .logo-upload-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      margin-top: 0.15rem;
+    }
+
+    .preview-stage {
+      padding: 1rem;
+      background: #eef1f3;
+      overflow: auto;
+    }
+
+    .preview-shell {
+      width: min(900px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 0.85rem 1rem;
+      background: #fff;
+      border: 1px solid var(--border);
+    }
+
+    .preview-toolbar h2 {
+      margin: 0;
+      font-size: 0.98rem;
+      color: var(--nad-denim);
+    }
+
+    .preview-toolbar p {
+      margin: 0.18rem 0 0;
+      color: var(--ink-soft);
+      font-size: 0.84rem;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 0.9rem;
+      align-items: start;
+    }
+
+    .preview-panel {
+      padding: 0.9rem;
+      background: #fff;
+      border: 1px solid var(--border);
+    }
+
+    .preview-panel h3 {
+      margin: 0 0 0.7rem;
+      color: var(--nad-denim);
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .card-frame {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0.1rem 0;
+    }
+
+    .card {
+      position: relative;
+      width: min(100%, 320px);
+      aspect-ratio: 1.75 / 1;
+      overflow: hidden;
+      border-radius: var(--preview-radius);
+      background: #fff;
+      box-shadow: 0 2px 10px rgba(20, 35, 47, 0.08);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .card-inner {
+      position: absolute;
+      inset: 0;
+      padding: var(--safe-pad-y) var(--safe-pad-x);
+    }
+
+    .show-guides .card::after {
+      content: "";
+      position: absolute;
+      inset: var(--safe-pad-y) var(--safe-pad-x);
+      border: 1px dashed rgba(255, 255, 255, 0.58);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .show-guides .card.back::after {
+      border-color: rgba(0, 59, 92, 0.3);
+    }
+
+    .card.front {
+      background: var(--nad-denim);
+      color: var(--white);
+    }
+
+    .front .card-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.16in 0.18in;
+      font-family: var(--font-sans);
+    }
+
+    .front-stack {
+      --front-logo-text-offset: 0.78in;
+      width: min(2.45in, 100%);
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: 0.09in;
+    }
+
+    .front-brand {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      min-width: 0;
+    }
+
+    .front-logo-mark {
+      width: min(2.45in, 100%);
+      max-height: 0.95in;
+      object-fit: contain;
+      object-position: center bottom;
+      display: block;
+    }
+
+    .contact-lines {
+      width: calc(100% - var(--front-logo-text-offset));
+      margin-left: var(--front-logo-text-offset);
+      padding-top: 0.08in;
+      display: grid;
+      justify-items: start;
+      gap: 0.036in;
+      font-family: var(--font-sans);
+      font-size: 0.11in;
+      line-height: 1.04;
+      font-weight: 400;
+      letter-spacing: 0.005em;
+    }
+
+    .front-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.04in;
+      color: var(--white);
+      white-space: nowrap;
+    }
+
+    .front-link-icon {
+      width: 0.104in;
+      height: 0.104in;
+      flex: 0 0 auto;
+      display: inline-block;
+      object-fit: contain;
+      object-position: center;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+
+    .front-link-text {
+      display: inline-block;
+    }
+
+    .card.back {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid rgba(0, 59, 92, 0.14);
+    }
+
+    .back .card-inner {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 0.66in;
+      padding: 0;
+      gap: 0;
+    }
+
+    .back-main {
+      padding: 0.14in 0.1in 0.14in var(--safe-pad-x);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+      gap: 0.055in;
+      font-family: var(--font-sans);
+    }
+
+    .back-name-block {
+      display: grid;
+      gap: 0.01in;
+      min-width: 0;
+    }
+
+    .person-name {
+      margin: 0;
+      color: var(--nad-denim);
+      font-family: var(--font-sans);
+      font-style: normal;
+      font-size: 8.5pt;
+      line-height: 1;
+      font-weight: 400;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .person-name.is-long {
+      font-size: 8pt;
+    }
+
+    .person-name.is-very-long {
+      font-size: 7.4pt;
+    }
+
+    .person-title,
+    .person-title-2 {
+      margin: 0;
+      color: #3a4c57;
+      font-family: var(--font-sans);
+      font-style: italic;
+      font-size: 6pt;
+      line-height: 1.03;
+      font-weight: 400;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .person-title.is-long,
+    .person-title-2.is-long {
+      font-size: 5.7pt;
+    }
+
+    .person-title.is-very-long,
+    .person-title-2.is-very-long {
+      font-size: 5.4pt;
+    }
+
+    .details {
+      display: grid;
+      gap: 0.012in;
+      margin-top: 0.18in;
+      color: #20323d;
+      min-width: 0;
+      font-family: var(--font-sans);
+      font-size: 6.5pt;
+      line-height: 1.02;
+      font-weight: 400;
+    }
+
+    .details-line,
+    .address-line,
+    .city-line {
+      margin: 0;
+      overflow-wrap: anywhere;
+      font-family: var(--font-sans);
+      font-style: normal;
+      font-size: 6.5pt;
+      line-height: 1.02;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+
+    .details-line {
+      display: flex;
+      align-items: baseline;
+      gap: 0.028in;
+    }
+
+    .details-line.email-line {
+      font-size: 6.5pt;
+      line-height: 1.02;
+    }
+
+    .details-line.email-line.is-long {
+      font-size: 6pt;
+    }
+
+    .details-line.email-line.is-very-long {
+      font-size: 5.6pt;
+    }
+
+    .detail-label {
+      color: #587180;
+      font-family: var(--font-sans);
+      font-style: normal;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.015in;
+      font-size: 6.5pt;
+    }
+
+    .back-band {
+      background: var(--nad-denim);
+      color: #fff;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 0.12in 0.08in 0.1in;
+    }
+
+    .back-symbol-mark {
+      width: 100%;
+      max-width: 0.31in;
+      max-height: 0.72in;
+      object-fit: contain;
+      object-position: top center;
+      display: block;
+      margin-top: 0;
+    }
+
+    .preview-note {
+      margin: 0;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--ink-soft);
+    }
+
+    .export-sandbox {
+      position: fixed;
+      left: -10000px;
+      top: 0;
+      width: var(--card-width);
+      min-width: var(--card-width);
+      max-width: var(--card-width);
+      height: var(--card-height);
+      min-height: var(--card-height);
+      max-height: var(--card-height);
+      overflow: hidden;
+      pointer-events: none;
+      opacity: 1;
+      z-index: -1;
+      margin: 0;
+      padding: 0;
+    }
+
+    .export-stage {
+      width: var(--card-width);
+      min-width: var(--card-width);
+      max-width: var(--card-width);
+      height: var(--card-height);
+      min-height: var(--card-height);
+      max-height: var(--card-height);
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: block;
+      transform: none;
+      zoom: 1;
+      contain: layout paint style;
+    }
+
+    .export-face {
+      width: var(--card-width) !important;
+      min-width: var(--card-width) !important;
+      max-width: var(--card-width) !important;
+      height: var(--card-height) !important;
+      min-height: var(--card-height) !important;
+      max-height: var(--card-height) !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      aspect-ratio: auto !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: hidden;
+      isolation: isolate;
+      transform: none !important;
+      zoom: 1 !important;
+      flex: none !important;
+      align-self: stretch !important;
+      display: block !important;
+    }
+
+    .export-face.back {
+      border: 1px solid rgba(0, 59, 92, 0.14);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 1100px) {
+      .workspace { grid-template-columns: 1fr; }
+      .controls {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body { padding-bottom: 1rem; }
+      .app-shell {
+        width: min(100%, calc(100% - 1rem));
+        margin: 0.5rem auto;
+      }
+      .grid { grid-template-columns: 1fr; }
+      .preview-stage { padding: 0.8rem; }
+      .card { width: 100%; }
+    }
+
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div class="app-header-left">
+        <h1>Generador de tarjetas de presentación</h1>
+        <p>Aquí hacemos juntos nuestras tarjetas de presentación de la Asociación, por delante y por detrás, listas para imprimir. Vemos cómo van quedando en vivo, podemos compartirlas con JSON y todo es fácil de usar en nuestra oficina.</p>
+      </div>
+      
+    </header>
+
+    <div class="workspace">
+      <form class="controls" id="businessCardForm" autocomplete="off" novalidate>
+        <section class="panel">
+          <h2>Información de contacto</h2>
+          <div class="grid">
+            <div class="field full">
+              <label for="fullName">Nombre completo <span aria-hidden="true">*</span></label>
+              <input id="fullName" name="fullName" type="text" required />
+            </div>
+            <div class="field full">
+              <label for="title">Cargo <span aria-hidden="true">*</span></label>
+              <input id="title" name="title" type="text" required />
+            </div>
+            <div class="field full">
+              <label for="titleLine2">Segunda línea del cargo (opcional)</label>
+              <input id="titleLine2" name="titleLine2" type="text" />
+            </div>
+            <div class="field">
+              <label for="cellPhone">Teléfono celular <span aria-hidden="true">*</span></label>
+              <input id="cellPhone" name="cellPhone" type="text" inputmode="tel" required />
+            </div>
+            <div class="field">
+              <label for="officePhone">Teléfono de oficina <span aria-hidden="true">*</span></label>
+              <input id="officePhone" name="officePhone" type="text" inputmode="tel" required />
+            </div>
+            <div class="field full toggle-grid">
+              <div class="toggle-row">
+                <input id="hideCell" name="hideCell" type="checkbox" />
+                <label for="hideCell">Ocultar celular</label>
+              </div>
+              <div class="toggle-row">
+                <input id="hideOffice" name="hideOffice" type="checkbox" />
+                <label for="hideOffice">Ocultar teléfono</label>
+              </div>
+            </div>
+            <div class="field full">
+              <label for="email">Correo electrónico <span aria-hidden="true">*</span></label>
+              <input id="email" name="email" type="email" required />
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Enlaces del anverso</h2>
+          <div class="grid">
+            <div class="field full">
+              <label for="frontLink1">Facebook</label>
+              <input id="frontLink1" name="frontLink1" type="text" />
+            </div>
+            <div class="field full">
+              <label for="frontLink2">Instagram</label>
+              <input id="frontLink2" name="frontLink2" type="text" />
+            </div>
+            <div class="field full">
+              <label for="frontLink3">Sitio web</label>
+              <input id="frontLink3" name="frontLink3" type="text" />
+            </div>
+            <div class="field full toggle-grid">
+              <div class="toggle-row">
+                <input id="showFrontLink1" name="showFrontLink1" type="checkbox" />
+                <label for="showFrontLink1">Mostrar Facebook</label>
+              </div>
+              <div class="toggle-row">
+                <input id="showFrontLink2" name="showFrontLink2" type="checkbox" />
+                <label for="showFrontLink2">Mostrar Instagram</label>
+              </div>
+              <div class="toggle-row">
+                <input id="showFrontLink3" name="showFrontLink3" type="checkbox" />
+                <label for="showFrontLink3">Mostrar sitio web</label>
+              </div>
+            </div>
+          </div>
+          <p class="helper">Los enlaces del anverso son opcionales. Desmarca la línea que no quieras mostrar, o deja el texto en blanco para esconder esa fila.</p>
+        </section>
+
+        <section class="panel">
+          <h2>Dirección postal</h2>
+          <div class="grid">
+            <div class="field full">
+              <label for="address1">Dirección, línea 1 <span aria-hidden="true">*</span></label>
+              <input id="address1" name="address1" type="text" required />
+            </div>
+            <div class="field full">
+              <label for="address2">Dirección, línea 2</label>
+              <input id="address2" name="address2" type="text" />
+            </div>
+            <div class="field">
+              <label for="city">Ciudad <span aria-hidden="true">*</span></label>
+              <input id="city" name="city" type="text" required />
+            </div>
+            <div class="field">
+              <label for="state">Estado <span aria-hidden="true">*</span></label>
+              <input id="state" name="state" type="text" maxlength="2" required />
+            </div>
+            <div class="field full">
+              <label for="zip">Código postal <span aria-hidden="true">*</span></label>
+              <input id="zip" name="zip" type="text" inputmode="numeric" required />
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Vista previa y exportación</h2>
+          <div class="grid">
+            <div class="field full">
+              <label for="frontLogoUpload">Subir logotipo del anverso</label>
+              <input id="frontLogoUpload" name="frontLogoUpload" type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" />
+              <p class="file-hint">Opcional. Si lo dejas vacío, usamos nuestro logotipo de siempre en el anverso. También puedes subir otra imagen y la usaremos en la vista previa, en el PDF y en el JSON para compartir.</p>
+              <div class="logo-upload-actions">
+                <button type="button" id="resetFrontLogoButton">Volver al logotipo original</button>
+              </div>
+            </div>
+            <div class="field full guide-row">
+              <input id="showGuides" name="showGuides" type="checkbox" />
+              <label for="showGuides">Mostrar guías de margen seguro en la vista previa</label>
+            </div>
+            <div class="field full button-row">
+              <button class="primary" type="button" id="exportPdfButton">Descargar PDF de las tarjetas</button>
+              <button type="button" id="resetButton">Volver al ejemplo</button>
+            </div>
+            <div class="field full share-row">
+              <button type="button" id="copyJsonButton">Copiar JSON para compartir</button>
+              <button type="button" id="loadJsonButton">Cargar JSON</button>
+            </div>
+            <p class="status" id="statusMessage" aria-live="polite"></p>
+            <p class="helper full">Con un solo clic descargas los dos lados de la tarjeta como PDF separados, a tamaño real de 3.5in × 2in, sin tener que abrir la ventana de impresión del navegador.</p>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Notas de validación</h2>
+          <p class="helper">Antes de exportar tenemos que llenar todos los campos obligatorios. Revisamos que el correo electrónico esté bien escrito, y los teléfonos se van acomodando solos mientras escribes.</p>
+          <p class="helper">Usa las herramientas JSON para guardar una tarjeta y volver a usarla con nuestro equipo de la oficina, sin guardar datos personales en el navegador.</p>
+        </section>
+      </form>
+
+      <section class="preview-stage">
+        <div class="preview-shell" id="previewShell">
+          <div class="preview-toolbar">
+            <div class="preview-meta">
+              <h2>Vista previa en vivo de la tarjeta</h2>
+              <p>Aquí vemos nuestra tarjeta con el logotipo oficial, en su tamaño real de impresión, con letra sencilla y los datos de contacto de nuestra Asociación bien ordenados, lista para mandar a imprimir.</p>
+            </div>
+            <p class="inline-note">Usa el botón de PDF para descargar el anverso y el reverso a tamaño real.</p>
+          </div>
+
+          <div class="cards-grid">
+            <article class="preview-panel">
+              <h3>Anverso</h3>
+              <div class="card-frame" id="frontPreviewMount"></div>
+            </article>
+
+            <article class="preview-panel">
+              <h3>Reverso</h3>
+              <div class="card-frame" id="backPreviewMount"></div>
+            </article>
+          </div>
+
+          <p class="preview-note">Revisa bien cómo quedó todo en la vista previa antes de descargar los dos PDF.</p>
+
+          <div class="export-sandbox" id="exportSandbox" aria-hidden="true"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>
+    (function () {
+      const FRONT_LOGO_SRC = 'Logos/Logo Template White.png';
+      const BACK_LOGO_SRC = 'Logos/SDA Logo.png';
+      const FRONT_FACEBOOK_ICON_SRC = 'Logos/facebook.png';
+      const FRONT_INSTAGRAM_ICON_SRC = 'Logos/instagram.png';
+      const FRONT_WEBSITE_ICON_SRC = 'Logos/link.png';
+      const ACCEPTED_FRONT_LOGO_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml'];
+      const ACCEPTED_FRONT_LOGO_EXTENSIONS = ['png', 'jpg', 'jpeg', 'svg'];
+
+      const SAMPLE_DATA = {
+        fullName: 'Nombre Apellido',
+        title: 'Cargo',
+        titleLine2: '',
+        cellPhone: '(123) 456 7890',
+        officePhone: '(012) 345 6789',
+        hideCell: false,
+        hideOffice: false,
+        frontLink1: 'Enlace de Facebook',
+        frontLink2: '@UsuarioInstagram',
+        frontLink3: 'Sitio web',
+        showFrontLink1: true,
+        showFrontLink2: true,
+        showFrontLink3: true,
+        email: 'email@example.org',
+        address1: 'Dirección línea 1',
+        address2: 'Dirección línea 2',
+        city: 'Ciudad',
+        state: 'Estado',
+        zip: '12345',
+        showGuides: false,
+        customFrontLogo: ''
+      };
+
+      const REQUIRED_FIELDS = ['fullName', 'title', 'cellPhone', 'officePhone', 'email', 'address1', 'city', 'state', 'zip'];
+      const PHONE_FIELDS = ['cellPhone', 'officePhone'];
+      const FORM_FIELD_NAMES = Object.keys(SAMPLE_DATA).filter((name) => name !== 'customFrontLogo');
+
+      const form = document.getElementById('businessCardForm');
+      const statusMessage = document.getElementById('statusMessage');
+      const previewShell = document.getElementById('previewShell');
+      const frontPreviewMount = document.getElementById('frontPreviewMount');
+      const backPreviewMount = document.getElementById('backPreviewMount');
+      const exportSandbox = document.getElementById('exportSandbox');
+      const exportPdfButton = document.getElementById('exportPdfButton');
+      const resetButton = document.getElementById('resetButton');
+      const copyJsonButton = document.getElementById('copyJsonButton');
+      const loadJsonButton = document.getElementById('loadJsonButton');
+      const frontLogoUpload = document.getElementById('frontLogoUpload');
+      const resetFrontLogoButton = document.getElementById('resetFrontLogoButton');
+      let customFrontLogo = '';
+
+      function getField(name) {
+        return form.elements.namedItem(name);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function digitsOnly(value) {
+        return String(value || '').replace(/\D+/g, '');
+      }
+
+      function formatPhone(value) {
+        const digits = digitsOnly(value).slice(0, 10);
+        if (!digits) return '';
+        if (digits.length < 4) return '(' + digits;
+        if (digits.length < 7) return '(' + digits.slice(0, 3) + ') ' + digits.slice(3);
+        return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + ' ' + digits.slice(6);
+      }
+
+      function isValidEmail(value) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+      }
+
+      function getLengthClass(value, thresholds) {
+        const length = String(value || '').trim().length;
+        if (length >= thresholds.veryLong) return ' is-very-long';
+        if (length >= thresholds.long) return ' is-long';
+        return '';
+      }
+
+      function getFormData() {
+        const data = {};
+        FORM_FIELD_NAMES.forEach((name) => {
+          const field = getField(name);
+          data[name] = field.type === 'checkbox' ? field.checked : field.value.trim();
+        });
+        data.state = data.state.toUpperCase().slice(0, 2);
+        data.cellPhone = formatPhone(data.cellPhone);
+        data.officePhone = formatPhone(data.officePhone);
+        data.customFrontLogo = customFrontLogo || '';
+        return data;
+      }
+
+      function getFrontLogoSrc(data) {
+        return data && data.customFrontLogo ? data.customFrontLogo : FRONT_LOGO_SRC;
+      }
+
+      function isValidCustomFrontLogoValue(value) {
+        return typeof value === 'string' && (!value || value.startsWith('data:image/'));
+      }
+
+      function isAcceptedFrontLogoFile(file) {
+        if (!file) return false;
+        const lowerName = String(file.name || '').toLowerCase();
+        const extension = lowerName.includes('.') ? lowerName.split('.').pop() : '';
+        return ACCEPTED_FRONT_LOGO_TYPES.includes(file.type) || ACCEPTED_FRONT_LOGO_EXTENSIONS.includes(extension);
+      }
+
+      function setStatus(message, type) {
+        statusMessage.textContent = message || '';
+        statusMessage.className = 'status' + (type ? ' ' + type : '');
+      }
+
+      function setSampleData() {
+        FORM_FIELD_NAMES.forEach((name) => {
+          const field = getField(name);
+          const value = SAMPLE_DATA[name];
+          if (!field) return;
+          if (field.type === 'checkbox') {
+            field.checked = Boolean(value);
+          } else {
+            field.value = value;
+          }
+          field.setAttribute('aria-invalid', 'false');
+        });
+        customFrontLogo = '';
+        if (frontLogoUpload) {
+          frontLogoUpload.value = '';
+          frontLogoUpload.setAttribute('aria-invalid', 'false');
+        }
+        render();
+        setStatus('Volvimos a poner los datos de ejemplo de la tarjeta.', 'success');
+      }
+
+      function normalizeImportedData(raw) {
+        const normalized = { ...SAMPLE_DATA };
+        FORM_FIELD_NAMES.forEach((name) => {
+          if (!(name in raw)) return;
+          if (typeof SAMPLE_DATA[name] === 'boolean') {
+            normalized[name] = Boolean(raw[name]);
+          } else {
+            normalized[name] = String(raw[name] == null ? '' : raw[name]);
+          }
+        });
+        normalized.state = normalized.state.toUpperCase().slice(0, 2);
+        normalized.cellPhone = formatPhone(normalized.cellPhone);
+        normalized.officePhone = formatPhone(normalized.officePhone);
+        normalized.customFrontLogo = isValidCustomFrontLogoValue(raw.customFrontLogo) ? raw.customFrontLogo : '';
+        return normalized;
+      }
+
+      function applyData(data) {
+        FORM_FIELD_NAMES.forEach((name) => {
+          const field = getField(name);
+          if (!field) return;
+          if (field.type === 'checkbox') {
+            field.checked = Boolean(data[name]);
+          } else {
+            field.value = data[name] || '';
+          }
+          field.setAttribute('aria-invalid', 'false');
+        });
+        customFrontLogo = data.customFrontLogo || '';
+        if (frontLogoUpload) {
+          frontLogoUpload.value = '';
+          frontLogoUpload.setAttribute('aria-invalid', 'false');
+        }
+        render();
+      }
+
+      function validate(data, options) {
+        const silent = options && options.silent;
+        let firstInvalid = null;
+        let isValid = true;
+
+        REQUIRED_FIELDS.forEach((name) => {
+          const field = getField(name);
+          let invalid = false;
+          const value = String(data[name] || '').trim();
+
+          if ((name === 'cellPhone' && data.hideCell) || (name === 'officePhone' && data.hideOffice)) {
+            invalid = false;
+          } else if (!value) {
+            invalid = true;
+          } else if (PHONE_FIELDS.includes(name) && digitsOnly(value).length !== 10) {
+            invalid = true;
+          } else if (name === 'email' && !isValidEmail(value)) {
+            invalid = true;
+          } else if (name === 'zip' && digitsOnly(value).length < 5) {
+            invalid = true;
+          }
+
+          field.setAttribute('aria-invalid', invalid ? 'true' : 'false');
+          if (invalid) {
+            isValid = false;
+            if (!firstInvalid) firstInvalid = field;
+          }
+        });
+
+        if (data.hideCell && data.hideOffice) {
+          isValid = false;
+          if (!firstInvalid) firstInvalid = getField('hideCell');
+        }
+
+        if (!silent) {
+          if (!isValid) {
+            if (data.hideCell && data.hideOffice) {
+              setStatus('Tenemos que dejar por lo menos un teléfono visible en el reverso de la tarjeta.', 'error');
+            } else if (!isValidEmail(data.email)) {
+              setStatus('Escribe un correo electrónico válido antes de exportar.', 'error');
+            } else {
+              setStatus('Llena todos los campos obligatorios con datos de contacto válidos.', 'error');
+            }
+          } else {
+            setStatus('¡Nuestra tarjeta está lista para exportar a PDF!', 'success');
+          }
+        }
+
+        return { isValid, firstInvalid };
+      }
+
+      function buildFrontLinksMarkup(data) {
+        const linkConfigs = [
+          { text: data.frontLink1, show: data.showFrontLink1, icon: FRONT_FACEBOOK_ICON_SRC },
+          { text: data.frontLink2, show: data.showFrontLink2, icon: FRONT_INSTAGRAM_ICON_SRC },
+          { text: data.frontLink3, show: data.showFrontLink3, icon: FRONT_WEBSITE_ICON_SRC }
+        ];
+
+        return linkConfigs.map((link) => {
+          const text = String(link.text || '').trim();
+          if (!link.show || !text) return '';
+          return '<div class="front-link"><img class="front-link-icon" src="' + escapeHtml(link.icon) + '" alt="" aria-hidden="true" /><span class="front-link-text">' + escapeHtml(text) + '</span></div>';
+        }).join('');
+      }
+
+      function buildFrontCardMarkup(data, className) {
+        const linksMarkup = buildFrontLinksMarkup(data);
+        const contactLinesMarkup = linksMarkup
+          ? '<div class="contact-lines" aria-label="Líneas de contacto de la Asociación">' + linksMarkup + '</div>'
+          : '';
+        const frontLogoSrc = getFrontLogoSrc(data);
+
+        return '' +
+          '<section class="card front ' + className + '" aria-label="Vista previa del anverso de la tarjeta">' +
+            '<div class="card-inner">' +
+              '<div class="front-stack">' +
+                '<div class="front-brand">' +
+                  '<img class="front-logo-mark" src="' + escapeHtml(frontLogoSrc) + '" alt="Logotipo de la Asociación Iowa-Missouri de la Iglesia Adventista del Séptimo Día" />' +
+                '</div>' +
+                contactLinesMarkup +
+              '</div>' +
+            '</div>' +
+          '</section>';
+      }
+
+      function buildBackCardMarkup(data, className) {
+        const safeName = escapeHtml(data.fullName || 'Nombre completo');
+        const safeTitle = escapeHtml(data.title || 'Cargo');
+        const nameClass = getLengthClass(data.fullName, { long: 22, veryLong: 32 });
+        const titleClass = getLengthClass(data.title, { long: 30, veryLong: 45 });
+        const titleLine2Class = getLengthClass(data.titleLine2, { long: 28, veryLong: 42 });
+        const emailClass = getLengthClass(data.email, { long: 24, veryLong: 34 });
+        const safeTitle2 = data.titleLine2
+          ? '<p class="person-title-2' + titleLine2Class + '">' + escapeHtml(data.titleLine2) + '</p>'
+          : '';
+        const cellLine = !data.hideCell && data.cellPhone
+          ? '<p class="details-line">' + escapeHtml(data.cellPhone) + '<span class="detail-label">Cel.</span></p>'
+          : '';
+        const officeLine = !data.hideOffice && data.officePhone
+          ? '<p class="details-line">' + escapeHtml(data.officePhone) + '<span class="detail-label">Tel.</span></p>'
+          : '';
+        const emailLine = data.email
+          ? '<p class="details-line email-line' + emailClass + '">' + escapeHtml(data.email) + '</p>'
+          : '';
+        const addressLine1 = data.address1 ? '<p class="address-line">' + escapeHtml(data.address1) + '</p>' : '';
+        const addressLine1b = data.address2 ? '<p class="address-line">' + escapeHtml(data.address2) + '</p>' : '';
+        const addressLine2 = data.city || data.state || data.zip
+          ? '<p class="city-line">' + escapeHtml(data.city) + (data.city && data.state ? ', ' : '') + escapeHtml(data.state) + (data.zip ? ' ' + escapeHtml(data.zip) : '') + '</p>'
+          : '';
+
+        return '' +
+          '<section class="card back ' + className + '" aria-label="Vista previa del reverso de la tarjeta">' +
+            '<div class="card-inner">' +
+              '<div class="back-main">' +
+                '<div class="back-name-block">' +
+                  '<h2 class="person-name' + nameClass + '">' + safeName + '</h2>' +
+                  '<p class="person-title' + titleClass + '">' + safeTitle + '</p>' +
+                  safeTitle2 +
+                '</div>' +
+                '<div class="details">' +
+                  cellLine +
+                  officeLine +
+                  emailLine +
+                  addressLine1 +
+                  addressLine1b +
+                  addressLine2 +
+                '</div>' +
+              '</div>' +
+              '<div class="back-band">' +
+                '<img class="back-symbol-mark" src="' + escapeHtml(BACK_LOGO_SRC) + '" alt="Símbolo adventista del séptimo día" />' +
+              '</div>' +
+            '</div>' +
+          '</section>';
+      }
+
+      function render() {
+        const data = getFormData();
+        previewShell.classList.toggle('show-guides', data.showGuides);
+
+        PHONE_FIELDS.forEach((fieldName) => {
+          const field = getField(fieldName);
+          const formatted = formatPhone(field.value);
+          if (field.value !== formatted) field.value = formatted;
+        });
+
+        getField('state').value = String(getField('state').value || '').toUpperCase().slice(0, 2);
+        getField('zip').value = digitsOnly(getField('zip').value).slice(0, 10);
+
+        const updatedData = getFormData();
+        frontPreviewMount.innerHTML = buildFrontCardMarkup(updatedData, '');
+        backPreviewMount.innerHTML = buildBackCardMarkup(updatedData, '');
+        validate(updatedData, { silent: true });
+      }
+
+      function slugifyFilePart(value) {
+        return String(value || '')
+          .toLowerCase()
+          .trim()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 80);
+      }
+
+      function getPdfFilename(face, data) {
+        const baseName = slugifyFilePart(data.fullName);
+        const prefix = baseName ? baseName + '-tarjeta-presentacion' : 'tarjeta-presentacion';
+        const faceLabel = face === 'front' ? 'anverso' : (face === 'back' ? 'reverso' : face);
+        return prefix + '-' + faceLabel + '.pdf';
+      }
+
+      const CARD_WIDTH_IN = 3.5;
+      const CARD_HEIGHT_IN = 2;
+      const PDF_WIDTH_IN = 3.5;
+      const PDF_HEIGHT_IN = 2;
+      const CARD_EXPORT_DPI = 300;
+      const CSS_PIXELS_PER_INCH = 96;
+      const EXPORT_SCALE = CARD_EXPORT_DPI / CSS_PIXELS_PER_INCH;
+
+      function dataUrlToImage(dataUrl) {
+        return new Promise(function (resolve, reject) {
+          const image = new Image();
+          image.decoding = 'async';
+          image.crossOrigin = 'anonymous';
+          image.onload = function () { resolve(image); };
+          image.onerror = function () { reject(new Error('No se pudo cargar la imagen para exportar.')); };
+          image.src = dataUrl;
+        });
+      }
+
+      function toAbsoluteAssetUrl(src) {
+        try {
+          return new URL(src, window.location.href).href;
+        } catch (error) {
+          throw new Error('Origen de imagen no válido para exportar: ' + src);
+        }
+      }
+
+      function blobToDataUrl(blob) {
+        return new Promise(function (resolve, reject) {
+          const reader = new FileReader();
+          reader.onloadend = function () {
+            if (typeof reader.result === 'string' && reader.result) {
+              resolve(reader.result);
+              return;
+            }
+            reject(new Error('No se pudo convertir la imagen para exportar.'));
+          };
+          reader.onerror = function () {
+            reject(new Error('No se pudo convertir la imagen para exportar.'));
+          };
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      async function resolveImageSourceToDataUrl(src) {
+        if (!src) {
+          throw new Error('Falta el origen de una imagen en el contenido a exportar.');
+        }
+
+        if (src.startsWith('data:')) {
+          return src;
+        }
+
+        const assetUrl = toAbsoluteAssetUrl(src);
+        const response = await fetch(assetUrl, { cache: 'force-cache', credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error('No se pudo obtener la imagen: ' + src);
+        }
+
+        const blob = await response.blob();
+        return blobToDataUrl(blob);
+      }
+
+      function decodeDomImage(img) {
+        if (!img) return Promise.resolve();
+        if (img.decode) {
+          return img.decode().catch(function () {
+            if (img.complete && img.naturalWidth > 0) return;
+            throw new Error('No se pudo leer la imagen durante la exportación.');
+          });
+        }
+
+        return new Promise(function (resolve, reject) {
+          if (img.complete && img.naturalWidth > 0) {
+            resolve();
+            return;
+          }
+          img.addEventListener('load', function handleLoad() {
+            resolve();
+          }, { once: true });
+          img.addEventListener('error', function handleError() {
+            reject(new Error('No se pudo cargar la imagen para exportar.'));
+          }, { once: true });
+        });
+      }
+
+      function waitForNextFrame() {
+        return new Promise(function (resolve) {
+          requestAnimationFrame(function () {
+            requestAnimationFrame(resolve);
+          });
+        });
+      }
+
+      function applyDataUrlToCloneImage(img, dataUrl) {
+        return new Promise(function (resolve, reject) {
+          function finalize() {
+            decodeDomImage(img).then(resolve).catch(reject);
+          }
+
+          img.removeAttribute('srcset');
+          img.removeAttribute('sizes');
+          img.removeAttribute('loading');
+          img.setAttribute('decoding', 'sync');
+          img.setAttribute('crossorigin', 'anonymous');
+
+          if (img.getAttribute('src') === dataUrl && img.complete && img.naturalWidth > 0) {
+            finalize();
+            return;
+          }
+
+          img.addEventListener('load', finalize, { once: true });
+          img.addEventListener('error', function () {
+            reject(new Error('No se pudo cargar la imagen para exportar.'));
+          }, { once: true });
+          img.src = dataUrl;
+        });
+      }
+
+      async function inlineCloneImages(clone) {
+        const images = Array.from(clone.querySelectorAll('img'));
+        const cache = new Map();
+
+        await Promise.all(images.map(async function (img) {
+          const originalSrc = img.getAttribute('src') || img.currentSrc || '';
+          if (!originalSrc) {
+            throw new Error('Falta el origen de una imagen en el contenido a exportar.');
+          }
+
+          const cacheKey = originalSrc.startsWith('data:') ? originalSrc : toAbsoluteAssetUrl(originalSrc);
+          if (!cache.has(cacheKey)) {
+            cache.set(cacheKey, resolveImageSourceToDataUrl(originalSrc));
+          }
+
+          const dataUrl = await cache.get(cacheKey);
+          await applyDataUrlToCloneImage(img, dataUrl);
+
+          const loadedImage = await dataUrlToImage(dataUrl);
+          if (loadedImage.decode) {
+            await loadedImage.decode().catch(function () {});
+          }
+        }));
+      }
+
+      async function waitForCloneAssets(clone) {
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+        await inlineCloneImages(clone);
+        await waitForNextFrame();
+      }
+
+      function getCardNode(face) {
+        if (face === 'front') {
+          return frontPreviewMount.querySelector('.card.front');
+        }
+        if (face === 'back') {
+          return backPreviewMount.querySelector('.card.back');
+        }
+        return null;
+      }
+
+      function buildExportClone(face) {
+        const sourceNode = getCardNode(face);
+        if (!sourceNode) {
+          throw new Error('No se encontró la vista previa del ' + (face === 'front' ? 'anverso' : (face === 'back' ? 'reverso' : face)) + ' de la tarjeta para exportar.');
+        }
+
+        exportSandbox.innerHTML = '';
+        exportSandbox.style.width = CARD_WIDTH_IN + 'in';
+        exportSandbox.style.minWidth = CARD_WIDTH_IN + 'in';
+        exportSandbox.style.maxWidth = CARD_WIDTH_IN + 'in';
+        exportSandbox.style.height = CARD_HEIGHT_IN + 'in';
+        exportSandbox.style.minHeight = CARD_HEIGHT_IN + 'in';
+        exportSandbox.style.maxHeight = CARD_HEIGHT_IN + 'in';
+        exportSandbox.style.margin = '0';
+        exportSandbox.style.padding = '0';
+        exportSandbox.style.transform = 'none';
+        exportSandbox.style.zoom = '1';
+
+        const exportStage = document.createElement('div');
+        exportStage.className = 'export-stage';
+        exportStage.style.width = CARD_WIDTH_IN + 'in';
+        exportStage.style.minWidth = CARD_WIDTH_IN + 'in';
+        exportStage.style.maxWidth = CARD_WIDTH_IN + 'in';
+        exportStage.style.height = CARD_HEIGHT_IN + 'in';
+        exportStage.style.minHeight = CARD_HEIGHT_IN + 'in';
+        exportStage.style.maxHeight = CARD_HEIGHT_IN + 'in';
+        exportStage.style.margin = '0';
+        exportStage.style.padding = '0';
+        exportStage.style.transform = 'none';
+        exportStage.style.zoom = '1';
+        exportStage.style.overflow = 'hidden';
+        exportStage.style.display = 'block';
+
+        const clone = sourceNode.cloneNode(true);
+        clone.classList.add('export-face');
+        clone.style.width = CARD_WIDTH_IN + 'in';
+        clone.style.height = CARD_HEIGHT_IN + 'in';
+        clone.style.minWidth = CARD_WIDTH_IN + 'in';
+        clone.style.minHeight = CARD_HEIGHT_IN + 'in';
+        clone.style.maxWidth = CARD_WIDTH_IN + 'in';
+        clone.style.maxHeight = CARD_HEIGHT_IN + 'in';
+        clone.style.aspectRatio = 'auto';
+        clone.style.borderRadius = '0';
+        clone.style.boxShadow = 'none';
+        clone.style.margin = '0';
+        clone.style.padding = '0';
+        clone.style.transform = 'none';
+        clone.style.zoom = '1';
+        clone.style.display = 'block';
+        clone.style.overflow = 'hidden';
+        clone.style.background = face === 'front' ? '#003B5C' : '#FFFFFF';
+        clone.style.position = 'relative';
+        clone.style.left = '0';
+        clone.style.top = '0';
+
+        Array.from(clone.querySelectorAll('*')).forEach(function (node) {
+          node.style.animation = 'none';
+          node.style.transition = 'none';
+        });
+
+        exportStage.appendChild(clone);
+        exportSandbox.appendChild(exportStage);
+        return clone;
+      }
+
+      async function rasterizeCardClone(cardClone, face) {
+        const htmlToImage = window.htmlToImage;
+        if (!htmlToImage) {
+          throw new Error('Las herramientas para hacer el PDF no están disponibles. Vuelve a cargar la página e inténtalo otra vez.');
+        }
+
+        await waitForCloneAssets(cardClone);
+
+        const canvas = await htmlToImage.toCanvas(cardClone, {
+          pixelRatio: EXPORT_SCALE,
+          cacheBust: true,
+          backgroundColor: face === 'front' ? '#003B5C' : '#FFFFFF',
+          style: {
+            margin: '0',
+            padding: '0',
+            transform: 'none',
+            width: CARD_WIDTH_IN + 'in',
+            height: CARD_HEIGHT_IN + 'in'
+          }
+        });
+
+        return canvas.toDataURL('image/png');
+      }
+
+      async function downloadPdfDataUrl(filename, imageDataUrl) {
+        const jsPDF = window.jspdf && window.jspdf.jsPDF;
+        if (!jsPDF) {
+          throw new Error('Las herramientas para hacer el PDF no están disponibles. Vuelve a cargar la página e inténtalo otra vez.');
+        }
+
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'in',
+          format: [PDF_WIDTH_IN, PDF_HEIGHT_IN],
+          compress: true
+        });
+
+        pdf.addImage(imageDataUrl, 'PNG', 0, 0, PDF_WIDTH_IN, PDF_HEIGHT_IN, undefined, 'FAST');
+
+        const blob = pdf.output('blob');
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        setTimeout(function () {
+          URL.revokeObjectURL(downloadUrl);
+        }, 1000);
+      }
+
+      async function createFacePdf(face, data) {
+        const clone = buildExportClone(face);
+        const pngDataUrl = await rasterizeCardClone(clone, face);
+        await downloadPdfDataUrl(getPdfFilename(face, data), pngDataUrl);
+      }
+
+      async function exportAllCardPdfs() {
+        const data = getFormData();
+        const result = validate(data, { silent: false });
+        if (!result.isValid) {
+          if (result.firstInvalid && typeof result.firstInvalid.focus === 'function') {
+            result.firstInvalid.focus();
+          }
+          return;
+        }
+
+        const previousDisabledState = exportPdfButton.disabled;
+        exportPdfButton.disabled = true;
+
+        try {
+          setStatus('Estamos preparando el PDF del anverso…', '');
+          await createFacePdf('front', data);
+          exportSandbox.innerHTML = '';
+
+          setStatus('Estamos preparando el PDF del reverso…', '');
+          await createFacePdf('back', data);
+
+          setStatus('¡Listo! Descargamos los PDF del anverso y del reverso a 3.5in × 2in.', 'success');
+        } catch (error) {
+          console.error(error);
+          setStatus('No se pudo exportar el PDF: ' + (error && error.message ? error.message : 'Error de exportación desconocido.'), 'error');
+        } finally {
+          exportSandbox.innerHTML = '';
+          exportPdfButton.disabled = previousDisabledState;
+        }
+      }
+
+      function resetFrontLogoToDefault(options) {
+        customFrontLogo = '';
+        if (frontLogoUpload) {
+          frontLogoUpload.value = '';
+          frontLogoUpload.setAttribute('aria-invalid', 'false');
+        }
+        render();
+        if (!options || !options.silent) {
+          setStatus('Volvimos a poner nuestro logotipo original de IMSDA en el anverso.', 'success');
+        }
+      }
+
+      function handleFrontLogoUpload(event) {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement)) return;
+        const file = input.files && input.files[0];
+
+        if (!file) {
+          return;
+        }
+
+        if (!isAcceptedFrontLogoFile(file)) {
+          input.value = '';
+          input.setAttribute('aria-invalid', 'true');
+          setStatus('Ese archivo de logotipo no sirve. Elige una imagen PNG, JPG, JPEG o SVG.', 'error');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (loadEvent) {
+          const result = loadEvent.target && typeof loadEvent.target.result === 'string' ? loadEvent.target.result : '';
+          if (!result || !String(result).startsWith('data:image/')) {
+            input.value = '';
+            input.setAttribute('aria-invalid', 'true');
+            setStatus('No pudimos leer ese archivo como imagen. Prueba con otro archivo.', 'error');
+            return;
+          }
+
+          customFrontLogo = result;
+          input.setAttribute('aria-invalid', 'false');
+          render();
+          setStatus('Ahora usamos tu logotipo en el anverso: en la vista previa, en el PDF y en el JSON.', 'success');
+        };
+        reader.onerror = function () {
+          input.value = '';
+          input.setAttribute('aria-invalid', 'true');
+          setStatus('No pudimos leer ese archivo. Prueba con otra imagen.', 'error');
+        };
+        reader.readAsDataURL(file);
+      }
+
+      async function copyJson() {
+        const data = getFormData();
+        const result = validate(data, { silent: false });
+        if (!result.isValid) {
+          if (result.firstInvalid && typeof result.firstInvalid.focus === 'function') {
+            result.firstInvalid.focus();
+          }
+          return;
+        }
+
+        const payload = JSON.stringify(data, null, 2);
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(payload);
+            setStatus('Copiamos el JSON para compartir al portapapeles.', 'success');
+            return;
+          }
+          throw new Error('Portapapeles no disponible');
+        } catch (error) {
+          window.prompt('Copia este JSON:', payload);
+          setStatus('Aquí no se puede usar el portapapeles, así que abrimos el JSON en un cuadro para que lo copies.', 'success');
+        }
+      }
+
+      function loadJson() {
+        const input = window.prompt('Pega aquí el JSON que guardaste antes en el Generador de tarjetas de presentación:');
+        if (!input) {
+          setStatus('Cancelamos la carga del JSON.', '');
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(input);
+          const normalized = normalizeImportedData(parsed);
+          applyData(normalized);
+          setStatus('¡Listo! Cargamos el JSON en el generador.', 'success');
+        } catch (error) {
+          setStatus('No pudimos leer ese JSON. Pega el JSON de una tarjeta que hayas guardado.', 'error');
+        }
+      }
+
+      form.addEventListener('input', function (event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        if (PHONE_FIELDS.includes(target.name)) {
+          target.value = formatPhone(target.value);
+        }
+
+        if (target.name === 'state') {
+          target.value = target.value.toUpperCase().slice(0, 2);
+        }
+
+        if (target.name === 'zip') {
+          target.value = digitsOnly(target.value).slice(0, 10);
+        }
+
+        render();
+      });
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        exportAllCardPdfs();
+      });
+
+      frontLogoUpload.addEventListener('change', handleFrontLogoUpload);
+      exportPdfButton.addEventListener('click', function () {
+        exportAllCardPdfs();
+      });
+      resetButton.addEventListener('click', setSampleData);
+      resetFrontLogoButton.addEventListener('click', function () {
+        resetFrontLogoToDefault();
+      });
+      copyJsonButton.addEventListener('click', copyJson);
+      loadJsonButton.addEventListener('click', loadJson);
+
+      setSampleData();
+    })();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

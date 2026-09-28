@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Archivos locales (misma carpeta):
+    - Logos/Logo Template White.png  (logotipo predeterminado)
+    - fonts/AdventSans-Beta.otf  (fuente de la marca; usa una fuente del sistema si falta)
+    - tools-nav.css  (opcional - estilos de la navegación superior compartida; la página funciona sin él)
+    - tools-nav.js  (opcional - navegación superior compartida + lista de herramientas; la página funciona sin él)
+  Externos (internet):
+    (ninguno)
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generador de membrete PDF IMSDA</title>
+  <style>
+    /* ===== Shared tool styles (inlined from tools.css) ===== */
+    @font-face {
+      font-family: 'Advent Sans Beta';
+      src: url('fonts/AdventSans-Beta.otf') format('opentype');
+      font-style: normal;
+      font-weight: 400 800;
+      font-display: swap;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #f4f7f9;
+      --surface: #ffffff;
+      --surface-soft: #f8fbfc;
+      --text-main: #1a2b3c;
+      --text-muted: #5e7185;
+      --primary: #087E8B;
+      --primary-dark: #0B3954;
+      --border: #e2e8f0;
+      --border-strong: #cfd8e3;
+      --shadow-sm: 0 2px 8px rgba(11, 57, 84, 0.04);
+      --shadow-md: 0 12px 24px rgba(11, 57, 84, 0.08);
+      --radius: 16px;
+    }
+
+    html, body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Advent Sans Beta', 'Manrope', 'Segoe UI', Arial, sans-serif;
+      color: var(--text-main);
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 100% 0%, rgba(8, 126, 139, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 0% 100%, rgba(11, 57, 84, 0.03) 0%, transparent 40%);
+      background-attachment: fixed;
+      line-height: 1.6;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Advent Sans Beta', 'Syne', 'Segoe UI', Arial, sans-serif;
+      color: var(--primary-dark);
+    }
+
+    a {
+      color: var(--primary);
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    .panel,
+    .hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .hero {
+      padding: 1.3rem 1.35rem;
+    }
+
+    .eyebrow {
+      font-size: 0.74rem;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: var(--primary);
+      font-weight: 800;
+      font-family: 'Advent Sans Beta', 'Syne', 'Segoe UI', Arial, sans-serif;
+    }
+
+    .back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      margin-top: 1rem;
+      padding: 0.7rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f4f8fa;
+      color: var(--primary-dark);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .back:hover {
+      background: #edf4f7;
+      text-decoration: none;
+    }
+
+    /* ===== Letterhead generator styles (inlined from letterhead-generator.css) ===== */
+    :root {
+      --letterhead-font: 'Advent Sans Beta', 'Noto Sans', 'Segoe UI', Arial, sans-serif;
+      --nad-denim: #003b5c;
+      --ui-border: #d7e0e8;
+      --ui-muted: #5d6f80;
+      --ui-soft: #f6f8fb;
+      --ui-guide: rgba(0, 59, 92, 0.22);
+    }
+
+    body {
+      font-family: var(--letterhead-font);
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    button,
+    input,
+    select,
+    textarea,
+    output {
+      font-family: var(--letterhead-font);
+    }
+
+    .letterhead-app {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 2rem;
+    }
+
+    .letterhead-hero {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.3rem 1.4rem;
+      margin-bottom: 1rem;
+    }
+
+    .letterhead-hero h1,
+    .editor-heading h2,
+    .preview-heading h2 {
+      margin: 0;
+      font-size: clamp(1.45rem, 2.4vw, 2rem);
+      color: #163046;
+    }
+
+    .hero-copy,
+    .preview-meta,
+    .editor-status,
+    .field-help,
+    .hint-card {
+      margin: 0;
+      color: var(--ui-muted);
+    }
+
+    .letterhead-workspace {
+      display: grid;
+      grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .editor,
+    .preview {
+      padding: 1.15rem;
+    }
+
+    .editor {
+      position: sticky;
+      top: 1rem;
+    }
+
+    .editor-heading,
+    .preview-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .editor-status {
+      max-width: 14rem;
+      text-align: right;
+      font-size: 0.9rem;
+    }
+
+    .editor-section {
+      border: 1px solid var(--ui-border);
+      border-radius: 14px;
+      padding: 0.95rem;
+      background: var(--ui-soft);
+      margin-bottom: 0.9rem;
+    }
+
+    .editor-section h3 {
+      margin: 0 0 0.8rem;
+      font-size: 1rem;
+      color: #17324a;
+    }
+
+    .field-grid {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .two-up {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    .field-help + .button-row,
+    .button-row + .field-help {
+      margin-top: 0.75rem;
+    }
+
+    .field span,
+    .field > label {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #163046;
+    }
+
+    .locked-value,
+    select,
+    input[type="file"],
+    textarea,
+    button,
+    .file-button {
+      border: 1px solid #c6d2dc;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .locked-value,
+    select,
+    input[type="file"],
+    textarea {
+      width: 100%;
+      padding: 0.72rem 0.8rem;
+      color: #193247;
+    }
+
+    .locked-field {
+      margin-bottom: 0.5rem;
+    }
+
+    .locked-value {
+      font-size: 0.92rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #fdfefe;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 6rem;
+    }
+
+    .checkbox-field {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .checkbox-field input {
+      inline-size: 1rem;
+      block-size: 1rem;
+    }
+
+    .error-text {
+      margin-top: 0.8rem;
+      font-size: 0.88rem;
+      color: #8a1f22;
+      background: #fff2f2;
+      border: 1px solid #f1cccc;
+      border-radius: 10px;
+      padding: 0.75rem 0.85rem;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      margin-bottom: 0.7rem;
+    }
+
+    .compact-row {
+      margin-bottom: 0;
+    }
+
+    button,
+    .file-button {
+      appearance: none;
+      cursor: pointer;
+      padding: 0.78rem 1rem;
+      font-weight: 700;
+      color: #163046;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .primary-action {
+      background: var(--nad-denim);
+      border-color: var(--nad-denim);
+      color: #fff;
+    }
+
+    .secondary-action,
+    .ghost-action,
+    .file-button {
+      background: #fff;
+    }
+
+    button:disabled,
+    .file-button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .preview {
+      min-width: 0;
+    }
+
+    .preview-stage {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      overflow: auto;
+      padding: 0.75rem;
+      border: 1px solid var(--ui-border);
+      border-radius: 14px;
+      background: linear-gradient(145deg, #ecf2f7, #f9fbfd);
+    }
+
+    .sheet-frame {
+      position: relative;
+      width: min(100%, 840px);
+      aspect-ratio: 8.5 / 11;
+      border: 1px solid #c8d4df;
+      background: #fff;
+      box-shadow: 0 10px 30px rgba(11, 57, 84, 0.14);
+    }
+
+    #previewCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #fff;
+    }
+
+    .preview-guides {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .guide-content-box {
+      position: absolute;
+      left: 12.5%;
+      right: 12.5%;
+      top: 19%;
+      bottom: 17%;
+      border: 1.5px dashed var(--ui-guide);
+    }
+
+    .guide-footer-line {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      bottom: 5%;
+      border-top: 1.5px dashed var(--ui-guide);
+    }
+
+    @media (max-width: 1120px) {
+      .letterhead-workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .editor {
+        position: static;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .letterhead-app,
+      .letterhead-workspace,
+      .preview,
+      .preview-stage,
+      .sheet-frame {
+        padding: 0;
+        margin: 0;
+        border: none;
+        box-shadow: none;
+      }
+
+      .editor,
+      .letterhead-hero,
+      .preview-heading,
+      .preview-guides {
+        display: none !important;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="letterhead-app">
+    <section class="letterhead-hero panel">
+      <div>
+        <p class="eyebrow">Herramienta de oficina</p>
+        <h1>Generador de membrete PDF</h1>
+        <p class="hero-copy">
+          Aquí hacemos juntos un membrete limpio de nuestra Asociación Iowa-Missouri, igual al modelo de la Asociación,
+          y lo exportamos como una imagen aplanada que se imprime sin problemas.
+        </p>
+      </div>
+      
+    </section>
+
+    <section class="letterhead-workspace">
+      <aside class="editor panel" aria-labelledby="editorHeading">
+        <div class="editor-heading">
+          <div>
+            <p class="eyebrow">Editor</p>
+            <h2 id="editorHeading">Controles del documento</h2>
+          </div>
+          <p class="editor-status" id="statusMessage" role="status">Cargando el logotipo requerido…</p>
+        </div>
+
+        <div class="editor-section">
+          <h3>Origen del logotipo</h3>
+          <div class="field locked-field" aria-describedby="logoHelp">
+            <span>Logotipo predeterminado</span>
+            <div class="locked-value" id="logoPath">Logos/Logo Template White.png</div>
+          </div>
+          <p class="field-help" id="logoHelp">
+            El logotipo blanco de nuestra Asociación se carga solo desde <code>Logos/Logo Template White.png</code>. Puedes subir otro logotipo
+            solo para esta sesión, sin cambiar los archivos guardados del proyecto.
+          </p>
+          <div class="button-row compact-row">
+            <label class="ghost-action file-button" for="logoUploadInput">Subir logotipo</label>
+            <input id="logoUploadInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden />
+            <button class="ghost-action" id="clearLogoButton" type="button" disabled>Usar logotipo predeterminado</button>
+          </div>
+          <p class="field-help">El logotipo que subas solo se usa en esta sesión para la vista previa y la exportación; no se guarda.</p>
+          <p class="error-text" id="logoError" hidden></p>
+        </div>
+
+        <div class="editor-section">
+          <h3>Diseño</h3>
+          <p class="field-help">
+            El espacio del logotipo tiene las mismas proporciones del modelo de la Asociación, así la vista previa, la impresión y el PDF siempre se ven igual.
+            El margen interno del logotipo solo se cambia en el código.
+          </p>
+          <label class="field checkbox-field">
+            <input id="showGuides" type="checkbox" checked />
+            <span>Mostrar guías del área segura (solo en la vista previa)</span>
+          </label>
+        </div>
+
+        <div class="editor-section">
+          <h3>Pie de página</h3>
+          <label class="field">
+            <span>Línea de contacto del pie de página</span>
+            <textarea id="footerText" rows="4"></textarea>
+          </label>
+        </div>
+
+        <div class="editor-section">
+          <h3>Exportar</h3>
+          <div class="button-row">
+            <button class="primary-action" id="printButton" type="button">Imprimir</button>
+            <button class="secondary-action" id="pdfButton" type="button">Exportar a PDF</button>
+            <button class="secondary-action" id="pngButton" type="button">Descargar PNG</button>
+          </div>
+          <div class="button-row compact-row">
+            <button class="ghost-action" id="saveConfigButton" type="button">Guardar JSON</button>
+            <label class="ghost-action file-button" for="loadConfigInput">Cargar JSON</label>
+            <input id="loadConfigInput" type="file" accept="application/json" hidden />
+            <button class="ghost-action" id="resetButton" type="button">Restablecer</button>
+          </div>
+          <p class="field-help">
+            Al exportar, primero hacemos una página aplanada de alta resolución, así los logotipos y las partes transparentes se ven bien al imprimir.
+          </p>
+        </div>
+      </aside>
+
+      <section class="preview panel" aria-labelledby="previewHeading">
+        <div class="preview-heading">
+          <div>
+            <p class="eyebrow">Vista previa</p>
+            <h2 id="previewHeading">Salida tamaño carta (EE. UU.)</h2>
+          </div>
+          <p class="preview-meta">8.5 × 11 pulg. · Fuente de nuestra Asociación</p>
+        </div>
+
+        <div class="preview-stage">
+          <div class="sheet-frame" id="sheetFrame">
+            <canvas id="previewCanvas" aria-label="Vista previa del membrete" width="1275" height="1650"></canvas>
+            <div class="preview-guides" id="previewGuides" aria-hidden="true">
+              <div class="guide-content-box"></div>
+              <div class="guide-footer-line"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const PAGE = Object.freeze({
+        widthIn: 8.5,
+        heightIn: 11,
+        previewDpi: 150,
+        exportDpi: 300,
+        footerSideMarginIn: 1.05,
+        footerBottomIn: 0.36,
+        defaultFooter: 'Correo postal: {Dirección} {Ciudad} {Estado} {Código postal} • Correo electrónico: email@example.org • Teléfono: 012.345.6789 • Fax: 123.456.7890 • Sitio web: {URL del sitio web}'
+      });
+
+      const BRAND = Object.freeze({
+        denim: '#003b5c',
+        footer: '#314252',
+        canvasFont: '"Advent Sans Beta", "Noto Sans", "Segoe UI", Arial, sans-serif'
+      });
+
+      const LOGO = Object.freeze({
+        path: 'Logos/Logo Template White.png',
+        label: 'Plantilla de logotipo blanco',
+        targetWidthIn: 2.25,
+        targetHeightIn: 1.28,
+        // Backend-only: edit these in source code, not through the webpage UI.
+        horizontalPaddingIn: 0.375,
+        verticalPaddingIn: 0.125
+      });
+
+      const DEFAULT_STATE = Object.freeze({
+        footerText: PAGE.defaultFooter,
+        showGuides: true
+      });
+
+      const els = {
+        logoPath: document.getElementById('logoPath'),
+        logoUploadInput: document.getElementById('logoUploadInput'),
+        clearLogoButton: document.getElementById('clearLogoButton'),
+        logoError: document.getElementById('logoError'),
+        statusMessage: document.getElementById('statusMessage'),
+        footerText: document.getElementById('footerText'),
+        showGuides: document.getElementById('showGuides'),
+        previewCanvas: document.getElementById('previewCanvas'),
+        previewGuides: document.getElementById('previewGuides'),
+        printButton: document.getElementById('printButton'),
+        pdfButton: document.getElementById('pdfButton'),
+        pngButton: document.getElementById('pngButton'),
+        saveConfigButton: document.getElementById('saveConfigButton'),
+        loadConfigInput: document.getElementById('loadConfigInput'),
+        resetButton: document.getElementById('resetButton')
+      };
+
+      const previewContext = els.previewCanvas.getContext('2d');
+
+      let state = { ...DEFAULT_STATE };
+      let defaultLogoImage = null;
+      let uploadedLogoImage = null;
+      let activeLogoImage = null;
+      let renderToken = 0;
+
+      function inchesToPx(value, dpi) {
+        return value * dpi;
+      }
+
+      async function loadImage(url) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.decoding = 'async';
+          image.onload = async () => {
+            try {
+              if (typeof image.decode === 'function') {
+                await image.decode().catch(() => {});
+              }
+              resolve(image);
+            } catch (error) {
+              reject(error);
+            }
+          };
+          image.onerror = () => reject(new Error(`No pudimos cargar el logotipo requerido en ${url}`));
+          image.src = `${url}?v=${Date.now()}`;
+        });
+      }
+
+      async function loadUploadedLogo(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('No pudimos leer el archivo de logotipo que elegiste.'));
+          reader.onload = async () => {
+            try {
+              const image = new Image();
+              image.decoding = 'async';
+              image.onload = async () => {
+                if (typeof image.decode === 'function') {
+                  await image.decode().catch(() => {});
+                }
+                resolve(image);
+              };
+              image.onerror = () => reject(new Error('No pudimos mostrar el logotipo que subiste. Prueba con un archivo PNG, JPG, WebP o SVG.'));
+              image.src = String(reader.result);
+            } catch (error) {
+              reject(error);
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function ensureFontsReady() {
+        if (!document.fonts || !document.fonts.load) return;
+
+        await Promise.allSettled([
+          document.fonts.load(`400 12px ${BRAND.canvasFont}`),
+          document.fonts.load(`500 12px ${BRAND.canvasFont}`),
+          document.fonts.load(`700 12px ${BRAND.canvasFont}`)
+        ]);
+      }
+
+      function syncControlsFromState() {
+        els.logoPath.textContent = LOGO.path;
+        els.footerText.value = state.footerText;
+        els.showGuides.checked = state.showGuides;
+        els.previewGuides.hidden = !state.showGuides;
+        els.clearLogoButton.disabled = !uploadedLogoImage;
+      }
+
+      function setStatus(message, isError = false) {
+        els.statusMessage.textContent = message;
+        els.statusMessage.style.color = isError ? '#8a1f22' : '';
+      }
+
+      function setLogoError(message) {
+        if (!message) {
+          els.logoError.hidden = true;
+          els.logoError.textContent = '';
+          return;
+        }
+
+        els.logoError.hidden = false;
+        els.logoError.textContent = message;
+      }
+
+      function updateActionState() {
+        const ready = Boolean(defaultLogoImage && activeLogoImage);
+        els.printButton.disabled = !ready;
+        els.pdfButton.disabled = !ready;
+        els.pngButton.disabled = !ready;
+        els.clearLogoButton.disabled = !uploadedLogoImage;
+      }
+
+      function refreshActiveLogo() {
+        activeLogoImage = uploadedLogoImage || defaultLogoImage;
+      }
+
+      function getStatusText() {
+        if (!defaultLogoImage) {
+          return 'Falta el logotipo requerido';
+        }
+
+        if (uploadedLogoImage) {
+          return 'Listo · Usando el logotipo que subiste';
+        }
+
+        return `Listo · ${LOGO.label}`;
+      }
+
+      async function resolveRequiredLogo() {
+        defaultLogoImage = null;
+        uploadedLogoImage = null;
+        refreshActiveLogo();
+        updateActionState();
+        setStatus(`Cargando ${LOGO.label}…`);
+
+        try {
+          defaultLogoImage = await loadImage(LOGO.path);
+          refreshActiveLogo();
+          setStatus(getStatusText());
+          setLogoError('');
+        } catch (error) {
+          defaultLogoImage = null;
+          uploadedLogoImage = null;
+          refreshActiveLogo();
+          setStatus('Falta el logotipo requerido', true);
+          setLogoError('No encontramos o no pudimos leer el logotipo requerido en Logos/Logo Template White.png. Vuelve a poner ese archivo para usar otra vez la vista previa, la exportación y la impresión.');
+        }
+
+        updateActionState();
+        await renderPreview();
+      }
+
+      function applyStateFromControls() {
+        state.footerText = (els.footerText.value || '').trim() || PAGE.defaultFooter;
+        state.showGuides = els.showGuides.checked;
+        syncControlsFromState();
+      }
+
+      function drawContainedImage(ctx, image, x, y, width, height) {
+        const ratio = Math.min(width / image.width, height / image.height);
+        const drawWidth = image.width * ratio;
+        const drawHeight = image.height * ratio;
+        const drawX = x + (width - drawWidth) / 2;
+        const drawY = y + (height - drawHeight) / 2;
+        ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+      }
+
+      function fitFooterFont(ctx, text, maxWidth, baseSize) {
+        let size = baseSize;
+        while (size > 7) {
+          ctx.font = `500 ${size}px ${BRAND.canvasFont}`;
+          if (ctx.measureText(text).width <= maxWidth) {
+            return size;
+          }
+          size -= 0.35;
+        }
+        return size;
+      }
+
+      function composeLetterhead(ctx, dpi, options) {
+        const pageWidthPx = inchesToPx(PAGE.widthIn, dpi);
+        const pageHeightPx = inchesToPx(PAGE.heightIn, dpi);
+
+        ctx.canvas.width = pageWidthPx;
+        ctx.canvas.height = pageHeightPx;
+        ctx.clearRect(0, 0, pageWidthPx, pageHeightPx);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, pageWidthPx, pageHeightPx);
+        ctx.textBaseline = 'alphabetic';
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        const logoWidth = inchesToPx(options.logoWidthIn, dpi);
+        const logoHeight = inchesToPx(options.logoHeightIn, dpi);
+        const logoHorizontalPadding = inchesToPx(options.logoHorizontalPaddingIn, dpi);
+        const logoVerticalPadding = inchesToPx(options.logoVerticalPaddingIn, dpi);
+        const blueBlockWidth = logoWidth + (logoHorizontalPadding * 2);
+        const blueBlockHeight = logoHeight + (logoVerticalPadding * 2);
+
+        ctx.fillStyle = BRAND.denim;
+        ctx.fillRect(0, 0, blueBlockWidth, blueBlockHeight);
+
+        if (options.logoImage) {
+          drawContainedImage(
+            ctx,
+            options.logoImage,
+            logoHorizontalPadding,
+            logoVerticalPadding,
+            Math.max(logoWidth, 1),
+            Math.max(logoHeight, 1)
+          );
+        }
+
+        const footerMaxWidth = pageWidthPx - inchesToPx(PAGE.footerSideMarginIn * 2, dpi);
+        const footerFontSize = fitFooterFont(ctx, options.footerText, footerMaxWidth, dpi * 0.1);
+        ctx.font = `500 ${footerFontSize}px ${BRAND.canvasFont}`;
+        ctx.fillStyle = BRAND.footer;
+        ctx.textAlign = 'center';
+        const footerBaseline = pageHeightPx - inchesToPx(PAGE.footerBottomIn, dpi);
+        ctx.fillText(options.footerText, pageWidthPx / 2, footerBaseline);
+      }
+
+      async function renderPreview() {
+        const currentToken = ++renderToken;
+        await ensureFontsReady();
+        if (currentToken !== renderToken) return;
+
+        composeLetterhead(previewContext, PAGE.previewDpi, {
+          logoWidthIn: LOGO.targetWidthIn,
+          logoHeightIn: LOGO.targetHeightIn,
+          logoHorizontalPaddingIn: LOGO.horizontalPaddingIn,
+          logoVerticalPaddingIn: LOGO.verticalPaddingIn,
+          footerText: state.footerText,
+          logoImage: activeLogoImage
+        });
+      }
+
+      async function createExportCanvas() {
+        if (!activeLogoImage) {
+          throw new Error('Necesitamos el logotipo requerido antes de exportar o imprimir.');
+        }
+
+        await ensureFontsReady();
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d', { alpha: false });
+
+        composeLetterhead(context, PAGE.exportDpi, {
+          logoWidthIn: LOGO.targetWidthIn,
+          logoHeightIn: LOGO.targetHeightIn,
+          logoHorizontalPaddingIn: LOGO.horizontalPaddingIn,
+          logoVerticalPaddingIn: LOGO.verticalPaddingIn,
+          footerText: state.footerText,
+          logoImage: activeLogoImage
+        });
+
+        return canvas;
+      }
+
+      async function canvasToBlob(canvas) {
+        return new Promise((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+              return;
+            }
+            reject(new Error('No pudimos preparar la imagen del membrete.'));
+          }, 'image/png');
+        });
+      }
+
+      function downloadUrl(url, fileName) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+
+      async function downloadBlob(blob, fileName) {
+        const objectUrl = URL.createObjectURL(blob);
+        downloadUrl(objectUrl, fileName);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      }
+
+      async function triggerPrintWorkflow(mode) {
+        try {
+          const canvas = await createExportCanvas();
+          const blob = await canvasToBlob(canvas);
+          const imageUrl = URL.createObjectURL(blob);
+          const frame = document.createElement('iframe');
+          frame.style.position = 'fixed';
+          frame.style.right = '-9999px';
+          frame.style.bottom = '0';
+          frame.setAttribute('aria-hidden', 'true');
+          document.body.appendChild(frame);
+
+          const title = mode === 'pdf' ? 'Exportar membrete en PDF' : 'Imprimir membrete';
+          const helper = mode === 'pdf' ? '<p class="helper">Elige <strong>Guardar como PDF</strong> en la ventana de impresión para tener tu archivo PDF.</p>' : '';
+          const html = `<!DOCTYPE html>
+            <html lang="es">
+            <head>
+              <meta charset="UTF-8" />
+              <title>${title}</title>
+              <style>
+                @page { size: letter; margin: 0; }
+                html, body { margin: 0; background: #fff; }
+                body { font-family: ${BRAND.canvasFont}; }
+                .helper { margin: 16px; font-size: 14px; color: #2f4255; }
+                img { display: block; width: 8.5in; height: 11in; margin: 0 auto; }
+                @media print { .helper { display: none; } }
+              <\/style>
+            </head>
+            <body>
+              ${helper}
+              <img src="${imageUrl}" alt="Página de membrete aplanada" />
+              <script>
+                window.addEventListener('load', () => {
+                  setTimeout(() => {
+                    window.focus();
+                    window.print();
+                  }, 250);
+                });
+              <\/script>
+            </body>
+            </html>`;
+
+          const doc = frame.contentWindow.document;
+          doc.open();
+          doc.write(html);
+          doc.close();
+
+          setTimeout(() => {
+            URL.revokeObjectURL(imageUrl);
+            frame.remove();
+          }, 60000);
+        } catch (error) {
+          setStatus(error.message || 'No pudimos preparar la impresión.', true);
+        }
+      }
+
+      async function saveConfiguration() {
+        const payload = {
+          footerText: state.footerText,
+          showGuides: state.showGuides,
+          version: 4,
+          savedAt: new Date().toISOString()
+        };
+        const jsonBlob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        await downloadBlob(jsonBlob, 'imsda-letterhead-config.json');
+      }
+
+      async function loadConfiguration(file) {
+        if (!file) return;
+
+        let parsed;
+        try {
+          parsed = JSON.parse(await file.text());
+        } catch (error) {
+          setStatus('No pudimos leer el archivo de configuración.', true);
+          setLogoError('Carga un archivo JSON válido que se haya hecho con esta herramienta y vuelve a intentarlo.');
+          return;
+        }
+
+        state = {
+          ...DEFAULT_STATE,
+          footerText: typeof parsed.footerText === 'string' && parsed.footerText.trim() ? parsed.footerText.trim() : PAGE.defaultFooter,
+          showGuides: typeof parsed.showGuides === 'boolean' ? parsed.showGuides : DEFAULT_STATE.showGuides
+        };
+
+        syncControlsFromState();
+        setLogoError(defaultLogoImage ? '' : els.logoError.textContent);
+        await renderPreview();
+      }
+
+      function resetState() {
+        state = { ...DEFAULT_STATE };
+        uploadedLogoImage = null;
+        refreshActiveLogo();
+        setLogoError(defaultLogoImage ? '' : els.logoError.textContent);
+        setStatus(getStatusText(), !defaultLogoImage);
+        updateActionState();
+        syncControlsFromState();
+        renderPreview();
+      }
+
+      function registerEvents() {
+        els.footerText.addEventListener('input', () => {
+          applyStateFromControls();
+          renderPreview();
+        });
+
+        els.showGuides.addEventListener('change', () => {
+          applyStateFromControls();
+        });
+
+        els.logoUploadInput.addEventListener('change', async (event) => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+
+          try {
+            const image = await loadUploadedLogo(file);
+            uploadedLogoImage = image;
+            refreshActiveLogo();
+            setLogoError('');
+            setStatus(getStatusText());
+            updateActionState();
+            await renderPreview();
+          } catch (error) {
+            uploadedLogoImage = null;
+            refreshActiveLogo();
+            setStatus(getStatusText(), !defaultLogoImage);
+            setLogoError(error.message || 'No pudimos usar el logotipo que subiste.');
+            updateActionState();
+            await renderPreview();
+          } finally {
+            els.logoUploadInput.value = '';
+          }
+        });
+
+        els.clearLogoButton.addEventListener('click', async () => {
+          uploadedLogoImage = null;
+          refreshActiveLogo();
+          setLogoError(defaultLogoImage ? '' : els.logoError.textContent);
+          setStatus(getStatusText(), !defaultLogoImage);
+          updateActionState();
+          await renderPreview();
+        });
+
+        els.printButton.addEventListener('click', () => triggerPrintWorkflow('print'));
+        els.pdfButton.addEventListener('click', () => triggerPrintWorkflow('pdf'));
+        els.pngButton.addEventListener('click', async () => {
+          try {
+            const canvas = await createExportCanvas();
+            const blob = await canvasToBlob(canvas);
+            await downloadBlob(blob, 'imsda-letterhead.png');
+          } catch (error) {
+            setStatus(error.message || 'No pudimos exportar el PNG.', true);
+          }
+        });
+
+        els.saveConfigButton.addEventListener('click', saveConfiguration);
+        els.loadConfigInput.addEventListener('change', (event) => loadConfiguration(event.target.files && event.target.files[0]));
+        els.resetButton.addEventListener('click', resetState);
+      }
+
+      async function init() {
+        syncControlsFromState();
+        registerEvents();
+        await resolveRequiredLogo();
+      }
+
+      init();
+    })();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>
