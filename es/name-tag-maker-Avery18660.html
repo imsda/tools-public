@@ -1,0 +1,792 @@
+<!doctype html>
+<!--
+  DEPENDENCIES
+  Archivos locales (misma carpeta):
+    - tools-nav.css  (opcional - estilos de la barra de navegación superior compartida; la página funciona sin él)
+    - tools-nav.js  (opcional - barra de navegación superior compartida + lista de herramientas; la página funciona sin él)
+  Externos (internet):
+    (ninguno)
+-->
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Generador de gafetes (Avery 18660)</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --text: #000;
+      --muted: #5f6c7b;
+      --border: #d7dfeb;
+      --accent: #1d6fe8;
+      --accent-dark: #1558bb;
+      --danger: #be2b2b;
+      --shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.4;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #173256;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      border: 1px solid #bfd0e8;
+      color: #14457f;
+      background: #f3f8ff;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: minmax(340px, 440px) minmax(680px, 1fr);
+      gap: 16px;
+      padding: 16px;
+      align-items: start;
+    }
+
+    .panel,
+    .preview-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 14px;
+      max-height: calc(100vh - 90px);
+      overflow: auto;
+    }
+
+    .section {
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #edf1f7;
+    }
+
+    .section:last-child {
+      border-bottom: 0;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .section h2 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      color: #11345e;
+    }
+
+    .hint {
+      margin: 4px 0;
+      color: var(--muted);
+      font-size: 0.87rem;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    button,
+    .file-btn {
+      border: 1px solid #b9c9e3;
+      border-radius: 8px;
+      background: #eef4ff;
+      color: #133761;
+      font-weight: 700;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    button.primary:hover { background: var(--accent-dark); }
+
+    button.danger {
+      background: #fff5f5;
+      color: var(--danger);
+      border-color: #f2b8b8;
+    }
+
+    .file-btn input { display: none; }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(90px, 1fr));
+      gap: 8px;
+    }
+
+    label.control {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.84rem;
+      color: #26415f;
+    }
+
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid #c9d6ea;
+      border-radius: 7px;
+      padding: 7px 8px;
+      font-size: 0.9rem;
+      background: #fff;
+    }
+
+    .rows-wrap {
+      max-height: 380px;
+      overflow: auto;
+      border: 1px solid #e2e9f4;
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    th,
+    td {
+      border-top: 1px solid #edf1f7;
+      vertical-align: middle;
+      padding: 6px 4px;
+      text-align: left;
+    }
+
+    th {
+      color: #254767;
+      font-size: 0.79rem;
+      background: #f8fbff;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .mini-btn {
+      font-size: 0.75rem;
+      padding: 5px 7px;
+      border-radius: 6px;
+      border: 1px solid #c5d4ea;
+      background: #f7faff;
+      color: #1f4268;
+      cursor: pointer;
+      margin-right: 4px;
+      margin-top: 2px;
+    }
+
+    .mini-btn.delete {
+      color: #a32121;
+      border-color: #efb6b6;
+      background: #fff6f6;
+    }
+
+    .preview-wrap {
+      padding: 14px;
+      overflow: auto;
+      max-height: calc(100vh - 90px);
+    }
+
+    .page-note {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin: 0 0 10px;
+    }
+
+    .print-area {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .sheet {
+      width: 8.5in;
+      height: 11in;
+      min-width: 8.5in;
+      min-height: 11in;
+      max-width: 8.5in;
+      max-height: 11in;
+      background: #fff;
+      border: 1px solid #d3ddeb;
+      margin: 0;
+      box-shadow: 0 8px 24px rgba(16, 24, 40, 0.1);
+      padding: 0.5in 0.1875in;
+      display: grid;
+      grid-template-columns: repeat(3, 2.625in);
+      grid-template-rows: repeat(10, 1in);
+      column-gap: 0.125in;
+      row-gap: 0;
+      overflow: hidden;
+      flex: none;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .tag {
+      width: 2.625in;
+      height: 1in;
+      min-width: 2.625in;
+      min-height: 1in;
+      max-width: 2.625in;
+      max-height: 1in;
+      padding: var(--label-padding, 0.08in);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      border: 1px dashed transparent;
+      overflow: hidden;
+    }
+
+    .tag,
+    .tag * {
+      color: #000 !important;
+    }
+
+    .show-guides .tag {
+      border-color: #d6e1f2;
+    }
+
+    .tag-name {
+      margin: 0;
+      font-size: var(--name-size, 18px);
+      font-weight: 600;
+      line-height: 1.05;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .tag-position {
+      margin: 0.05in 0 0;
+      font-size: var(--position-size, 11px);
+      line-height: 1.1;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .tag.bold .tag-name {
+      font-size: calc(var(--name-size, 18px) * 1.2);
+      font-weight: 800;
+    }
+
+    .tag.bold .tag-position {
+      font-size: calc(var(--position-size, 11px) * 0.9);
+    }
+
+    .tag.empty .tag-name,
+    .tag.empty .tag-position { visibility: hidden; }
+
+    @media (max-width: 1280px) {
+      .app { grid-template-columns: 1fr; }
+      .panel,
+      .preview-wrap { max-height: none; }
+      .sheet {
+        transform-origin: top left;
+        transform: scale(0.86);
+      }
+    }
+
+    @page {
+      size: letter;
+      margin: 0;
+    }
+
+    @media print {
+      html,
+      body {
+        width: 8.5in;
+        height: auto;
+        margin: 0;
+        padding: 0;
+        background: #fff;
+      }
+
+      body * {
+        visibility: hidden !important;
+      }
+
+      .print-area,
+      .print-area * {
+        visibility: visible !important;
+      }
+
+      .print-area {
+        display: block;
+        width: 8.5in;
+        margin: 0;
+        padding: 0;
+      }
+
+      .topbar,
+      .panel,
+      .page-note,
+      .back-link { display: none !important; }
+
+      .app,
+      .preview-wrap {
+        display: block;
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+        max-height: none;
+        overflow: visible;
+        background: transparent;
+      }
+
+      .sheet {
+        margin: 0;
+        border: 0;
+        box-shadow: none;
+        transform: none !important;
+        zoom: 1;
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .sheet:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
+      .tag {
+        border: 0 !important;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Generador de gafetes — Avery 18660 (3 × 10)</h1>
+    
+  </header>
+
+  <main class="app">
+    <aside class="panel" aria-label="Controles">
+      <section class="section">
+        <h2>Datos</h2>
+        <p class="hint">Sube un CSV o agrega personas a mano. Tomamos la primera fila como encabezados y los acomodamos automáticamente.</p>
+        <p class="hint"><strong>Asignación de encabezados:</strong> Nombre = name/full name/fullname/nombre/nombre completo · Cargo = position/title/role/cargo/puesto/función · Negrita = bold/highlight/large/emphasis/negrita/destacar</p>
+        <p class="hint"><strong>CSV de ejemplo:</strong> <code>Nombre,Cargo,Negrita</code> · <code>Ana López,Recepción,sí</code></p>
+        <div class="buttons">
+          <label class="file-btn">Subir CSV
+            <input id="csvInput" type="file" accept=".csv,text/csv" />
+          </label>
+          <button type="button" id="addBtn">Agregar persona</button>
+          <button type="button" id="addTopBtn">Agregar persona al principio</button>
+          <button type="button" id="clearBtn" class="danger">Borrar todo</button>
+          <button type="button" id="printBtn" class="primary">Imprimir</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Configuración general de etiquetas</h2>
+        <div class="grid-3">
+          <label class="control">Tamaño base del nombre (px)
+            <input id="nameSize" type="number" min="10" max="36" step="1" value="18" />
+          </label>
+          <label class="control">Tamaño base del cargo (px)
+            <input id="positionSize" type="number" min="8" max="24" step="1" value="11" />
+          </label>
+          <label class="control">Margen interno de la etiqueta (pulg.)
+            <input id="labelPadding" type="number" min="0" max="0.25" step="0.01" value="0.08" />
+          </label>
+        </div>
+        <div style="margin-top:8px;">
+          <label class="control" style="flex-direction:row; align-items:center; gap:8px;">
+            <input id="guidesToggle" type="checkbox" checked />
+            Mostrar guías de diseño en la vista previa
+          </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Entradas</h2>
+        <div class="rows-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 28%;">Nombre</th>
+                <th style="width: 28%;">Cargo</th>
+                <th style="width: 10%;">Negrita</th>
+                <th style="width: 34%;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="entryTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </aside>
+
+    <section class="preview-wrap" aria-label="Vista previa Avery 18660">
+      <p class="page-note">Vista previa en vivo: la hoja Avery 18660 tiene 3 columnas × 10 filas (30 etiquetas por página). La última página se llena sola con etiquetas en blanco.</p>
+      <div id="previewRoot" class="print-area show-guides"></div>
+    </section>
+  </main>
+
+  <script>
+    // -------------------------
+    // state
+    // -------------------------
+    const state = {
+      entries: [],
+      settings: {
+        nameSize: 18,
+        positionSize: 11,
+        labelPadding: 0.08,
+        showGuides: true
+      }
+    };
+
+    const refs = {
+      csvInput: document.getElementById('csvInput'),
+      addBtn: document.getElementById('addBtn'),
+      addTopBtn: document.getElementById('addTopBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      printBtn: document.getElementById('printBtn'),
+      nameSize: document.getElementById('nameSize'),
+      positionSize: document.getElementById('positionSize'),
+      labelPadding: document.getElementById('labelPadding'),
+      guidesToggle: document.getElementById('guidesToggle'),
+      entryTableBody: document.getElementById('entryTableBody'),
+      previewRoot: document.getElementById('previewRoot')
+    };
+
+    function createEntry(name = '', position = '', bold = false) {
+      return { name, position, bold };
+    }
+
+    // -------------------------
+    // CSV parsing
+    // -------------------------
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let value = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+
+        if (ch === '"') {
+          if (inQuotes && next === '"') {
+            value += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (ch === ',' && !inQuotes) {
+          row.push(value);
+          value = '';
+        } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+          if (ch === '\r' && next === '\n') i += 1;
+          row.push(value);
+          value = '';
+          if (row.some(cell => String(cell).trim() !== '')) rows.push(row);
+          row = [];
+        } else {
+          value += ch;
+        }
+      }
+
+      row.push(value);
+      if (row.some(cell => String(cell).trim() !== '')) rows.push(row);
+
+      return rows;
+    }
+
+    // -------------------------
+    // normalization/header mapping
+    // -------------------------
+    function normalizeHeader(header) {
+      return String(header || '').trim().toLowerCase();
+    }
+
+    function findHeaderIndex(headers, candidates) {
+      for (let i = 0; i < candidates.length; i++) {
+        const idx = headers.indexOf(candidates[i]);
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    }
+
+    function isTrueBold(value) {
+      const normalized = String(value || '').trim().toLowerCase();
+      return normalized === 'true' || normalized === 'yes' || normalized === '1' || normalized === 'bold' || normalized === 'y' || normalized === 'sí' || normalized === 'si' || normalized === 's' || normalized === 'verdadero' || normalized === 'negrita';
+    }
+
+    function importCsvText(csvText) {
+      const rows = parseCsv(csvText);
+      if (!rows.length) return;
+
+      const headers = rows[0].map(normalizeHeader);
+      const nameIndex = findHeaderIndex(headers, ['name', 'full name', 'fullname', 'nombre', 'nombre completo']);
+      const positionIndex = findHeaderIndex(headers, ['position', 'title', 'role', 'cargo', 'puesto', 'título', 'titulo', 'función', 'funcion', 'rol']);
+      const boldIndex = findHeaderIndex(headers, ['bold', 'highlight', 'large', 'emphasis', 'negrita', 'destacar', 'destacado', 'resaltar', 'grande', 'énfasis', 'enfasis']);
+
+      const imported = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const name = nameIndex >= 0 ? String(row[nameIndex] || '').trim() : '';
+        const position = positionIndex >= 0 ? String(row[positionIndex] || '').trim() : '';
+        const bold = boldIndex >= 0 ? isTrueBold(row[boldIndex]) : false;
+
+        if (name || position) {
+          imported.push(createEntry(name, position, bold));
+        }
+      }
+
+      state.entries = imported;
+      renderAll();
+    }
+
+    // -------------------------
+    // editor rendering
+    // -------------------------
+    function renderEditorTable() {
+      refs.entryTableBody.innerHTML = '';
+
+      state.entries.forEach((entry, index) => {
+        const tr = document.createElement('tr');
+
+        const nameTd = document.createElement('td');
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.value = entry.name;
+        nameInput.placeholder = 'Nombre';
+        nameInput.addEventListener('input', () => {
+          entry.name = nameInput.value;
+          renderSheets();
+        });
+        nameTd.appendChild(nameInput);
+
+        const positionTd = document.createElement('td');
+        const positionInput = document.createElement('input');
+        positionInput.type = 'text';
+        positionInput.value = entry.position;
+        positionInput.placeholder = 'Cargo';
+        positionInput.addEventListener('input', () => {
+          entry.position = positionInput.value;
+          renderSheets();
+        });
+        positionTd.appendChild(positionInput);
+
+        const boldTd = document.createElement('td');
+        const boldInput = document.createElement('input');
+        boldInput.type = 'checkbox';
+        boldInput.checked = Boolean(entry.bold);
+        boldInput.addEventListener('change', () => {
+          entry.bold = boldInput.checked;
+          renderSheets();
+        });
+        boldTd.appendChild(boldInput);
+
+        const actionsTd = document.createElement('td');
+        const upBtn = miniButton('Subir', () => moveEntry(index, -1));
+        const downBtn = miniButton('Bajar', () => moveEntry(index, 1));
+        const deleteBtn = miniButton('Eliminar', () => deleteEntry(index), 'delete');
+
+        if (index === 0) upBtn.disabled = true;
+        if (index === state.entries.length - 1) downBtn.disabled = true;
+
+        actionsTd.append(upBtn, downBtn, deleteBtn);
+
+        tr.append(nameTd, positionTd, boldTd, actionsTd);
+        refs.entryTableBody.appendChild(tr);
+      });
+    }
+
+    function miniButton(label, onClick, cls = '') {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `mini-btn ${cls}`.trim();
+      btn.textContent = label;
+      btn.addEventListener('click', onClick);
+      return btn;
+    }
+
+    // -------------------------
+    // sheet rendering
+    // -------------------------
+    function renderSheets() {
+      const root = refs.previewRoot;
+      root.innerHTML = '';
+
+      root.style.setProperty('--name-size', `${state.settings.nameSize}px`);
+      root.style.setProperty('--position-size', `${state.settings.positionSize}px`);
+      root.style.setProperty('--label-padding', `${state.settings.labelPadding}in`);
+
+      if (state.settings.showGuides) {
+        root.classList.add('show-guides');
+      } else {
+        root.classList.remove('show-guides');
+      }
+
+      const labelsPerPage = 30;
+      const pageCount = Math.max(1, Math.ceil(state.entries.length / labelsPerPage));
+
+      for (let page = 0; page < pageCount; page++) {
+        const sheet = document.createElement('div');
+        sheet.className = 'sheet';
+
+        for (let i = 0; i < labelsPerPage; i++) {
+          const idx = page * labelsPerPage + i;
+          const entry = state.entries[idx];
+
+          const tag = document.createElement('article');
+          tag.className = 'tag';
+          if (!entry) tag.classList.add('empty');
+          if (entry && entry.bold) tag.classList.add('bold');
+
+          const nameEl = document.createElement('h3');
+          nameEl.className = 'tag-name';
+          nameEl.textContent = entry ? entry.name || ' ' : ' ';
+
+          const positionEl = document.createElement('p');
+          positionEl.className = 'tag-position';
+          positionEl.textContent = entry ? entry.position || ' ' : ' ';
+
+          tag.append(nameEl, positionEl);
+          sheet.appendChild(tag);
+        }
+
+        root.appendChild(sheet);
+      }
+    }
+
+    function renderAll() {
+      renderEditorTable();
+      renderSheets();
+    }
+
+    // -------------------------
+    // print handling
+    // -------------------------
+    function printSheets() {
+      window.print();
+    }
+
+    // -------------------------
+    // mutations/events
+    // -------------------------
+    function addEntry() {
+      state.entries.push(createEntry('', '', false));
+      renderAll();
+    }
+
+    function addEntryToTop() {
+      state.entries.unshift(createEntry('', '', false));
+      renderAll();
+    }
+
+    function deleteEntry(index) {
+      state.entries.splice(index, 1);
+      renderAll();
+    }
+
+    function moveEntry(index, delta) {
+      const nextIndex = index + delta;
+      if (nextIndex < 0 || nextIndex >= state.entries.length) return;
+      const [moved] = state.entries.splice(index, 1);
+      state.entries.splice(nextIndex, 0, moved);
+      renderAll();
+    }
+
+    function clearAll() {
+      state.entries = [];
+      renderAll();
+    }
+
+    function clampNumber(value, min, max, fallback) {
+      const num = Number(value);
+      if (Number.isNaN(num)) return fallback;
+      return Math.max(min, Math.min(max, num));
+    }
+
+    function bindEvents() {
+      refs.csvInput.addEventListener('change', async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const text = await file.text();
+        importCsvText(text);
+        refs.csvInput.value = '';
+      });
+
+      refs.addBtn.addEventListener('click', addEntry);
+      refs.addTopBtn.addEventListener('click', addEntryToTop);
+      refs.clearBtn.addEventListener('click', clearAll);
+      refs.printBtn.addEventListener('click', printSheets);
+
+      refs.nameSize.addEventListener('input', () => {
+        state.settings.nameSize = clampNumber(refs.nameSize.value, 10, 36, 18);
+        renderSheets();
+      });
+
+      refs.positionSize.addEventListener('input', () => {
+        state.settings.positionSize = clampNumber(refs.positionSize.value, 8, 24, 11);
+        renderSheets();
+      });
+
+      refs.labelPadding.addEventListener('input', () => {
+        state.settings.labelPadding = clampNumber(refs.labelPadding.value, 0, 0.25, 0.08);
+        renderSheets();
+      });
+
+      refs.guidesToggle.addEventListener('change', () => {
+        state.settings.showGuides = refs.guidesToggle.checked;
+        renderSheets();
+      });
+    }
+
+    bindEvents();
+    renderAll();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

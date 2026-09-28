@@ -14,11 +14,11 @@
   External (internet):
     (none)
 -->
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Church Logo Generator</title>
+  <title>Generador de logos para iglesias</title>
   <style>
     @font-face {
       font-family: 'Advent Sans';
@@ -311,27 +311,27 @@
 <body>
   <div class="page-wrap">
     <header class="hero">
-      <div class="eyebrow">Brand Utility</div>
-      <h1>Church Logo Generator</h1>
-      <p>Enter a church name to render it onto the conference logo template, preview it live, and export the exact same PNG.</p>
+      <div class="eyebrow">Herramienta de marca</div>
+      <h1>Generador de logos para iglesias</h1>
+      <p>Aquí hacemos juntos el logo de nuestra iglesia: escribe el nombre, lo ponemos en la plantilla del logo de la Asociación, lo ves en vivo y descargas exactamente el mismo PNG.</p>
       
     </header>
 
     <main class="logo-generator">
       <div class="generator-layout">
         <section class="panel" aria-labelledby="controls-heading">
-          <h2 id="controls-heading">Church name</h2>
-          <p>Use the provided template and Advent Sans from the local font file for a clean conference-aligned church logo export.</p>
+          <h2 id="controls-heading">Nombre de la iglesia</h2>
+          <p>Usamos la plantilla incluida y la fuente Advent Sans para que el logo de nuestra iglesia quede limpio y a juego con el de la Asociación.</p>
 
           <div class="field">
-            <label for="churchName">Church name</label>
-            <input id="churchName" name="churchName" type="text" autocomplete="off" placeholder="Enter church name" />
-            <div class="field-help">The preview updates as you type and the downloaded PNG matches it exactly.</div>
+            <label for="churchName">Nombre de la iglesia</label>
+            <input id="churchName" name="churchName" type="text" autocomplete="off" placeholder="Escribe el nombre de la iglesia" />
+            <div class="field-help">La vista previa cambia mientras escribes, y el PNG que descargas sale igualito.</div>
           </div>
 
           <div class="field">
-            <label>Logo layout</label>
-            <div class="color-picker" role="radiogroup" aria-label="Logo layout">
+            <label>Diseño del logo</label>
+            <div class="color-picker" role="radiogroup" aria-label="Diseño del logo">
               <label class="color-option" for="logoLayoutHorizontal">
                 <input id="logoLayoutHorizontal" name="logoLayout" type="radio" value="horizontal" checked />
                 <span>Horizontal</span>
@@ -344,38 +344,38 @@
           </div>
 
           <div class="field">
-            <label>Logo color</label>
-            <div class="color-picker" role="radiogroup" aria-label="Logo color">
+            <label>Color del logo</label>
+            <div class="color-picker" role="radiogroup" aria-label="Color del logo">
               <label class="color-option" for="logoColorBlue">
                 <input id="logoColorBlue" name="logoColor" type="radio" value="blue" checked />
-                <span>Blue</span>
+                <span>Azul</span>
               </label>
               <label class="color-option" for="logoColorWhite">
                 <input id="logoColorWhite" name="logoColor" type="radio" value="white" />
-                <span>White</span>
+                <span>Blanco</span>
               </label>
               <label class="color-option" for="logoColorBlack">
                 <input id="logoColorBlack" name="logoColor" type="radio" value="black" />
-                <span>Black</span>
+                <span>Negro</span>
               </label>
             </div>
           </div>
 
-          <button id="downloadButton" class="download-button" type="button" disabled>Download PNG</button>
-          <p class="meta" id="statusText" role="status" aria-live="polite">Loading template and font…</p>
+          <button id="downloadButton" class="download-button" type="button" disabled>Descargar PNG</button>
+          <p class="meta" id="statusText" role="status" aria-live="polite">Estamos cargando la plantilla y la fuente…</p>
         </section>
 
         <section class="panel preview-shell" aria-labelledby="preview-heading">
           <div>
-            <h2 id="preview-heading">Preview</h2>
-            <p>Live canvas preview using the conference logo template and the locally loaded brand font.</p>
+            <h2 id="preview-heading">Vista previa</h2>
+            <p>Así se está viendo nuestro logo, con la plantilla de la Asociación y la fuente de marca.</p>
           </div>
 
           <div class="preview-stage">
             <canvas id="logoPreview"></canvas>
           </div>
 
-          <p class="preview-caption">Export uses the same canvas renderer, so the PNG output stays consistent with the live preview.</p>
+          <p class="preview-caption">La descarga usa el mismo dibujo, así que el PNG sale igual a lo que ves aquí.</p>
         </section>
       </div>
     </main>
@@ -385,19 +385,19 @@
     (function () {
       const logoOptions = {
         blue: {
-          label: 'Blue',
+          label: 'Azul',
           image: 'Logos/Logo Template Blue.png',
           verticalImage: 'Logos/Logo Vertical Blue.png',
           textColor: '#003b5c'
         },
         white: {
-          label: 'White',
+          label: 'Blanco',
           image: 'Logos/Logo Template White.png',
           verticalImage: 'Logos/Logo Vertical White.png',
           textColor: '#ffffff'
         },
         black: {
-          label: 'Black',
+          label: 'Negro',
           image: 'Logos/Logo Template Black.png',
           verticalImage: 'Logos/Logo Vertical Black.png',
           textColor: '#000000'
@@ -439,7 +439,7 @@
       if (!previewCanvas) {
         console.error('[Logo Generator] Missing #logoPreview canvas element.');
         if (statusText) {
-          statusText.textContent = 'Render error: canvas element not found.';
+          statusText.textContent = 'Error al dibujar: no encontramos el elemento canvas.';
         }
         return;
       }
@@ -448,7 +448,7 @@
       if (!ctx) {
         console.error('[Logo Generator] Failed to get 2D context from #logoPreview.');
         if (statusText) {
-          statusText.textContent = 'Render error: canvas context unavailable.';
+          statusText.textContent = 'Error al dibujar: el canvas no está disponible.';
         }
         return;
       }
@@ -474,11 +474,11 @@
 
       function getTemplateErrorMessage(colorKey) {
         const option = logoOptions[colorKey];
-        return 'Logo template could not be loaded. Confirm ' + getTemplateSrc(option) + ' is available.';
+        return 'No pudimos cargar la plantilla del logo. Revisa que ' + getTemplateSrc(option) + ' esté disponible.';
       }
 
       function setLoadingStatus(colorKey) {
-        setStatus('Loading ' + logoOptions[colorKey].label.toLowerCase() + ' logo template and font…');
+        setStatus('Estamos cargando la plantilla del logo ' + logoOptions[colorKey].label.toLowerCase() + ' y la fuente…');
       }
 
       function normalizeChurchName(value) {
@@ -714,7 +714,7 @@
         const activeOption = getActiveColorOption();
         if (!activeOption) {
           console.error('[Logo Generator] Unknown color selected:', activeColor);
-          setStatus('Render error: invalid color option.');
+          setStatus('Error al dibujar: ese color no es válido.');
           return;
         }
 
@@ -724,7 +724,7 @@
           await ensureFontsLoaded();
         } catch (error) {
           console.error('[Logo Generator] Font load failure.', error);
-          setStatus('Font load failed. Confirm fonts/AdventSans-Beta.otf exists and refresh.');
+          setStatus('No pudimos cargar la fuente. Revisa que fonts/AdventSans-Beta.otf exista y vuelve a cargar la página.');
           updateControls('');
           return;
         }
@@ -747,7 +747,7 @@
         const canvasHeightBase = templateImage.naturalHeight;
         if (!canvasWidth || !canvasHeightBase) {
           console.error('[Logo Generator] Loaded image has invalid dimensions.', getTemplateSrc(activeOption), canvasWidth, canvasHeightBase);
-          setStatus('Render error: template dimensions are invalid.');
+          setStatus('Error al dibujar: la plantilla no tiene un tamaño válido.');
           return;
         }
 
@@ -756,11 +756,11 @@
             drawVerticalLogo(templateImage, churchName, activeOption);
           } catch (error) {
             console.error('[Logo Generator] Failed while drawing vertical canvas.', error);
-            setStatus('Render error while drawing canvas. Check console for details.');
+            setStatus('Algo falló al dibujar. Revisa la consola para ver más detalles.');
             return;
           }
           updateControls(churchName);
-          setStatus(churchName ? 'Preview ready. Download will export this composed PNG.' : 'Template ready. Enter a church name to enable PNG export.');
+          setStatus(churchName ? '¡Listo! Al descargar vas a recibir este mismo PNG.' : 'Plantilla lista. Escribe el nombre de la iglesia para poder descargar el PNG.');
           return;
         }
 
@@ -791,15 +791,15 @@
           }
         } catch (error) {
           console.error('[Logo Generator] Failed while drawing canvas.', error);
-          setStatus('Render error while drawing canvas. Check console for details.');
+          setStatus('Algo falló al dibujar. Revisa la consola para ver más detalles.');
           return;
         }
 
         updateControls(churchName);
         if (churchName) {
-          setStatus('Preview ready. Download will export this composed PNG.');
+          setStatus('¡Listo! Al descargar vas a recibir este mismo PNG.');
         } else {
-          setStatus('Template ready. Enter a church name to enable PNG export.');
+          setStatus('Plantilla lista. Escribe el nombre de la iglesia para poder descargar el PNG.');
         }
       }
 
@@ -838,13 +838,13 @@
         const activeOption = getActiveColorOption();
         if (!fontLoaded || !activeOption || !loadedTemplates[getTemplateSrc(activeOption)]) {
           console.error('[Logo Generator] Export blocked because canvas assets are not ready.');
-          setStatus('PNG export is not ready yet. Wait for preview to finish loading.');
+          setStatus('El PNG todavía no está listo. Espera a que termine de cargar la vista previa.');
           return;
         }
 
         if (!previewCanvas || !previewCanvas.width || !previewCanvas.height) {
           console.error('[Logo Generator] Canvas is not ready for export.', previewCanvas);
-          setStatus('PNG export failed: canvas is not ready.');
+          setStatus('No se pudo descargar el PNG: el canvas no está listo.');
           return;
         }
 
@@ -866,21 +866,21 @@
               console.error('[Logo Generator] Failed to create PNG blob. Falling back to data URL export.');
               const fallbackUrl = previewCanvas.toDataURL('image/png');
               triggerDownload(fallbackUrl);
-              setStatus('PNG downloaded.');
+              setStatus('PNG descargado.');
               return;
             }
 
             const objectUrl = URL.createObjectURL(blob);
             try {
               triggerDownload(objectUrl);
-              setStatus('PNG downloaded.');
+              setStatus('PNG descargado.');
             } finally {
               setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 1000);
             }
           }, 'image/png');
         } catch (error) {
           console.error('[Logo Generator] PNG export failed.', error);
-          setStatus('PNG export failed. Please try again.');
+          setStatus('No se pudo descargar el PNG. Inténtalo otra vez.');
         }
       });
 
@@ -890,7 +890,7 @@
         })
         .catch(function (error) {
           console.error('[Logo Generator] Initial asset preparation failed.', error);
-          setStatus('Initialization failed. Check console for details.');
+          setStatus('Algo falló al empezar. Revisa la consola para ver más detalles.');
         });
       updateControls('');
     }());

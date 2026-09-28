@@ -1,29 +1,24 @@
 <!DOCTYPE html>
 <!--
-  PUBLIC LAUNCHER (index-public.html from imsda/utilities, published as index.html)
-  Has an English | Español switch linking to es/index.html (the Spanish launcher).
-  The switch lives only on the two launchers; tool pages link back to index.html
-  in their own folder, so each language stays in its own folder.
-  The last language picked is saved in localStorage ('imsda-tools-lang'); if it is
-  'es', this page forwards to es/index.html.
+  LANZADOR PÚBLICO EN ESPAÑOL (es/index.html)
+  Copia de index-public.html de imsda/utilities-spanish, con el selector de idioma agregado.
+  Las herramientas de esta carpeta (es/) son copias sin cambios de imsda/utilities-spanish.
+  imconnected.html no está traducido y lo mantiene otra persona: la tarjeta enlaza a ../imconnected.html.
 -->
 <!--
   DEPENDENCIES
-  Local files (same folder):
-    es/index.html  (Spanish launcher, linked from the language switch)
-  External (internet):
-    - Google Fonts - optional, falls back to system fonts
-    - IMSDA logo hosted on imsda.org: https://imsda.org/wp-content/uploads/2023/11/IMSDA-Logo-black.png
+  Archivos locales (misma carpeta):
+    ../index.html  (lanzador en inglés, enlazado desde el selector de idioma)
+    ../imconnected.html  (creador de boletines en inglés)
+  Externos (internet):
+    - Google Fonts - opcional, usa fuentes del sistema como respaldo
+    - Logotipo de IMSDA alojado en imsda.org: https://imsda.org/wp-content/uploads/2023/11/IMSDA-Logo-black.png
 -->
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <script>
-    /* Language switch: send visitors who last picked Spanish to the Spanish launcher. */
-    try { if (localStorage.getItem('imsda-tools-lang') === 'es') location.replace('es/index.html' + location.hash); } catch (e) {}
-  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IMSDA Tools</title>
+  <title>Herramientas IMSDA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -114,181 +109,181 @@
   <main class="container">
     <header class="topbar">
       <a class="brand" href="https://imsda.org">
-        <img src="https://imsda.org/wp-content/uploads/2023/11/IMSDA-Logo-black.png" alt="IMSDA Logo" onerror="this.style.display='none';" />
-        <div class="brand-text"><h1>IMSDA Tools</h1><span>Iowa-Missouri Conference</span></div>
+        <img src="https://imsda.org/wp-content/uploads/2023/11/IMSDA-Logo-black.png" alt="Logotipo de IMSDA" onerror="this.style.display='none';" />
+        <div class="brand-text"><h1>Herramientas IMSDA</h1><span>Asociación Iowa-Missouri</span></div>
       </a>
-      <div class="topbar-actions"><nav class="lang-switch" aria-label="Language"><a href="index.html" hreflang="en" lang="en" data-lang="en" aria-current="true">English</a><a href="es/index.html" hreflang="es" lang="es" data-lang="es">Español</a></nav><a class="back" href="https://imsda.org">← Back to imsda.org</a><a class="support-btn" href="https://imsda.org/support-portal/">Get Support</a></div>
+      <div class="topbar-actions"><nav class="lang-switch" aria-label="Idioma"><a href="../index.html" hreflang="en" lang="en" data-lang="en">English</a><a href="index.html" hreflang="es" lang="es" data-lang="es" aria-current="true">Español</a></nav><a class="back" href="https://imsda.org">← Volver a imsda.org</a><a class="support-btn" href="https://imsda.org/support-portal/">Pedir ayuda</a></div>
     </header>
-    <section class="tools-controls" aria-label="Browse and search tools">
-      <div class="search-row"><label for="toolSearch">Search tools</label><input id="toolSearch" type="search" placeholder="Search by title, description, section, or keyword…" autocomplete="off" /></div>
-      <button class="section-nav-toggle" type="button" aria-expanded="false" aria-controls="sectionNav">Browse Sections</button>
-      <ul id="sectionNav" class="section-nav" aria-label="Tool sections"></ul>
+    <section class="tools-controls" aria-label="Explorar y buscar herramientas">
+      <div class="search-row"><label for="toolSearch">Buscar herramientas</label><input id="toolSearch" type="search" placeholder="Busca por título, descripción, sección o palabra clave…" autocomplete="off" /></div>
+      <button class="section-nav-toggle" type="button" aria-expanded="false" aria-controls="sectionNav">Explorar secciones</button>
+      <ul id="sectionNav" class="section-nav" aria-label="Secciones de herramientas"></ul>
     </section>
-    <p id="noToolsFound" class="search-empty" role="status" aria-live="polite">No tools found. Try a different keyword.</p>
+    <p id="noToolsFound" class="search-empty" role="status" aria-live="polite">No encontramos herramientas. Prueba con otra palabra clave.</p>
     <section class="section-wrapper" id="pastors-churches">
-      <div class="section-header"><h2>Pastors / Churches</h2></div>
+      <div class="section-header"><h2>Pastores / Iglesias</h2></div>
       <div class="grid">
         <a class="card" id="adventist-logo-maker" href="logo-generator.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5h16v14z"/><path d="M8 15l2.6-3 2.2 2.3 3.2-4.3L20 15"/><circle cx="9" cy="9" r="1.3"/></svg></div>
-          <div><h3 class="card-title">Adventist Logo Maker</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Generate church logos with consistent conference branding, typography, and export-ready formats.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Branding</span></div>
+          <div><h3 class="card-title">Creador de logotipos adventistas</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Creamos los logotipos de nuestra iglesia con la identidad visual de la Asociación, su tipografía y formatos listos para exportar.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Identidad visual</span></div>
       </a>
 <a class="card" id="business-card-creator" href="business-card-generator.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h10"/><path d="M7 14h6"/></svg></div>
-          <div><h3 class="card-title">Business Card Creator</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Create clean, consistent business cards for pastors and staff with proper branding and export-ready layouts.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Print · Branding</span></div>
+          <div><h3 class="card-title">Creador de tarjetas de presentación</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Hacemos tarjetas de presentación limpias y uniformes para nuestros pastores y nuestro personal, con la identidad visual correcta y listas para exportar.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Impresión · Identidad visual</span></div>
       </a>
 <a class="card" id="church-letterhead-pdf" href="church-letterhead-pdf-generator.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5"/><path d="M9 13h8"/><path d="M9 17h8"/></svg></div>
-          <div><h3 class="card-title">Church Letterhead PDF</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Generate official church letterhead PDFs with correct branding and print-ready formatting.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>PDF · Print</span></div>
+          <div><h3 class="card-title">Membrete de iglesia en PDF</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Hacemos el membrete oficial de nuestra iglesia en PDF, con la identidad visual correcta y listo para imprimir.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>PDF · Impresión</span></div>
       </a>
 <a class="card" id="quote-generator" href="custom-quote-generator.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M6 4h12v16H6z"/><path d="M9 11h6"/><path d="M9 15h4"/></svg></div>
-          <div><h3 class="card-title">Quote Generator</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Generate consistent looking quotes for any projects or estimates for events coming up.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>PDF · Print</span></div>
+          <div><h3 class="card-title">Generador de cotizaciones</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Preparamos cotizaciones con el mismo estilo para cualquier proyecto o para calcular los costos de nuestros próximos eventos.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>PDF · Impresión</span></div>
       </a>
 <a class="card" id="bulletin-maker" href="church-bulletin-generator.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5"/><path d="M9 13h8"/><path d="M9 17h8"/></svg></div>
-          <div><h3 class="card-title">Bulletin Maker</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Create a bulletin, with plenty of customization, and easy export import for saving.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>PDF · Print</span></div>
+          <div><h3 class="card-title">Creador de boletines</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Armamos nuestro boletín con muchas opciones para personalizarlo, y lo guardamos fácilmente al exportarlo e importarlo.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>PDF · Impresión</span></div>
       </a>
 <div class="card placeholder" style="cursor:default; opacity:.72; box-shadow:none;">
           <div class="card-header"><div class="icon-box muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
-            <div><h3 class="card-title muted-title">More tools on the way</h3><div class="badges"><span class="badge badge-soon">Coming Soon</span></div></div></div>
-          <p class="card-desc">New resources for conference churches and ministry leaders are in development. Check back for updates.</p>
-          <div class="card-footer"><span class="muted-link">In Development</span><span>Roadmap</span></div>
+            <div><h3 class="card-title muted-title">Más herramientas en camino</h3><div class="badges"><span class="badge badge-soon">Próximamente</span></div></div></div>
+          <p class="card-desc">Estamos preparando nuevos recursos para nuestras iglesias y nuestros líderes de ministerio en la Asociación. ¡Vuelve pronto para ver las novedades!</p>
+          <div class="card-footer"><span class="muted-link">En desarrollo</span><span>Hoja de ruta</span></div>
         </div>
       </div>
     </section>
 <section class="section-wrapper" id="event-tools">
-      <div class="section-header"><h2>Event Tools</h2></div>
+      <div class="section-header"><h2>Herramientas para eventos</h2></div>
       <div class="grid">
         <a class="card" id="name-tag-avery-18660" href="name-tag-maker-Avery18660.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M7 9.2h10"/><path d="M7 13h7"/><path d="M7 16.8h5"/></svg></div>
-          <div><h3 class="card-title">Name Tag (Avery 18660)</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Easily Print out name tag stickers on an Avery 18660 (3x10) Sheet</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Print</span></div>
+          <div><h3 class="card-title">Gafete (Avery 18660)</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Imprimimos fácilmente gafetes adhesivos en una hoja Avery 18660 (3x10).</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Eventos · Impresión</span></div>
       </a>
 <a class="card" id="name-tag-avery-8395" href="name-tag-generator-8395.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M7 9.2h10"/><path d="M7 13h7"/><path d="M7 16.8h5"/></svg></div>
-          <div><h3 class="card-title">Name Tag (Avery 8395)</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Easily Print out name tag stickers on an Avery 8395 (2x4) Sheet</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Print</span></div>
+          <div><h3 class="card-title">Gafete (Avery 8395)</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Imprimimos fácilmente gafetes adhesivos en una hoja Avery 8395 (2x4).</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Eventos · Impresión</span></div>
       </a>
 <a class="card" id="name-tag-avery-5392" href="avery-5392.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M7 9.2h10"/><path d="M7 13h7"/><path d="M7 16.8h5"/></svg></div>
-          <div><h3 class="card-title">Name Tag (Avery 5392)</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Easily Print out name tags with graphics on front or back with Avery 5392 (2x3 Sheet).</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Print</span></div>
+          <div><h3 class="card-title">Gafete (Avery 5392)</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Imprimimos fácilmente gafetes con gráficos al frente o atrás en Avery 5392 (hoja de 2x3).</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Eventos · Impresión</span></div>
       </a>
 <a class="card" id="schedule-maker" href="schedule-maker.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2.8v3"/><path d="M16 2.8v3"/><path d="M3 9h18"/><path d="M7 13h4"/><path d="M13 13h4"/><path d="M7 17h10"/></svg></div>
-          <div><h3 class="card-title">Schedule Maker</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Upload a CSV to make a printable 3x5 Schedule Card</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Print</span></div>
+          <div><h3 class="card-title">Creador de horarios</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Subimos un CSV y hacemos una tarjeta de horario de 3x5 lista para imprimir.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Eventos · Impresión</span></div>
       </a>
 <a class="card" id="schedule-maker-avery-5392" href="schedule-avery-5392.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2.8v3"/><path d="M16 2.8v3"/><path d="M3 9h18"/><path d="M7 13h4"/><path d="M13 13h4"/><path d="M7 17h10"/></svg></div>
-          <div><h3 class="card-title">Schedule Maker (Avery 5392)</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Upload a CSV to make a schedule that will work with the Avery 5392 Name Tag.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Print</span></div>
+          <div><h3 class="card-title">Creador de horarios (Avery 5392)</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Subimos un CSV y hacemos un horario que funciona con el gafete Avery 5392.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Eventos · Impresión</span></div>
       </a>
 <a class="card" id="calendar-builder" href="calendar-builder.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2.8v3"/><path d="M16 2.8v3"/><path d="M3 9h18"/><path d="M7 13h2"/><path d="M11 13h2"/><path d="M15 13h2"/><path d="M7 17h2"/><path d="M11 17h2"/></svg></div>
-          <div><h3 class="card-title">Calendar Generator</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Build a customized calendar for church events, ministry schedules, and conference planning.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Planning</span></div>
+          <div><h3 class="card-title">Generador de calendarios</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Armamos un calendario a nuestra medida para los eventos de nuestra iglesia, los horarios de nuestros ministerios y la planificación de la Asociación.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Eventos · Planificación</span></div>
       </a>
 <div class="card placeholder" style="cursor:default; opacity:.72; box-shadow:none;">
           <div class="card-header"><div class="icon-box muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
-            <div><h3 class="card-title muted-title">More tools on the way</h3><div class="badges"><span class="badge badge-soon">Coming Soon</span></div></div></div>
-          <p class="card-desc">New resources for conference churches and ministry leaders are in development. Check back for updates.</p>
-          <div class="card-footer"><span class="muted-link">In Development</span><span>Roadmap</span></div>
+            <div><h3 class="card-title muted-title">Más herramientas en camino</h3><div class="badges"><span class="badge badge-soon">Próximamente</span></div></div></div>
+          <p class="card-desc">Estamos preparando nuevos recursos para nuestras iglesias y nuestros líderes de ministerio en la Asociación. ¡Vuelve pronto para ver las novedades!</p>
+          <div class="card-footer"><span class="muted-link">En desarrollo</span><span>Hoja de ruta</span></div>
         </div>
       </div>
     </section>
 <section class="section-wrapper" id="audio-video-and-technology">
-      <div class="section-header"><h2>Audio/Video and Technology</h2></div>
+      <div class="section-header"><h2>Audio/Video y Tecnología</h2></div>
       <div class="grid">
         <a class="card" id="church-av-quote-request" href="church-av-quote-request.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M6 4h12v16H6z"/><path d="M9 11h6"/><path d="M9 15h4"/></svg></div>
-          <div><h3 class="card-title">Church AV Quote Request</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Build and submit church audio/video quote requests with consistent options for ministry planning using recommended equipment.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>AV · Technology</span></div>
+          <div><h3 class="card-title">Solicitud de cotización AV para iglesias</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Preparamos y enviamos nuestras solicitudes de cotización de audio/video con opciones uniformes y equipo recomendado para planear nuestro ministerio.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>AV · Tecnología</span></div>
       </a>
 <a class="card" id="church-network-wifi-estimator" href="church-wifi-coverage.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5C7.3 3.6 16.7 3.6 22 8.5"/><path d="M5.5 12c3.2-3 9.8-3 13 0"/><path d="M9 15.5c1.6-1.6 4.4-1.6 6 0"/><circle cx="12" cy="19" r="1.1" fill="currentColor" stroke="none"/></svg></div>
-          <div><h3 class="card-title">Church Network &amp; WiFi Estimator</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Estimate a church’s router, access points, and PoE switch size, choose UniFi or TP-Link, and continue into a prefilled network quote request.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Network · Planning</span></div>
+          <div><h3 class="card-title">Estimador de red y WiFi para la iglesia</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Estimamos el router, los puntos de acceso y el tamaño del switch PoE de nuestra iglesia, elegimos UniFi o TP-Link y seguimos con una solicitud de cotización de red ya llenada.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Red · Planificación</span></div>
       </a>
 <a class="card" id="church-networking-internet-quote-request" href="church-network-quote-request.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="7" height="5.5" rx="1"/><rect x="14.5" y="4" width="7" height="5.5" rx="1"/><rect x="8.5" y="14.5" width="7" height="5.5" rx="1"/><path d="M6 9.5v2.5h12V9.5"/><path d="M12 12v2.5"/></svg></div>
-          <div><h3 class="card-title">Church Networking/Internet Quote Request</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Build and submit Networking quote requests with default recommendations and customization.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>AV · Technology</span></div>
+          <div><h3 class="card-title">Solicitud de cotización de red/Internet para la iglesia</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Preparamos y enviamos nuestras solicitudes de cotización de red con recomendaciones predeterminadas y opciones para personalizar.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>AV · Tecnología</span></div>
       </a>
 <a class="card" id="livestream-equipment-checklist" href="livestream-equipment-checklist.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.3"/><rect x="13" y="3" width="8" height="8" rx="1.3"/><rect x="3" y="13" width="8" height="8" rx="1.3"/><path d="M15 14h6"/><path d="M15 18h6"/></svg></div>
-          <div><h3 class="card-title">Livestream Equipment Checklist</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Make sure you have the equipment needed to get your livestream up and running.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>AV · Technology</span></div>
+          <div><h3 class="card-title">Lista de equipo para transmisión en vivo</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Nos aseguramos de tener todo el equipo que necesitamos para empezar nuestra transmisión en vivo.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>AV · Tecnología</span></div>
       </a>
 <a class="card" id="livestream-checklist" href="livestream-checklist.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11"/><path d="M9 12h11"/><path d="M9 19h11"/><path d="M3.8 5.4l1.3 1.3 2.4-2.4"/><path d="M3.8 12.4l1.3 1.3 2.4-2.4"/><path d="M3.8 19.4l1.3 1.3 2.4-2.4"/></svg></div>
-          <div><h3 class="card-title">Livestream Checklist</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Create a repeatable pre-service, equipment, and troubleshooting checklist for church livestream setups.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>AV · Technology</span></div>
+          <div><h3 class="card-title">Lista de verificación para transmisión en vivo</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Hacemos una lista reutilizable para antes del culto, para el equipo y para resolver problemas en las transmisiones en vivo de nuestra iglesia.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>AV · Tecnología</span></div>
       </a>
 <a class="card" id="security-camera-quote-generator" href="security-camera-quote-generator.html">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11l4 4v6H4z"/><circle cx="10" cy="12" r="2.5"/><path d="M19 13h2"/><path d="M7 17v3"/><path d="M4 20h6"/></svg></div>
-          <div><h3 class="card-title">Security Camera Quote Request</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Build a security camera system quote with organized equipment, installation, and project details.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Security · Technology</span></div>
+          <div><h3 class="card-title">Solicitud de cotización de cámaras de seguridad</h3><div class="badges"><span class="badge badge-live">Disponible</span></div></div></div>
+        <p class="card-desc">Preparamos la cotización de nuestro sistema de cámaras de seguridad con el equipo, la instalación y los detalles del proyecto bien organizados.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Seguridad · Tecnología</span></div>
       </a>
 <div class="card placeholder" style="cursor:default; opacity:.72; box-shadow:none;">
           <div class="card-header"><div class="icon-box muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
-            <div><h3 class="card-title muted-title">More tools on the way</h3><div class="badges"><span class="badge badge-soon">Coming Soon</span></div></div></div>
-          <p class="card-desc">New resources for conference churches and ministry leaders are in development. Check back for updates.</p>
-          <div class="card-footer"><span class="muted-link">In Development</span><span>Roadmap</span></div>
+            <div><h3 class="card-title muted-title">Más herramientas en camino</h3><div class="badges"><span class="badge badge-soon">Próximamente</span></div></div></div>
+          <p class="card-desc">Estamos preparando nuevos recursos para nuestras iglesias y nuestros líderes de ministerio en la Asociación. ¡Vuelve pronto para ver las novedades!</p>
+          <div class="card-footer"><span class="muted-link">En desarrollo</span><span>Hoja de ruta</span></div>
         </div>
       </div>
     </section>
 <section class="section-wrapper" id="special-tools">
-      <div class="section-header"><h2>Special Tools</h2></div>
+      <div class="section-header"><h2>Herramientas especiales</h2></div>
       <div class="grid">
-        <a class="card" id="email-newsletter-builder" href="imconnected.html">
+        <a class="card" id="email-newsletter-builder" href="../imconnected.html" hreflang="en">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
-          <div><h3 class="card-title">Email Newsletter Builder</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
-        <p class="card-desc">Design and assemble Email Newsletters with organized story blocks and consistent formatting.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Newsletter</span></div>
+          <div><h3 class="card-title">Creador de boletines por correo electrónico</h3><div class="badges"><span class="badge badge-live">Disponible</span><span class="badge badge-soon">En inglés</span></div></div></div>
+        <p class="card-desc">Diseñamos y armamos nuestros boletines por correo electrónico con bloques de noticias organizados y un formato uniforme.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Boletín</span></div>
       </a>
 <a class="card" id="camp-meeting-scanner" href="https://cm26-imsda.wp1.host" target="_blank" rel="noopener">
         <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="2.5" height="2.5" rx="0.4"/><line x1="18.5" y1="14" x2="21" y2="14"/><line x1="14" y1="18.5" x2="17" y2="18.5"/><line x1="20" y1="18" x2="20" y2="21"/></svg></div>
-          <div><h3 class="card-title">Camp Meeting Scanner</h3><div class="badges"><span class="badge badge-live">Live</span><span class="badge badge-pwa">PWA</span></div></div></div>
-        <p class="card-desc">QR scanning system for Camp Meeting with offline support and payments.</p>
-        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · PWA</span></div>
+          <div><h3 class="card-title">Escáner del Congreso Campestre</h3><div class="badges"><span class="badge badge-live">Disponible</span><span class="badge badge-pwa">PWA</span></div></div></div>
+        <p class="card-desc">Sistema de escaneo QR para nuestro Congreso Campestre; funciona sin conexión y acepta pagos.</p>
+        <div class="card-footer"><span>Abrir herramienta &rarr;</span><span>Eventos · PWA</span></div>
       </a>
 <div class="card placeholder" style="cursor:default; opacity:.72; box-shadow:none;">
           <div class="card-header"><div class="icon-box muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
-            <div><h3 class="card-title muted-title">More tools on the way</h3><div class="badges"><span class="badge badge-soon">Coming Soon</span></div></div></div>
-          <p class="card-desc">New resources for conference churches and ministry leaders are in development. Check back for updates.</p>
-          <div class="card-footer"><span class="muted-link">In Development</span><span>Roadmap</span></div>
+            <div><h3 class="card-title muted-title">Más herramientas en camino</h3><div class="badges"><span class="badge badge-soon">Próximamente</span></div></div></div>
+          <p class="card-desc">Estamos preparando nuevos recursos para nuestras iglesias y nuestros líderes de ministerio en la Asociación. ¡Vuelve pronto para ver las novedades!</p>
+          <div class="card-footer"><span class="muted-link">En desarrollo</span><span>Hoja de ruta</span></div>
         </div>
       </div>
     </section>
     <aside class="support-note" aria-labelledby="support-note-title">
-      <h2 id="support-note-title">Tool Support &amp; Requests</h2>
-      <p>If you experience an issue with one of the tools or would like to request a new one, please use the <a href="https://imsda.org/support-portal/">IMSDA Support Portal</a>.</p>
-      <p>Please note that requested tools are not guaranteed to be created, but we will review each request and determine whether it is something we can provide.</p>
+      <h2 id="support-note-title">Ayuda y solicitudes de herramientas</h2>
+      <p>Si tienes un problema con alguna de las herramientas o quieres pedir una nueva, usa el <a href="https://imsda.org/support-portal/">Portal de soporte de IMSDA</a>.</p>
+      <p>Ten en cuenta que no podemos prometer que haremos cada herramienta que se pide, pero revisamos cada solicitud y vemos si es algo que podemos ofrecer.</p>
     </aside>
-    <footer><p>&copy; 2026 Iowa-Missouri Conference of Seventh-day Adventists · <a href="https://imsda.org">Return to imsda.org</a></p></footer>
+    <footer><p>&copy; 2026 Asociación Iowa-Missouri de los Adventistas del Séptimo Día · <a href="https://imsda.org">Volver a imsda.org</a></p></footer>
   </main>
 <script>
   function toSlug(text) { return (text || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); }
@@ -300,7 +295,7 @@
     const sections = Array.from(document.querySelectorAll('.section-wrapper'));
     const sectionData = sections.map((section, idx) => {
       const header = section.querySelector('.section-header h2'); const grid = section.querySelector('.grid');
-      const title = header ? header.textContent.trim() : `Section ${idx + 1}`; const sectionId = section.id || `${toSlug(title) || `section-${idx + 1}`}`; section.id = sectionId;
+      const title = header ? header.textContent.trim() : `Sección ${idx + 1}`; const sectionId = section.id || `${toSlug(title) || `section-${idx + 1}`}`; section.id = sectionId;
       const cards = Array.from(grid ? grid.querySelectorAll('.card') : []);
       cards.forEach((card) => {
         const titleEl = card.querySelector('.card-title, h3'); const descEl = card.querySelector('.card-desc, p'); const keywords = (card.getAttribute('data-keywords') || '').trim();
@@ -310,7 +305,7 @@
     });
     controlsNav.innerHTML = sectionData.map(({ title, sectionId, cards }) => {
       const tools = cards.map((card) => {
-        const cardTitle = (card.querySelector('.card-title, h3')?.textContent || 'Untitled Tool').trim();
+        const cardTitle = (card.querySelector('.card-title, h3')?.textContent || 'Herramienta sin título').trim();
         const href = card.getAttribute('href');
         if (href) return `<li><a href="${href}">${cardTitle}</a></li>`;
         return `<li><a href="#${sectionId}">${cardTitle}</a></li>`;
