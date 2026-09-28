@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    - Google Fonts - optional, falls back to system fonts
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Livestream Checklist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f7f9;
+      --surface: #ffffff;
+      --surface-soft: #f8fbfc;
+      --text-main: #1a2b3c;
+      --text-muted: #5e7185;
+      --primary: #087e8b;
+      --primary-dark: #0b3954;
+      --border: #e2e8f0;
+      --shadow-sm: 0 2px 8px rgba(11, 57, 84, 0.05);
+      --shadow-md: 0 10px 22px rgba(11, 57, 84, 0.08);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Manrope", sans-serif;
+      color: var(--text-main);
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 100% 0%, rgba(8, 126, 139, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 0% 100%, rgba(11, 57, 84, 0.04) 0%, transparent 40%);
+      background-attachment: fixed;
+      line-height: 1.6;
+    }
+
+    .page-wrap {
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 1.2rem 1rem 2rem;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.85rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      font-family: "Syne", sans-serif;
+      color: var(--primary-dark);
+      font-size: 1.05rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .back-link {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      text-decoration: none;
+      color: var(--primary-dark);
+      background: #f3f7fa;
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 0.5rem 0.95rem;
+    }
+
+    .back-link:hover,
+    .btn:hover { filter: brightness(0.98); }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 1rem;
+    }
+
+    .hero {
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Syne", sans-serif;
+      color: var(--primary-dark);
+      line-height: 1.2;
+      font-size: 1.7rem;
+    }
+
+    .intro {
+      margin: 0.6rem 0 0;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.9rem;
+    }
+
+    .field,
+    .setup-select,
+    .options {
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem;
+    }
+
+    .field label,
+    .block-title {
+      display: block;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 0.45rem;
+      font-size: 0.95rem;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      border: 1px solid #cfd8e3;
+      border-radius: 10px;
+      padding: 0.56rem 0.65rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: #fff;
+      color: inherit;
+    }
+
+    textarea { min-height: 72px; resize: vertical; }
+
+    .setup-choice {
+      border: 1px solid #dbe4ee;
+      border-radius: 10px;
+      background: #fff;
+      padding: 0.65rem;
+      display: flex;
+      gap: 0.55rem;
+      align-items: flex-start;
+      margin-bottom: 0.6rem;
+    }
+
+    .setup-choice:last-child { margin-bottom: 0; }
+
+    .setup-choice p { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.45rem 0.6rem;
+    }
+
+    .options-grid label {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.92rem;
+      color: #304658;
+    }
+
+    .actions {
+      margin-top: 0.9rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 0.6rem 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-secondary { background: #eef3f7; color: var(--primary-dark); border-color: var(--border); }
+
+    .result-wrap {
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.9rem;
+    }
+
+    .result-title {
+      margin: 0;
+      font-family: "Syne", sans-serif;
+      color: var(--primary-dark);
+      font-size: 1.2rem;
+    }
+
+    .meta {
+      margin: 0.25rem 0 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .result-tools { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+
+    .output-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem;
+      margin-bottom: 0.85rem;
+      background: #fff;
+    }
+
+    .output-card h3 {
+      margin: 0 0 0.6rem;
+      font-family: "Syne", sans-serif;
+      font-size: 1.03rem;
+      color: var(--primary-dark);
+    }
+
+    .editable-list,
+    .troubleshooting {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .editable-list li,
+    .troubleshooting li {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.55rem;
+      align-items: start;
+    }
+
+    .editable-text {
+      display: inline-block;
+      padding: 0.12rem 0.2rem;
+      border-radius: 5px;
+      min-width: 10ch;
+    }
+
+    .editable-text[contenteditable="true"]:focus {
+      outline: 2px solid rgba(8, 126, 139, 0.28);
+      background: #f1fafb;
+    }
+
+    .issue-title {
+      font-weight: 700;
+      color: #2b4458;
+      margin-bottom: 0.2rem;
+      display: block;
+    }
+
+    .issue-steps { margin: 0; padding-left: 1.1rem; }
+    .issue-steps li { margin: 0.18rem 0; }
+
+    .small-note {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .status {
+      min-height: 1.2rem;
+      margin-top: 0.45rem;
+      color: #1d5e67;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 860px) {
+      .form-grid,
+      .options-grid { grid-template-columns: 1fr; }
+      h1 { font-size: 1.45rem; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .topbar,
+      .hero,
+      .actions,
+      .result-tools,
+      .status,
+      .small-note { display: none !important; }
+      .page-wrap { max-width: none; padding: 0; }
+      .panel,
+      .output-card { border: none; box-shadow: none; padding: 0; margin: 0 0 0.7rem 0; }
+      .result-wrap { display: block !important; margin-top: 0; }
+      .editable-text { padding: 0; }
+      input[type="checkbox"] { transform: scale(1.1); }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="page-wrap">
+    <header class="topbar" aria-label="Top navigation">
+      <p class="brand">IMSDA Tools</p>
+      
+    </header>
+
+    <section class="panel hero" aria-labelledby="tool-title">
+      <h1 id="tool-title">Livestream Checklist</h1>
+      <p class="intro">Build a repeatable pre-service, equipment, and troubleshooting checklist so church volunteers can prepare for livestream services with confidence.</p>
+    </section>
+
+    <section class="panel" aria-label="Checklist setup form">
+      <div class="form-grid">
+        <div class="field">
+          <label for="churchName">Church / School Name</label>
+          <input id="churchName" type="text" placeholder="Example: Cedar Rapids SDA Church" />
+        </div>
+        <div class="field">
+          <label for="serviceName">Service / Event Name</label>
+          <input id="serviceName" type="text" placeholder="Example: Sabbath Worship Service" />
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-top:0.9rem;">
+        <fieldset class="setup-select">
+          <legend class="block-title">Select setup type</legend>
+          <label class="setup-choice">
+            <input type="radio" name="setupType" value="simple" checked />
+            <span>
+              <strong>Simple Setup</strong>
+              <p>Recommended for most churches. Best for a basic camera, simple audio feed, and smaller volunteer teams.</p>
+            </span>
+          </label>
+          <label class="setup-choice">
+            <input type="radio" name="setupType" value="advanced" />
+            <span>
+              <strong>Advanced Setup</strong>
+              <p>Best for churches using multiple sources, switchers, or more complex audio/video routing.</p>
+            </span>
+          </label>
+        </fieldset>
+
+        <fieldset class="options">
+          <legend class="block-title">Optional setup details</legend>
+          <div class="options-grid" id="optionGrid"></div>
+        </fieldset>
+      </div>
+
+      <div class="field" style="margin-top:0.9rem;">
+        <label for="customNotes">Custom Notes (optional)</label>
+        <textarea id="customNotes" placeholder="Add church-specific reminders, contact numbers, or special Sabbath notes."></textarea>
+      </div>
+
+      <div class="actions">
+        <button id="generateBtn" class="btn btn-primary" type="button">Generate Checklist</button>
+        <button id="resetBtn" class="btn btn-secondary" type="button">Reset</button>
+      </div>
+      <p id="status" class="status" aria-live="polite"></p>
+    </section>
+
+    <section id="resultWrap" class="result-wrap" aria-label="Generated checklist">
+      <div class="panel">
+        <div class="result-header">
+          <div>
+            <h2 class="result-title">Generated Livestream Checklist</h2>
+            <p id="resultMeta" class="meta"></p>
+          </div>
+          <div class="result-tools">
+            <button id="printBtn" class="btn btn-secondary" type="button">Print Checklist</button>
+            <button id="copyBtn" class="btn btn-secondary" type="button">Copy Checklist</button>
+            <button id="downloadBtn" class="btn btn-secondary" type="button">Download Text</button>
+          </div>
+        </div>
+
+        <article class="output-card" id="preServiceCard">
+          <h3>1. Pre-Service Checklist</h3>
+          <ul id="preServiceList" class="editable-list"></ul>
+        </article>
+
+        <article class="output-card" id="equipmentCard">
+          <h3>2. Equipment Checklist</h3>
+          <ul id="equipmentList" class="editable-list"></ul>
+        </article>
+
+        <article class="output-card" id="troubleCard">
+          <h3>3. Troubleshooting Steps</h3>
+          <ul id="troubleshootingList" class="troubleshooting"></ul>
+        </article>
+
+        <article class="output-card" id="notesCard">
+          <h3>Custom Notes</h3>
+          <p class="small-note">You can click and edit any checklist text before printing, copying, or downloading.</p>
+          <div id="notesOutput" class="editable-text" contenteditable="true"></div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = "imsdaLivestreamChecklistForm";
+
+      const options = [
+        ["presentationComputer", "Uses presentation computer"],
+        ["confidenceMonitor", "Uses confidence monitor"],
+        ["wirelessMics", "Uses wireless microphones"],
+        ["soundBoardFeed", "Uses livestream audio feed from sound board"],
+        ["separateCamera", "Uses separate streaming camera"],
+        ["switcher", "Uses switcher"],
+        ["atem", "Uses ATEM"],
+        ["propresenter", "Uses ProPresenter or presentation software"],
+        ["volunteers", "Uses volunteer operators"],
+        ["churchInternet", "Uses church internet connection"],
+        ["recording", "Uses recording in addition to livestream"]
+      ];
+
+      const churchNameEl = document.getElementById("churchName");
+      const serviceNameEl = document.getElementById("serviceName");
+      const customNotesEl = document.getElementById("customNotes");
+      const optionGrid = document.getElementById("optionGrid");
+      const resultWrap = document.getElementById("resultWrap");
+      const resultMeta = document.getElementById("resultMeta");
+      const statusEl = document.getElementById("status");
+
+      const preServiceList = document.getElementById("preServiceList");
+      const equipmentList = document.getElementById("equipmentList");
+      const troubleshootingList = document.getElementById("troubleshootingList");
+      const notesOutput = document.getElementById("notesOutput");
+
+      function buildOptionCheckboxes() {
+        options.forEach(([id, label]) => {
+          const row = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.id = id;
+          input.dataset.option = "true";
+
+          const text = document.createElement("span");
+          text.textContent = label;
+
+          row.appendChild(input);
+          row.appendChild(text);
+          optionGrid.appendChild(row);
+        });
+      }
+
+      function getFormData() {
+        const selectedSetup = document.querySelector("input[name='setupType']:checked");
+        const data = {
+          churchName: churchNameEl.value.trim(),
+          serviceName: serviceNameEl.value.trim(),
+          customNotes: customNotesEl.value.trim(),
+          setupType: selectedSetup ? selectedSetup.value : "simple",
+          options: {}
+        };
+
+        options.forEach(([id]) => {
+          const el = document.getElementById(id);
+          data.options[id] = Boolean(el && el.checked);
+        });
+
+        return data;
+      }
+
+      function saveFormState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(getFormData()));
+      }
+
+      function loadFormState() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+
+        try {
+          const saved = JSON.parse(raw);
+          churchNameEl.value = saved.churchName || "";
+          serviceNameEl.value = saved.serviceName || "";
+          customNotesEl.value = saved.customNotes || "";
+
+          if (saved.setupType) {
+            const setupInput = document.querySelector(`input[name='setupType'][value='${saved.setupType}']`);
+            if (setupInput) setupInput.checked = true;
+          }
+
+          if (saved.options) {
+            options.forEach(([id]) => {
+              const el = document.getElementById(id);
+              if (el) el.checked = Boolean(saved.options[id]);
+            });
+          }
+        } catch (err) {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+
+      function uniqueItems(items) {
+        return Array.from(new Set(items));
+      }
+
+      function buildPreService(data) {
+        const common = [
+          "Power on all needed equipment.",
+          "Confirm the camera image is visible in the streaming software.",
+          "Confirm audio is reaching the stream and not muted.",
+          "Verify internet connection is stable.",
+          "Confirm stream destination and platform settings are correct.",
+          "Run a short test recording or private stream.",
+          "Confirm service start scene/layout is ready."
+        ];
+
+        const simpleExtras = [
+          "Check one backup plan (example: phone hotspot or spare cable).",
+          "Make sure one person is assigned to start and monitor the stream."
+        ];
+
+        const advancedExtras = [
+          "Confirm all video sources appear correctly in the switcher/software.",
+          "Check audio routing from board to stream return channel.",
+          "Do a full rehearsal of transitions for opening song, prayer, and sermon.",
+          "Confirm operator communication plan (headsets/text/hand signals)."
+        ];
+
+        const items = [...common];
+        items.push(...(data.setupType === "advanced" ? advancedExtras : simpleExtras));
+
+        if (data.options.propresenter || data.options.presentationComputer) {
+          items.push("Test slides/presentation and confirm text is readable on stream.");
+        }
+        if (data.options.wirelessMics) {
+          items.push("Check microphones, mute status, and battery levels.");
+        }
+        if (data.options.volunteers) {
+          items.push("Confirm volunteers know their roles and handoff timing.");
+        }
+        if (data.options.recording) {
+          items.push("Verify recording is enabled and save location has enough space.");
+        }
+
+        return uniqueItems(items);
+      }
+
+      function buildEquipment(data) {
+        const base = [
+          "Camera",
+          "Tripod or stable camera mount",
+          "HDMI or video cable (primary + spare)",
+          "Streaming computer or encoder",
+          "Headphones for audio check",
+          "Power strips and extension cables",
+          "Backup adapters (video and USB)"
+        ];
+
+        if (data.setupType === "advanced") {
+          base.push(
+            "Second camera or secondary source",
+            "Source labels for each input",
+            "Operator quick-reference sheet"
+          );
+        }
+
+        if (data.options.soundBoardFeed) base.push("Sound board feed cable/interface");
+        if (data.options.wirelessMics) base.push("Wireless microphones and fresh batteries");
+        if (data.options.switcher) base.push("Video switcher");
+        if (data.options.atem) base.push("ATEM unit and control computer");
+        if (data.options.presentationComputer) base.push("Presentation computer");
+        if (data.options.confidenceMonitor) base.push("Confidence monitor and cabling");
+        if (data.options.propresenter) base.push("Presentation software license/login and media files");
+        if (data.options.churchInternet) base.push("Network cables and internet backup option");
+        if (data.options.recording) base.push("Recording drive/storage media");
+        if (data.options.separateCamera) base.push("Separate streaming camera with power supply");
+
+        return uniqueItems(base);
+      }
+
+      function buildTroubleshooting(data) {
+        const simpleIssues = [
+          {
+            issue: "No video on stream",
+            steps: [
+              "Check that the camera is powered on.",
+              "Make sure the HDMI/video cable is fully connected at both ends.",
+              "Confirm the correct camera input is selected in the streaming software.",
+              "Restart only the camera or capture device first."
+            ]
+          },
+          {
+            issue: "No audio on stream",
+            steps: [
+              "Verify the audio source is not muted.",
+              "Check the input level meter in the streaming software.",
+              "Confirm the correct microphone or board input is selected.",
+              "Reconnect the audio cable and test again."
+            ]
+          },
+          {
+            issue: "Stream not starting",
+            steps: [
+              "Confirm stream key/account is correct.",
+              "Check internet connection and speed.",
+              "Close and reopen the streaming software.",
+              "Restart only the streaming computer if needed."
+            ]
+          },
+          {
+            issue: "Volunteers unsure what to do",
+            steps: [
+              "Pause for one minute and assign one clear lead operator.",
+              "Use the checklist top-to-bottom.",
+              "Start with a simple camera + audio setup and go live.",
+              "Add extra elements only after core stream is stable."
+            ]
+          }
+        ];
+
+        const advancedIssues = [
+          {
+            issue: "ATEM or switcher source not showing",
+            steps: [
+              "Check source device power and output format.",
+              "Confirm the cable is connected to the expected input number.",
+              "Verify the switcher input is assigned and not hidden.",
+              "Try a known-good cable or move source to another input."
+            ]
+          },
+          {
+            issue: "Wrong audio source selected",
+            steps: [
+              "Open audio settings and verify the intended input device.",
+              "Check for duplicate devices with similar names.",
+              "Watch level meters while someone speaks at the pulpit mic.",
+              "Lock the correct source once confirmed."
+            ]
+          },
+          {
+            issue: "Slides not appearing",
+            steps: [
+              "Check that the presentation computer is outputting to the correct display.",
+              "Confirm the switcher/software scene includes the slide source.",
+              "Restart the presentation software only if output is frozen.",
+              "Keep camera-only layout ready as backup."
+            ]
+          },
+          {
+            issue: "Internet not working",
+            steps: [
+              "Confirm network cable or Wi-Fi connection on the streaming computer.",
+              "Test internet by loading a simple website.",
+              "Switch to backup network or hotspot if needed.",
+              "Lower stream bitrate before trying again."
+            ]
+          }
+        ];
+
+        const issues = data.setupType === "advanced"
+          ? [...simpleIssues, ...advancedIssues]
+          : simpleIssues;
+
+        if (data.options.wirelessMics) {
+          issues.push({
+            issue: "Microphone not working",
+            steps: [
+              "Check microphone battery level and replace if low.",
+              "Confirm transmitter and receiver are both on.",
+              "Verify the correct channel is unmuted on the board.",
+              "Test with a backup wired microphone if available."
+            ]
+          });
+        }
+
+        return issues;
+      }
+
+      function makeEditableChecklistItem(text) {
+        const li = document.createElement("li");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+
+        const span = document.createElement("span");
+        span.className = "editable-text";
+        span.setAttribute("contenteditable", "true");
+        span.textContent = text;
+
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        return li;
+      }
+
+      function renderChecklist(data) {
+        const preService = buildPreService(data);
+        const equipment = buildEquipment(data);
+        const troubleshooting = buildTroubleshooting(data);
+
+        preServiceList.replaceChildren(...preService.map(makeEditableChecklistItem));
+        equipmentList.replaceChildren(...equipment.map(makeEditableChecklistItem));
+
+        const troubleNodes = troubleshooting.map((entry) => {
+          const li = document.createElement("li");
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+
+          const wrap = document.createElement("div");
+          const issueTitle = document.createElement("span");
+          issueTitle.className = "issue-title editable-text";
+          issueTitle.setAttribute("contenteditable", "true");
+          issueTitle.textContent = entry.issue;
+
+          const stepList = document.createElement("ol");
+          stepList.className = "issue-steps";
+
+          entry.steps.forEach((step) => {
+            const stepItem = document.createElement("li");
+            const stepText = document.createElement("span");
+            stepText.className = "editable-text";
+            stepText.setAttribute("contenteditable", "true");
+            stepText.textContent = step;
+            stepItem.appendChild(stepText);
+            stepList.appendChild(stepItem);
+          });
+
+          wrap.appendChild(issueTitle);
+          wrap.appendChild(stepList);
+          li.appendChild(checkbox);
+          li.appendChild(wrap);
+          return li;
+        });
+
+        troubleshootingList.replaceChildren(...troubleNodes);
+        notesOutput.textContent = data.customNotes || "Add any local notes here (door unlock times, contacts, passwords managed by staff, etc.).";
+
+        const church = data.churchName || "Your Church";
+        const service = data.serviceName || "Service";
+        const ts = new Date();
+        resultMeta.textContent = `${church} • ${service} • ${data.setupType === "advanced" ? "Advanced Setup" : "Simple Setup"} • Generated on ${ts.toLocaleString()}`;
+
+        resultWrap.style.display = "block";
+      }
+
+      function collectTextFromChecklist() {
+        const lines = [];
+        lines.push("Livestream Setup Checklist");
+        lines.push(resultMeta.textContent || "");
+        lines.push("");
+
+        lines.push("1. Pre-Service Checklist");
+        document.querySelectorAll("#preServiceList .editable-text").forEach((item) => lines.push(`- ${item.textContent.trim()}`));
+        lines.push("");
+
+        lines.push("2. Equipment Checklist");
+        document.querySelectorAll("#equipmentList .editable-text").forEach((item) => lines.push(`- ${item.textContent.trim()}`));
+        lines.push("");
+
+        lines.push("3. Troubleshooting Steps");
+        document.querySelectorAll("#troubleshootingList > li").forEach((issueEl) => {
+          const issue = issueEl.querySelector(".issue-title");
+          if (issue) lines.push(`- ${issue.textContent.trim()}`);
+          issueEl.querySelectorAll(".issue-steps .editable-text").forEach((step) => {
+            lines.push(`  * ${step.textContent.trim()}`);
+          });
+        });
+
+        const notes = notesOutput.textContent.trim();
+        if (notes) {
+          lines.push("");
+          lines.push("Custom Notes");
+          lines.push(notes);
+        }
+
+        return lines.join("\n");
+      }
+
+      function resetForm() {
+        churchNameEl.value = "";
+        serviceNameEl.value = "";
+        customNotesEl.value = "";
+        document.querySelector("input[name='setupType'][value='simple']").checked = true;
+        options.forEach(([id]) => {
+          const el = document.getElementById(id);
+          if (el) el.checked = false;
+        });
+        resultWrap.style.display = "none";
+        statusEl.textContent = "Form reset.";
+        localStorage.removeItem(STORAGE_KEY);
+      }
+
+      document.getElementById("generateBtn").addEventListener("click", () => {
+        const formData = getFormData();
+        renderChecklist(formData);
+        saveFormState();
+        statusEl.textContent = "Checklist generated. You can edit any item before printing or sharing.";
+      });
+
+      document.getElementById("resetBtn").addEventListener("click", resetForm);
+
+      document.getElementById("printBtn").addEventListener("click", () => {
+        window.print();
+      });
+
+      document.getElementById("copyBtn").addEventListener("click", async () => {
+        const text = collectTextFromChecklist();
+        try {
+          await navigator.clipboard.writeText(text);
+          statusEl.textContent = "Checklist copied to clipboard.";
+        } catch (err) {
+          statusEl.textContent = "Copy failed. Please copy manually from the checklist.";
+        }
+      });
+
+      document.getElementById("downloadBtn").addEventListener("click", () => {
+        const text = collectTextFromChecklist();
+        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const safeChurch = (churchNameEl.value || "church").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        const safeService = (serviceNameEl.value || "service").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        link.href = url;
+        link.download = `${safeChurch || "church"}-${safeService || "service"}-livestream-checklist.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        statusEl.textContent = "Checklist downloaded as a text file.";
+      });
+
+      document.addEventListener("input", (event) => {
+        const target = event.target;
+        if (
+          target === churchNameEl ||
+          target === serviceNameEl ||
+          target === customNotesEl ||
+          (target instanceof HTMLInputElement && target.dataset.option === "true") ||
+          (target instanceof HTMLInputElement && target.name === "setupType")
+        ) {
+          saveFormState();
+        }
+      });
+
+      buildOptionCheckboxes();
+      loadFormState();
+    })();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

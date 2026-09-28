@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    - Google Fonts - optional, falls back to system fonts
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Name Tag Generator (Avery 8395)</title>
+  <style>
+    /* IMSDA base design tokens and styles (formerly shared tools.css) */
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Manrope:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #f4f7f9;
+      --surface: #ffffff;
+      --surface-soft: #f8fbfc;
+      --text-main: #1a2b3c;
+      --text-muted: #5e7185;
+      --primary: #087E8B;
+      --primary-dark: #0B3954;
+      --border: #e2e8f0;
+      --border-strong: #cfd8e3;
+      --shadow-sm: 0 2px 8px rgba(11, 57, 84, 0.04);
+      --shadow-md: 0 12px 24px rgba(11, 57, 84, 0.08);
+      --radius: 16px;
+    }
+
+    html, body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Manrope', sans-serif;
+      color: var(--text-main);
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 100% 0%, rgba(8, 126, 139, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 0% 100%, rgba(11, 57, 84, 0.03) 0%, transparent 40%);
+      background-attachment: fixed;
+      line-height: 1.6;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Syne', sans-serif;
+      color: var(--primary-dark);
+    }
+
+    a {
+      color: var(--primary);
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    .page-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 2rem;
+    }
+
+    .panel,
+    .hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .hero {
+      padding: 1.3rem 1.35rem;
+    }
+
+    .eyebrow {
+      font-size: 0.74rem;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      margin-top: 1rem;
+      padding: 0.7rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f4f8fa;
+      color: var(--primary-dark);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .back:hover {
+      background: #edf4f7;
+      text-decoration: none;
+    }
+  </style>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 1rem;
+      font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg, #f3f7fa, #edf2f7);
+      color: var(--text-main);
+    }
+    .app {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .app-header {
+      padding: 1rem 1.4rem;
+      border-bottom: 1px solid #dfe5eb;
+      background: #ffffff;
+      color: #14232f;
+      display: flex;
+      justify-content: space-between;
+      gap: .9rem;
+      align-items: center;
+    }
+    .app-header h1 { margin: 0; font-size: clamp(1.3rem, 2.2vw, 1.8rem); }
+    .app-header p { margin: .25rem 0 0; opacity: .9; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(380px, 500px) minmax(0, 1fr);
+      min-height: 860px;
+    }
+    .controls {
+      border-right: 1px solid var(--border);
+      background: #f8fbfd;
+      padding: 1rem;
+      overflow-y: auto;
+      max-height: calc(100vh - 2.6rem);
+    }
+    .panel {
+      margin-bottom: .95rem;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      padding: .9rem;
+    }
+    .panel h2 {
+      margin: 0 0 .65rem;
+      font-size: .95rem;
+      color: var(--primary-dark);
+    }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+    .field { display: flex; flex-direction: column; gap: .25rem; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: .78rem; font-weight: 700; color: #2a495c; }
+
+    input[type="text"], input[type="color"], select, textarea {
+      width: 100%;
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      padding: .58rem .65rem;
+      background: #fff;
+      font: 500 .88rem "Manrope", sans-serif;
+      color: #1f3547;
+    }
+
+    input[type="color"] {
+      padding: .2rem;
+      min-height: 2.2rem;
+      min-width: 2.4rem;
+    }
+
+    .actions { display: flex; gap: .55rem; flex-wrap: wrap; }
+    button, .back-link, .file-btn {
+      border: 1px solid var(--border-strong);
+      border-radius: 11px;
+      padding: .6rem .9rem;
+      background: #fff;
+      color: #1f3a4f;
+      font: 700 .84rem "Manrope", sans-serif;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    button.primary { background: var(--primary-dark); color: #fff; border-color: var(--primary-dark); }
+    button.danger { background: #fff5f5; color: #9b1c1c; border-color: #f1b8b8; }
+
+    .hint { margin: 0 0 .45rem; font-size: .8rem; color: #4e657a; line-height: 1.35; }
+
+    .rows-wrap {
+      max-height: 420px;
+      overflow: auto;
+      border: 1px solid #dbe6f1;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .84rem;
+    }
+
+    th, td {
+      border-top: 1px solid #edf2f7;
+      vertical-align: middle;
+      padding: .35rem .3rem;
+      text-align: left;
+    }
+
+    th {
+      color: #254767;
+      font-size: .76rem;
+      background: #f5f9fd;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      border-top: 0;
+    }
+
+    .row-input {
+      width: 100%;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: .38rem .44rem;
+      background: #fff;
+      font: 500 .82rem "Manrope", sans-serif;
+    }
+
+    .role-color-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: .5rem;
+      align-items: center;
+      grid-column: 1 / -1;
+      border: 1px solid #e4ebf3;
+      border-radius: 10px;
+      padding: .45rem .55rem;
+      background: #fbfdff;
+    }
+
+    .role-color-label {
+      font: 700 .82rem "Manrope", sans-serif;
+      color: #1f3a4f;
+      overflow-wrap: anywhere;
+    }
+
+    .mini-btn {
+      font-size: .72rem;
+      padding: .3rem .42rem;
+      border-radius: 6px;
+      border: 1px solid #c5d4ea;
+      background: #f7faff;
+      color: #1f4268;
+      cursor: pointer;
+    }
+
+    .mini-btn.delete {
+      color: #a32121;
+      border-color: #efb6b6;
+      background: #fff6f6;
+    }
+
+    .file-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .file-btn input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .preview-wrap {
+      padding: 1.1rem;
+      overflow: auto;
+      background: #e8eef3;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .print-area {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .page-note {
+      color: #4c6377;
+      font-size: .85rem;
+      margin: 0 0 10px;
+      text-align: center;
+      max-width: 8.5in;
+    }
+
+    .sheet {
+      width: 8.5in;
+      height: 11in;
+      min-width: 8.5in;
+      min-height: 11in;
+      background: #fff;
+      border: 1px solid #d5dde5;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.15);
+      position: relative;
+      overflow: hidden;
+      flex: none;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .badge {
+      width: 3.375in;
+      height: 2.333in;
+      position: absolute;
+      left: calc(var(--sheet-left-margin) + (var(--col) * var(--col-pitch)));
+      top: calc(var(--sheet-top-margin) + (var(--row) * var(--row-pitch)));
+      border: 1px solid #c2cfdd;
+      border-radius: 10px;
+      padding: .18in .2in;
+      display: flex;
+      flex-direction: column;
+      gap: .07in;
+      overflow: hidden;
+      background: #fff;
+      --name-font: "Manrope", "Segoe UI", sans-serif;
+    }
+    .badge, .badge * { color: #000; }
+    .badge.no-border { border-color: transparent; }
+    .badge.guide { border-color: #d6e1f2; }
+
+    .band {
+      height: .16in;
+      margin: -.18in -.2in .06in;
+      border-radius: 8px 8px 0 0;
+      background: #7b8da0;
+    }
+
+    .badge-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .08in;
+      min-height: .22in;
+    }
+
+    .event {
+      font-size: 8.3pt;
+      line-height: 1.15;
+      font-weight: 700;
+      letter-spacing: .15px;
+      text-transform: uppercase;
+    }
+
+    .role-chip {
+      font-size: 7pt;
+      font-weight: 700;
+      border: 1px solid #c9d6e5;
+      border-radius: 999px;
+      padding: 0 .08in;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .name {
+      font-weight: 800;
+      font-size: 30pt;
+      margin: 0;
+      text-align: center;
+      line-height: 1.05;
+      letter-spacing: .2px;
+      word-break: keep-all;
+      overflow-wrap: normal;
+      white-space: nowrap;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .02in;
+    }
+
+    .name-first,
+    .name-last {
+      display: block;
+      white-space: nowrap;
+      font-family: var(--name-font, "Manrope", "Segoe UI", sans-serif);
+    }
+
+    .sub {
+      margin: 0;
+      font-size: 12pt;
+      text-align: center;
+      overflow-wrap: anywhere;
+      min-height: 1.1em;
+    }
+
+    .empty-note {
+      border: 1px dashed #b8c8d8;
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+      color: #50657a;
+      font-size: .95rem;
+      background: #fff;
+    }
+
+    .legacy-area { min-height: 120px; resize: vertical; }
+
+    @media (max-width: 1280px) {
+      .workspace { grid-template-columns: 1fr; }
+      .controls { border-right: none; border-bottom: 1px solid var(--border); max-height: none; }
+      .sheet { transform-origin: top left; transform: scale(.86); }
+    }
+
+    @page { size: letter; margin: 0; }
+
+    @media print {
+      html, body {
+        width: 8.5in;
+        height: auto;
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      body * { visibility: hidden !important; }
+      .print-area, .print-area * { visibility: visible !important; }
+      .app-header, .controls, .page-note, .back-link { display: none !important; }
+
+      .app, .preview-wrap {
+        display: block;
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+        max-height: none;
+        overflow: visible;
+        background: transparent;
+      }
+
+      .print-area { display: block; width: 8.5in; margin: 0; padding: 0; }
+
+      .sheet {
+        margin: 0;
+        border: 0;
+        box-shadow: none;
+        transform: none !important;
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .sheet:last-child { page-break-after: auto; break-after: auto; }
+      .badge.guide { border-color: transparent; }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <div>
+        <h1>Name Tag Generator (Avery 8395)</h1>
+        <p>Simple first/last name badges with CSV import, manual editing, and Avery 8395 print layout.</p>
+      </div>
+      
+    </header>
+
+    <div class="workspace">
+      <form class="controls" id="controls" autocomplete="off">
+        <section class="panel">
+          <h2>Event + Display</h2>
+          <div class="grid">
+            <div class="field full"><label for="eventName">Event Name</label><input id="eventName" value="IMSDA Ministry Event" /></div>
+            <div class="field full"><label for="subtitle">Subtitle (optional)</label><input id="subtitle" value="Welcome!" /></div>
+            <div class="field full"><label for="nameFont">Name Font</label>
+              <select id="nameFont">
+                <option value='"Manrope", "Segoe UI", sans-serif'>Manrope</option>
+                <option value='Arial, sans-serif'>Arial</option>
+                <option value='Georgia, serif'>Georgia</option>
+                <option value='"Trebuchet MS", sans-serif'>Trebuchet MS</option>
+                <option value='Tahoma, sans-serif'>Tahoma</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Role Color Mapping</h2>
+          <p class="hint">Colors apply to all matching Role / Position / Title values (trimmed, case-insensitive).</p>
+          <div id="roleColorMapBody" class="grid"></div>
+        </section>
+
+        <section class="panel">
+          <h2>CSV + Manual Entry</h2>
+          <p class="hint">CSV auto-maps First Name + Last Name (or splits Name), Title/Role/Position, and Secondary text. Any color column is optional and only used as an initial mapping fallback.</p>
+          <div class="actions" style="margin-bottom: .6rem;">
+            <label class="file-btn">Upload CSV<input id="csvInput" type="file" accept=".csv,text/csv" /></label>
+            <button type="button" id="addBtn">Add person to bottom</button>
+            <button type="button" id="addTopBtn">Add person to top</button>
+            <button type="button" id="clearBtn" class="danger">Clear all</button>
+          </div>
+
+          <div class="rows-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 16%;">First Name</th>
+                  <th style="width: 16%;">Last Name</th>
+                  <th style="width: 20%;">Role / Position / Title</th>
+                  <th style="width: 20%;">Secondary</th>
+                  <th style="width: 10%;">Delete</th>
+                </tr>
+              </thead>
+              <tbody id="entryTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Optional Legacy Text Import</h2>
+          <div class="grid">
+            <div class="field full">
+              <label for="names">One person per line (Name | Role | Church/City, supports x2 or *2)</label>
+              <textarea id="names" class="legacy-area" placeholder="John Smith | Volunteer | Des Moines SDA Church"></textarea>
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" id="importLinesBtn">Import lines into row editor</button>
+          </div>
+        </section>
+
+        <div class="actions">
+          <button type="button" class="primary" id="printBtn">Print Name Tags</button>
+        </div>
+      </form>
+
+      <section class="preview-wrap" aria-label="Avery 8395 preview">
+        <div>
+          <p class="page-note">Live preview: Avery 8395 is 3.375in × 2.333in badges, 2 columns × 4 rows on US Letter. Unused labels remain blank for alignment.</p>
+          <div id="emptyState" class="empty-note">Add people manually or import CSV to generate printable name tags.</div>
+          <div id="previewRoot" class="print-area"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const SHEET_CONFIG = {
+      cols: 2,
+      rows: 4,
+      leftMargin: 0.4375,
+      topMargin: 0.584,
+      colPitch: 4,
+      rowPitch: 2.5
+    };
+
+    const DEFAULT_BAND_COLOR = "#808080";
+    const FALLBACK_PICKER_COLOR = "#808080";
+    const DEFAULT_TITLE_TEXT = "Attendee";
+
+    const FIXED_DISPLAY_OPTIONS = {
+      showEvent: true,
+      hideEmptySubtitle: true,
+      showBorder: true,
+      roleBand: true,
+      fontSizingMode: "autofit"
+    };
+
+    const state = { entries: [], roleColorMap: {} };
+
+    const els = {
+      form: document.getElementById("controls"),
+      eventName: document.getElementById("eventName"),
+      subtitle: document.getElementById("subtitle"),
+      nameFont: document.getElementById("nameFont"),
+      names: document.getElementById("names"),
+      csvInput: document.getElementById("csvInput"),
+      addBtn: document.getElementById("addBtn"),
+      addTopBtn: document.getElementById("addTopBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+      printBtn: document.getElementById("printBtn"),
+      importLinesBtn: document.getElementById("importLinesBtn"),
+      roleColorMapBody: document.getElementById("roleColorMapBody"),
+      entryTableBody: document.getElementById("entryTableBody"),
+      previewRoot: document.getElementById("previewRoot"),
+      emptyState: document.getElementById("emptyState")
+    };
+
+    els.previewRoot.style.setProperty("--sheet-left-margin", `${SHEET_CONFIG.leftMargin}in`);
+    els.previewRoot.style.setProperty("--sheet-top-margin", `${SHEET_CONFIG.topMargin}in`);
+    els.previewRoot.style.setProperty("--col-pitch", `${SHEET_CONFIG.colPitch}in`);
+    els.previewRoot.style.setProperty("--row-pitch", `${SHEET_CONFIG.rowPitch}in`);
+
+    function createEntry(firstName = "", lastName = "", titleText = "", secondaryText = "") {
+      return {
+        firstName,
+        lastName,
+        titleText,
+        secondaryText
+      };
+    }
+
+    function splitFullName(fullName) {
+      const trimmed = String(fullName || "").trim();
+      if (!trimmed) return { firstName: "", lastName: "" };
+      const parts = trimmed.split(/\s+/);
+      if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+      return {
+        firstName: parts[0],
+        lastName: parts.slice(1).join(" ")
+      };
+    }
+
+    function normalizeColor(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+
+      const shortHex = raw.match(/^#?([a-f0-9]{3})$/i);
+      if (shortHex) return `#${shortHex[1].toLowerCase()}`;
+
+      const fullHex = raw.match(/^#?([a-f0-9]{6})$/i);
+      if (fullHex) return `#${fullHex[1].toLowerCase()}`;
+
+      if (typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("color", raw)) {
+        return raw;
+      }
+
+      return "";
+    }
+
+    function normalizeHexForPicker(value) {
+      const normalized = normalizeColor(value);
+      if (!normalized) return FALLBACK_PICKER_COLOR;
+      const fullHex = normalized.match(/^#([a-f0-9]{6})$/i);
+      if (fullHex) return `#${fullHex[1].toLowerCase()}`;
+      return FALLBACK_PICKER_COLOR;
+    }
+
+    function roleKeyFromText(text) {
+      return String(text || "").trim().toLowerCase();
+    }
+
+    function ensureRoleColorForTitle(titleText, fallbackColor = "") {
+      const key = roleKeyFromText(titleText);
+      if (!key) return;
+      if (state.roleColorMap[key]) return;
+      state.roleColorMap[key] = normalizeColor(fallbackColor) || DEFAULT_BAND_COLOR;
+    }
+
+    function ensureRoleColorsForEntries() {
+      state.entries.forEach(entry => ensureRoleColorForTitle(entry.titleText));
+    }
+
+    function resolveBandColor(entry) {
+      const key = roleKeyFromText(entry.titleText);
+      if (key) {
+        const mapped = normalizeColor(state.roleColorMap[key]);
+        if (mapped) return mapped;
+      }
+      return DEFAULT_BAND_COLOR;
+    }
+
+    function getState() {
+      return {
+        eventName: els.eventName.value.trim(),
+        subtitle: els.subtitle.value.trim(),
+        nameFont: els.nameFont.value,
+        showEvent: FIXED_DISPLAY_OPTIONS.showEvent,
+        hideEmptySubtitle: FIXED_DISPLAY_OPTIONS.hideEmptySubtitle,
+        showBorder: FIXED_DISPLAY_OPTIONS.showBorder,
+        roleBand: FIXED_DISPLAY_OPTIONS.roleBand,
+        fontSizingMode: FIXED_DISPLAY_OPTIONS.fontSizingMode
+      };
+    }
+
+    function parseLine(rawLine) {
+      const trimmed = rawLine.trim();
+      if (!trimmed) return null;
+
+      let duplicateCount = 1;
+      let working = trimmed;
+      const dupMatch = working.match(/(?:\s*[x*]\s*)(\d+)\s*$/i);
+      if (dupMatch) {
+        duplicateCount = Math.max(1, Math.min(200, Number(dupMatch[1]) || 1));
+        working = working.slice(0, dupMatch.index).trim();
+      }
+
+      const parts = working.split("|").map(part => part.trim()).filter(Boolean);
+      const rawName = parts[0] || "";
+      const { firstName, lastName } = splitFullName(rawName);
+      const titleText = parts[1] || "";
+      const secondaryText = parts[2] || "";
+
+      return { firstName, lastName, titleText, secondaryText, duplicateCount };
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let value = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i += 1) {
+        const ch = text[i];
+        const next = text[i + 1];
+        if (ch === '"') {
+          if (inQuotes && next === '"') {
+            value += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (ch === ',' && !inQuotes) {
+          row.push(value);
+          value = "";
+        } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+          if (ch === '\r' && next === '\n') i += 1;
+          row.push(value);
+          value = "";
+          if (row.some(cell => String(cell).trim() !== "")) rows.push(row);
+          row = [];
+        } else {
+          value += ch;
+        }
+      }
+
+      row.push(value);
+      if (row.some(cell => String(cell).trim() !== "")) rows.push(row);
+      return rows;
+    }
+
+    function normalizeHeader(header) {
+      return String(header || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ");
+    }
+
+    function findHeaderIndex(headers, candidates) {
+      for (let i = 0; i < candidates.length; i += 1) {
+        const idx = headers.indexOf(candidates[i]);
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    }
+
+    function importCsvText(csvText) {
+      const rows = parseCsv(csvText);
+      if (!rows.length) return;
+
+      const headers = rows[0].map(normalizeHeader);
+      const firstNameIndex = findHeaderIndex(headers, ["first name", "firstname", "first"]);
+      const lastNameIndex = findHeaderIndex(headers, ["last name", "lastname", "last", "surname", "family name"]);
+      const nameIndex = findHeaderIndex(headers, ["name", "full name", "fullname"]);
+      const titleIndex = findHeaderIndex(headers, ["role", "position", "title", "badge type", "badge title", "badge role"]);
+      const secondaryIndex = findHeaderIndex(headers, ["secondary", "second line", "subtitle", "church", "school", "city", "location"]);
+      const colorIndex = findHeaderIndex(headers, ["band color", "badge color", "banner color", "color", "hex", "band"]);
+      const imported = [];
+
+      for (let i = 1; i < rows.length; i += 1) {
+        const row = rows[i];
+        const rawFirstName = firstNameIndex >= 0 ? String(row[firstNameIndex] || "").trim() : "";
+        const rawLastName = lastNameIndex >= 0 ? String(row[lastNameIndex] || "").trim() : "";
+        const rawName = nameIndex >= 0 ? String(row[nameIndex] || "").trim() : "";
+        const rawTitle = titleIndex >= 0 ? String(row[titleIndex] || "").trim() : "";
+        const rawSecondary = secondaryIndex >= 0 ? String(row[secondaryIndex] || "").trim() : "";
+        const rawColor = colorIndex >= 0 ? String(row[colorIndex] || "").trim() : "";
+        const fallbackSplit = splitFullName(rawName);
+        const finalFirstName = rawFirstName || fallbackSplit.firstName;
+        const finalLastName = rawLastName || fallbackSplit.lastName;
+
+        if (!finalFirstName && !finalLastName && !rawTitle && !rawSecondary && !rawColor) continue;
+
+        imported.push(createEntry(finalFirstName, finalLastName, rawTitle, rawSecondary));
+        if (rawTitle && rawColor) ensureRoleColorForTitle(rawTitle, rawColor);
+      }
+
+      state.entries = imported;
+      ensureRoleColorsForEntries();
+      renderAll();
+    }
+
+    function makeBadge(entry, uiState, row, col, isBlank) {
+      const badge = document.createElement("article");
+      badge.className = "badge guide";
+      badge.style.setProperty("--row", row);
+      badge.style.setProperty("--col", col);
+      badge.style.setProperty("--name-font", uiState.nameFont);
+
+      if (!uiState.showBorder) badge.classList.add("no-border");
+
+      if (!isBlank && uiState.roleBand) {
+        const band = document.createElement("div");
+        band.className = "band";
+        band.style.background = resolveBandColor(entry);
+        badge.appendChild(band);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "badge-meta";
+
+      const eventLabel = document.createElement("div");
+      eventLabel.className = "event";
+      if (!isBlank && uiState.showEvent) {
+        const top = uiState.eventName || "Event";
+        if (uiState.subtitle || !uiState.hideEmptySubtitle) {
+          eventLabel.textContent = uiState.subtitle ? `${top} · ${uiState.subtitle}` : top;
+        } else {
+          eventLabel.textContent = top;
+        }
+      } else {
+        eventLabel.textContent = "";
+      }
+      meta.appendChild(eventLabel);
+
+      const chip = document.createElement("div");
+      chip.className = "role-chip";
+      const chipText = !isBlank ? (entry.titleText || DEFAULT_TITLE_TEXT) : "";
+      chip.textContent = chipText;
+      if (!chipText) chip.style.visibility = "hidden";
+      meta.appendChild(chip);
+
+      badge.appendChild(meta);
+
+      const name = document.createElement("h3");
+      name.className = "name";
+      if (!isBlank) {
+        const firstLine = document.createElement("span");
+        firstLine.className = "name-first";
+        firstLine.textContent = entry.firstName || "Unnamed";
+        name.appendChild(firstLine);
+
+        if (entry.lastName) {
+          const lastLine = document.createElement("span");
+          lastLine.className = "name-last";
+          lastLine.textContent = entry.lastName;
+          name.appendChild(lastLine);
+        }
+      }
+      badge.appendChild(name);
+
+      const sub = document.createElement("p");
+      sub.className = "sub";
+      const secondary = !isBlank ? (entry.secondaryText || "") : "";
+      sub.textContent = secondary;
+      if (!secondary && uiState.hideEmptySubtitle) sub.style.visibility = "hidden";
+      if (isBlank) sub.style.visibility = "hidden";
+      badge.appendChild(sub);
+
+      return badge;
+    }
+
+    function renderEditorTable() {
+      els.entryTableBody.textContent = "";
+
+      state.entries.forEach((entry, index) => {
+        const tr = document.createElement("tr");
+
+        const firstNameTd = document.createElement("td");
+        const firstNameInput = document.createElement("input");
+        firstNameInput.type = "text";
+        firstNameInput.className = "row-input";
+        firstNameInput.value = entry.firstName;
+        firstNameInput.placeholder = "First";
+        firstNameInput.addEventListener("input", () => {
+          entry.firstName = firstNameInput.value;
+          renderSheets();
+        });
+        firstNameTd.appendChild(firstNameInput);
+
+        const lastNameTd = document.createElement("td");
+        const lastNameInput = document.createElement("input");
+        lastNameInput.type = "text";
+        lastNameInput.className = "row-input";
+        lastNameInput.value = entry.lastName;
+        lastNameInput.placeholder = "Last";
+        lastNameInput.addEventListener("input", () => {
+          entry.lastName = lastNameInput.value;
+          renderSheets();
+        });
+        lastNameTd.appendChild(lastNameInput);
+
+        const titleTd = document.createElement("td");
+        const titleInput = document.createElement("input");
+        titleInput.type = "text";
+        titleInput.className = "row-input";
+        titleInput.value = entry.titleText;
+        titleInput.placeholder = "Role / Position / Title";
+        titleInput.addEventListener("input", () => {
+          entry.titleText = titleInput.value;
+          ensureRoleColorForTitle(entry.titleText);
+          renderAll();
+        });
+        titleTd.appendChild(titleInput);
+
+        const secondaryTd = document.createElement("td");
+        const secondaryInput = document.createElement("input");
+        secondaryInput.type = "text";
+        secondaryInput.className = "row-input";
+        secondaryInput.value = entry.secondaryText;
+        secondaryInput.placeholder = "Church / City / Group";
+        secondaryInput.addEventListener("input", () => {
+          entry.secondaryText = secondaryInput.value;
+          renderSheets();
+        });
+        secondaryTd.appendChild(secondaryInput);
+
+        const actionTd = document.createElement("td");
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "mini-btn delete";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", () => {
+          state.entries.splice(index, 1);
+          renderAll();
+        });
+        actionTd.appendChild(deleteBtn);
+
+        tr.append(firstNameTd, lastNameTd, titleTd, secondaryTd, actionTd);
+        els.entryTableBody.appendChild(tr);
+      });
+    }
+
+    function autoFitName(nameEl, badgeEl) {
+      const range = { min: 13, max: 32 };
+      nameEl.style.fontSize = `${range.max}pt`;
+
+      if (!nameEl.textContent || !nameEl.textContent.trim()) return;
+
+      let size = range.max;
+      while (size > range.min) {
+        const overflowsHorizontally = nameEl.scrollWidth > nameEl.clientWidth + 1;
+        const overflowsBadge = badgeEl.scrollHeight > badgeEl.clientHeight + 1;
+        if (!overflowsHorizontally && !overflowsBadge) break;
+        size -= 0.5;
+        nameEl.style.fontSize = `${size}pt`;
+      }
+    }
+
+    function fitAllBadgeNames() {
+      const badges = els.previewRoot.querySelectorAll(".badge");
+      badges.forEach(badge => {
+        const nameEl = badge.querySelector(".name");
+        if (!nameEl) return;
+        autoFitName(nameEl, badge);
+      });
+    }
+
+    function renderRoleColorMap() {
+      els.roleColorMapBody.textContent = "";
+      const seen = new Set();
+      const roles = [];
+
+      state.entries.forEach(entry => {
+        const trimmed = String(entry.titleText || "").trim();
+        const key = roleKeyFromText(trimmed);
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        roles.push({ key, label: trimmed });
+      });
+
+      if (!roles.length) {
+        const note = document.createElement("p");
+        note.className = "hint";
+        note.style.margin = "0";
+        note.textContent = "No roles yet. Add or import rows to build mapping.";
+        els.roleColorMapBody.appendChild(note);
+        return;
+      }
+
+      roles.forEach(role => {
+        const row = document.createElement("div");
+        row.className = "role-color-row";
+
+        const label = document.createElement("div");
+        label.className = "role-color-label";
+        label.textContent = role.label;
+
+        const picker = document.createElement("input");
+        picker.type = "color";
+        picker.value = normalizeHexForPicker(state.roleColorMap[role.key] || DEFAULT_BAND_COLOR);
+        picker.addEventListener("input", () => {
+          state.roleColorMap[role.key] = picker.value;
+          renderSheets();
+        });
+
+        row.append(label, picker);
+        els.roleColorMapBody.appendChild(row);
+      });
+    }
+
+    function renderSheets() {
+      const uiState = getState();
+      els.previewRoot.textContent = "";
+
+      const entries = state.entries
+        .map(entry => ({
+          firstName: String(entry.firstName || "").trim(),
+          lastName: String(entry.lastName || "").trim(),
+          titleText: String(entry.titleText || "").trim(),
+          secondaryText: String(entry.secondaryText || "").trim()
+        }))
+        .filter(entry => entry.firstName || entry.lastName || entry.titleText || entry.secondaryText);
+
+      els.emptyState.style.display = entries.length ? "none" : "block";
+      if (!entries.length) return;
+
+      const perPage = SHEET_CONFIG.cols * SHEET_CONFIG.rows;
+      const pageCount = Math.max(1, Math.ceil(entries.length / perPage));
+
+      for (let page = 0; page < pageCount; page += 1) {
+        const sheet = document.createElement("div");
+        sheet.className = "sheet";
+
+        for (let i = 0; i < perPage; i += 1) {
+          const absoluteIndex = page * perPage + i;
+          const row = Math.floor(i / SHEET_CONFIG.cols);
+          const col = i % SHEET_CONFIG.cols;
+          const entry = entries[absoluteIndex] || createEntry("", "", "", "");
+          const isBlank = !entries[absoluteIndex];
+          sheet.appendChild(makeBadge(entry, uiState, row, col, isBlank));
+        }
+
+        els.previewRoot.appendChild(sheet);
+      }
+
+      fitAllBadgeNames();
+    }
+
+    function renderAll() {
+      ensureRoleColorsForEntries();
+      renderRoleColorMap();
+      renderEditorTable();
+      renderSheets();
+    }
+
+    function importFromLegacyLines() {
+      const lines = els.names.value.split(/\r?\n/);
+      const imported = [];
+      lines.forEach(line => {
+        const parsed = parseLine(line);
+        if (!parsed || (!parsed.firstName && !parsed.lastName)) return;
+        for (let i = 0; i < parsed.duplicateCount; i += 1) {
+          imported.push(createEntry(parsed.firstName, parsed.lastName, parsed.titleText, parsed.secondaryText));
+        }
+      });
+      state.entries = imported;
+      renderAll();
+    }
+
+    els.form.addEventListener("input", renderSheets);
+    els.form.addEventListener("change", renderSheets);
+
+    els.csvInput.addEventListener("change", async () => {
+      const file = els.csvInput.files && els.csvInput.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        importCsvText(text);
+      } finally {
+        els.csvInput.value = "";
+      }
+    });
+
+    els.importLinesBtn.addEventListener("click", importFromLegacyLines);
+
+    els.addBtn.addEventListener("click", () => {
+      state.entries.push(createEntry("", "", "", ""));
+      renderAll();
+    });
+
+    els.addTopBtn.addEventListener("click", () => {
+      state.entries.unshift(createEntry("", "", "", ""));
+      renderAll();
+    });
+
+    els.clearBtn.addEventListener("click", () => {
+      state.entries = [];
+      renderAll();
+    });
+
+    els.printBtn.addEventListener("click", () => window.print());
+
+    state.entries = [
+      createEntry("John", "Smith", "Principal", "Des Moines SDA Church"),
+      createEntry("Mary", "Clark", "Teacher", "Youth Rally"),
+      createEntry("Elijah", "Turner", "Band", "Camp Heritage"),
+      createEntry("Ariana", "Wells", "Visitor", "VBS")
+    ];
+    state.roleColorMap = {
+      principal: "#0b3954",
+      teacher: "#7c3aed",
+      band: "#0f766e",
+      visitor: "#ea580c"
+    };
+
+    renderAll();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

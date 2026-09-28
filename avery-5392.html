@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    - Google Fonts - optional, falls back to system fonts
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Name Tag (Avery 5392)</title>
+  <style>
+    /* IMSDA base design tokens and styles (formerly shared tools.css) */
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Manrope:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #f4f7f9;
+      --surface: #ffffff;
+      --surface-soft: #f8fbfc;
+      --text-main: #1a2b3c;
+      --text-muted: #5e7185;
+      --primary: #087E8B;
+      --primary-dark: #0B3954;
+      --border: #e2e8f0;
+      --border-strong: #cfd8e3;
+      --shadow-sm: 0 2px 8px rgba(11, 57, 84, 0.04);
+      --shadow-md: 0 12px 24px rgba(11, 57, 84, 0.08);
+      --radius: 16px;
+    }
+
+    html, body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Manrope', sans-serif;
+      color: var(--text-main);
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 100% 0%, rgba(8, 126, 139, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 0% 100%, rgba(11, 57, 84, 0.03) 0%, transparent 40%);
+      background-attachment: fixed;
+      line-height: 1.6;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Syne', sans-serif;
+      color: var(--primary-dark);
+    }
+
+    a {
+      color: var(--primary);
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    .page-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 2rem;
+    }
+
+    .panel,
+    .hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .hero {
+      padding: 1.3rem 1.35rem;
+    }
+
+    .eyebrow {
+      font-size: 0.74rem;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      margin-top: 1rem;
+      padding: 0.7rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f4f8fa;
+      color: var(--primary-dark);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .back:hover {
+      background: #edf4f7;
+      text-decoration: none;
+    }
+  </style>
+  <style>
+    :root {
+      --sheet-width: 8.5in;
+      --sheet-height: 11in;
+      --page-margin-x: 0.25in;
+      --page-margin-y: 1in;
+      --card-width: 4in;
+      --card-height: 3in;
+      --cols: 2;
+      --rows: 3;
+      --gutter-x: 0in;
+      --gutter-y: 0in;
+      --print-offset-y: -0.125in;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 1rem; font-family: "Manrope", "Segoe UI", sans-serif; background: linear-gradient(180deg, #f3f7fa, #edf2f7); color: var(--text-main); }
+    .app { width: min(1500px, 100%); margin: 0 auto; border: 1px solid var(--border); border-radius: 22px; background: rgba(255,255,255,.96); box-shadow: var(--shadow-md); overflow: hidden; }
+    .app-header { padding: 1rem 1.4rem; border-bottom: 1px solid #dfe5eb; background: #fff; display:flex; justify-content:space-between; align-items:center; gap:1rem; }
+    .app-header h1 { margin:0; font-size: clamp(1.2rem,2.2vw,1.7rem); }
+    .app-header p { margin:.2rem 0 0; color:#4a6378; }
+    .back-link { border:1px solid var(--border-strong); border-radius: 10px; padding: .62rem .9rem; text-decoration:none; font-weight:700; color:#1f3a4f; background:#fff; }
+    .layout { display:grid; grid-template-columns: minmax(340px,460px) minmax(0,1fr); min-height: 85vh; }
+    .controls { padding: 1rem; border-right: 1px solid var(--border); background:#f8fbfd; overflow:auto; max-height: calc(100vh - 2.2rem); }
+    .panel { border:1px solid var(--border); border-radius:14px; padding:.9rem; background:#fff; margin-bottom:.85rem; }
+    .panel h2 { margin:0 0 .6rem; font-size:.95rem; color: var(--primary-dark); }
+    .hint { margin:0 0 .5rem; font-size:.82rem; color:#4e657a; }
+    .grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:.6rem; }
+    .field { display:flex; flex-direction:column; gap:.28rem; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size:.78rem; font-weight:700; color:#2a495c; }
+    input, select { width:100%; border:1px solid var(--border-strong); border-radius:10px; padding:.56rem .6rem; font:500 .86rem "Manrope", sans-serif; }
+    input[type="range"] { padding:0; }
+    .actions { display:flex; flex-wrap:wrap; gap:.5rem; }
+    .actions.nudge-buttons button { flex: 1 1 calc(50% - .5rem); min-width: 120px; }
+    button { border:1px solid var(--border-strong); border-radius:10px; padding:.58rem .82rem; background:#fff; font:700 .83rem "Manrope",sans-serif; cursor:pointer; }
+    button.primary { background: var(--primary-dark); border-color: var(--primary-dark); color:#fff; }
+    .table-wrap { max-height: 260px; overflow:auto; border:1px solid #dbe6f1; border-radius:10px; }
+    table { width:100%; border-collapse: collapse; font-size:.84rem; }
+    th, td { padding:.33rem; border-top:1px solid #edf2f7; }
+    th { position:sticky; top:0; background:#f5f9fd; border-top:0; font-size:.74rem; color:#254767; }
+    .row-input { width:100%; border:1px solid var(--border-strong); border-radius:7px; padding:.35rem .45rem; }
+    .preview { background:#e8eef3; padding:1rem; overflow:auto; }
+    .preview-shell { display:flex; flex-direction:column; gap:.55rem; align-items:center; }
+    #previewPages { display:flex; flex-direction:column; gap:12px; align-items:center; width:100%; }
+    #printArea { display:none; }
+    .print-pages { display:flex; flex-direction:column; gap:12px; align-items:center; }
+    .sheet { width: var(--sheet-width); min-width: var(--sheet-width); height: var(--sheet-height); min-height: var(--sheet-height); background:#fff; border:1px solid #d5dde5; box-shadow:0 8px 18px rgba(15,23,42,.15); position:relative; overflow:hidden; }
+    .cards-grid { position:relative; width:100%; height:100%; }
+    .card { width:var(--card-width); height:var(--card-height); position:absolute; border:1px dashed #cad5e1; background:#fff; overflow:hidden; }
+    .badge-face {
+      width: 3in;
+      height: 4in;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%) rotate(90deg);
+      transform-origin: center center;
+      overflow: hidden;
+    }
+    .badge-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: var(--bg-fit, cover);
+      object-position: var(--bg-pos, center center);
+      transform: var(--bg-flip, none);
+      z-index: 0;
+    }
+    .badge-text { position: absolute; left: 8%; right: 8%; top: 50%; transform: translateY(calc(-50% + var(--offset, 0px))); text-align: center; color: #111; text-shadow: 0 1px 1px rgba(255,255,255,.65); z-index: 1; }
+
+    .name { font-weight:800; font-size: var(--name-size, 34px); line-height:1.1; }
+    .school { margin-top:.15em; font-weight:600; font-size: var(--school-size, 18px); line-height:1.2; }
+    .print-note { font-size:.82rem; color:#4e657a; max-width:8.5in; }
+    @media print {
+      @page {
+        size: 8.5in 11in;
+        margin: 0;
+      }
+
+      html,
+      body {
+        width: 8.5in !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        overflow: visible !important;
+      }
+
+      body > * {
+        display: none !important;
+      }
+
+      #printArea {
+        display: block !important;
+        width: 8.5in !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: static !important;
+        inset: auto !important;
+        background: #fff !important;
+      }
+
+      #pages,
+      .print-pages {
+        display: block !important;
+        width: 8.5in !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        gap: 0 !important;
+        align-items: initial !important;
+        justify-content: initial !important;
+      }
+
+      .sheet {
+        display: block !important;
+        width: 8.5in !important;
+        min-width: 8.5in !important;
+        max-width: 8.5in !important;
+        height: 11in !important;
+        min-height: 11in !important;
+        max-height: 11in !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        position: relative !important;
+        overflow: hidden !important;
+        page-break-after: always;
+        break-after: page;
+        transform: none !important;
+      }
+
+      .sheet:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
+      .cards-grid {
+        position: absolute !important;
+        left: 0 !important;
+        top: var(--print-offset-y) !important;
+        width: 8.5in !important;
+        height: 11in !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .card {
+        position: absolute !important;
+        width: 4in !important;
+        height: 3in !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        overflow: hidden !important;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div>
+        <h1>Name Tag (Avery 5392)</h1>
+        <p>3x4 insert cards on US Letter (2 columns × 3 rows). Print at 100% / Actual Size only.</p>
+      </div>
+      
+    </header>
+    <div class="layout">
+      <aside class="controls">
+        <section class="panel">
+          <h2>CSV Data</h2>
+          <p class="hint">Upload CSV with columns: <strong>Name, School</strong>. Blank rows are ignored.</p>
+          <div class="actions">
+            <label><input id="csvFile" type="file" accept=".csv,text/csv" /></label>
+            <button id="downloadTemplate" type="button">Download CSV Template</button>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>Name</th><th>School</th></tr></thead><tbody id="rowsBody"></tbody></table></div>
+        </section>
+        <section class="panel">
+          <h2>Front Background</h2>
+          <div class="grid">
+            <div class="field full"><label>Front image</label><input id="frontImage" type="file" accept="image/*" /></div>
+            <div class="field"><label>Fit</label><select id="bgFit"><option>cover</option><option>contain</option><option>stretch</option></select></div>
+            <div class="field"><label>Position</label><select id="bgPos"><option value="center center">Center</option><option value="top center">Top</option><option value="bottom center">Bottom</option><option value="center left">Left</option><option value="center right">Right</option></select></div>
+            <div class="field"><label><input id="frontFlipH" type="checkbox" /> Optional: flip front image (horizontal)</label></div>
+            <div class="field"><label><input id="frontFlipV" type="checkbox" /> Optional: flip front image (vertical)</label></div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Text Controls</h2>
+          <div class="grid">
+            <div class="field full"><label>Text offset</label><input id="textOffset" type="range" min="-400" max="400" value="0" step="1" /><small id="offsetVal">0px</small></div>
+            <div class="field"><label>Type exact offset</label><input id="textOffsetNumber" type="number" min="-400" max="400" value="0" step="1" /></div>
+            <div class="field"><label>Name size</label><input id="nameSize" type="number" min="12" max="72" value="34" /></div>
+            <div class="field"><label>School size</label><input id="schoolSize" type="number" min="10" max="48" value="18" /></div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Back Side (Optional)</h2>
+          <label><input id="enableBack" type="checkbox" /> Enable Back Side</label>
+          <div id="backFields" class="grid" style="margin-top:.6rem; display:none;">
+            <div class="field full"><label>Back image</label><input id="backImage" type="file" accept="image/*" /></div>
+            <div class="field"><label><input id="backFlipH" type="checkbox" /> Optional: flip back image (horizontal)</label></div>
+            <div class="field"><label><input id="backFlipV" type="checkbox" /> Optional: flip back image (vertical)</label></div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Print Alignment / Nudge</h2>
+          <p class="hint">Use this only for printer calibration. Positive X moves right. Negative X moves left. Positive Y moves down. Negative Y moves up.</p>
+          <div class="grid">
+            <div class="field"><label for="nudgeX">Horizontal nudge (in)</label><input id="nudgeX" type="number" step="0.01" value="0" /></div>
+            <div class="field"><label for="nudgeY">Vertical nudge (in)</label><input id="nudgeY" type="number" step="0.01" value="0" /></div>
+          </div>
+          <div class="field full" style="margin-top:.6rem;">
+            <label for="nudgePresetSelect">Nudge Presets</label>
+            <div class="actions" style="margin-top:.35rem;">
+              <select id="nudgePresetSelect">
+                <option value="">Select preset...</option>
+                <option value="7th8th">7th and 8th bible</option>
+              </select>
+              <button id="applyPresetBtn" type="button">Apply Preset</button>
+            </div>
+          </div>
+          <div class="field full" style="margin-top:.6rem;">
+            <label><input id="invertBackNudge" type="checkbox" checked /> Invert nudge on back pages for duplex printing</label>
+            <p class="hint" style="margin:.35rem 0 0;">For duplex printing, back-side alignment usually needs the opposite nudge direction.</p>
+          </div>
+          <div class="actions nudge-buttons" style="margin-top:.6rem;">
+            <button id="nudgeLeft" type="button">Left 1/8"</button>
+            <button id="nudgeRight" type="button">Right 1/8"</button>
+            <button id="nudgeUp" type="button">Up 1/8"</button>
+            <button id="nudgeDown" type="button">Down 1/8"</button>
+            <button id="nudgeReset" type="button">Reset nudge</button>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="actions"><button id="printBtn" class="primary" type="button">Print / Save PDF</button></div>
+          <p class="hint" style="margin-top:.5rem;"><strong>Print at 100% / Actual Size. Do not use Fit to Page.</strong></p>
+        </section>
+      </aside>
+      <main class="preview">
+        <div class="preview-shell">
+          <p class="print-note">Preview shows exact Avery 5392 sheet geometry (8.5×11, 0.25in side margins, 1in top/bottom, 4×3 cards, no gutters).</p>
+          <div id="previewPages"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <div id="printArea">
+    <div id="pages" class="print-pages"></div>
+  </div>
+<script>
+const sampleRows = [{name:'Jane Student', school:'Example School'},{name:'John Student', school:'North Campus'},{name:'Leah Student', school:'South Academy'}];
+const state = { rows:[...sampleRows], frontImageSrc:'', backImageSrc:'', fit:'cover', pos:'center center', offset:0, nameSize:34, schoolSize:18, enableBack:false, frontFlipH:false, frontFlipV:false, backFlipH:false, backFlipV:false, nudgeX:0, nudgeY:0, invertBackNudge:true };
+const $ = (id) => document.getElementById(id);
+const NUDGE_PRESETS = {
+  '7th8th': {
+    label: '7th and 8th bible',
+    x: 0.02,
+    y: 0.09
+  }
+};
+function parseCSV(text){ const rows=[]; let row=[], cell='', i=0, q=false; while(i<text.length){ const c=text[i], n=text[i+1]; if(c==='"'){ if(q && n==='"'){ cell+='"'; i++; } else q=!q; } else if(c===',' && !q){ row.push(cell); cell=''; } else if((c==='\n' || c==='\r') && !q){ if(c==='\r'&&n==='\n') i++; row.push(cell); rows.push(row); row=[]; cell=''; } else cell+=c; i++; } if(cell.length || row.length){ row.push(cell); rows.push(row);} return rows; }
+function normalizeRows(raw){ if(!raw.length) return [...sampleRows]; const head = raw[0].map(v=>String(v||'').trim().toLowerCase()); let ni=head.indexOf('name'), si=head.indexOf('school'); let data=raw.slice(1); if(ni<0||si<0){ ni=0; si=1; data=raw; } return data.map(r=>({name:(r[ni]||'').trim(), school:(r[si]||'').trim()})).filter(r=>r.name||r.school); }
+function readImage(file, key){ if(!file){ state[key]=''; render(); return; } const fr=new FileReader(); fr.onload=()=>{ state[key]=String(fr.result || ''); render(); }; fr.readAsDataURL(file); }
+function renderTable(){ const body=$('rowsBody'); body.innerHTML=''; state.rows.forEach((r,idx)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td><input class="row-input" data-i="${idx}" data-k="name" value="${r.name.replace(/"/g,'&quot;')}"></td><td><input class="row-input" data-i="${idx}" data-k="school" value="${r.school.replace(/"/g,'&quot;')}"></td>`; body.appendChild(tr); }); }
+function flipTransform(fh, fv){ if(fh && fv) return 'scale(-1, -1)'; if(fh) return 'scaleX(-1)'; if(fv) return 'scaleY(-1)'; return 'none'; }
+function backFlipTransform(){ if(!state.backFlipH && !state.backFlipV) return 'none'; return flipTransform(state.backFlipH, state.backFlipV); }
+function cardPosition(index, isBack=false){
+  const baseLeft = index % 2 === 0 ? 0.25 : 4.25;
+  const baseTop = [1, 4, 7][Math.floor(index / 2)];
+  const direction = isBack && state.invertBackNudge ? -1 : 1;
+  return { left: baseLeft + (state.nudgeX * direction), top: baseTop + (state.nudgeY * direction) };
+}
+function cardHtml(row,imageSrc,isBack=false,index=0){
+  const fit = state.fit==='stretch'?'fill':state.fit;
+  const flip = isBack ? backFlipTransform() : flipTransform(state.frontFlipH, state.frontFlipV);
+  const bgClass = isBack ? 'back-bg' : 'front-bg';
+  const { left, top } = cardPosition(index, isBack);
+  return `<div class="card" style="left:${left}in; top:${top}in;"><div class="badge-face" style="--bg-fit:${fit};--bg-pos:${state.pos};--bg-flip:${flip};">${imageSrc?`<img class="badge-bg ${bgClass}" src="${escapeAttr(imageSrc)}" alt="" />`:''}${isBack?'':`<div class="badge-text" style="--offset:${state.offset}px;--name-size:${state.nameSize}px;--school-size:${state.schoolSize}px;"><div class="name">${escapeHtml(row.name)}</div><div class="school">${escapeHtml(row.school)}</div></div>`}</div></div>`;
+}
+function escapeHtml(v){ return String(v||'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+function escapeAttr(v){ return escapeHtml(v); }
+function render(){ $('offsetVal').textContent = `${state.offset}px`; $('textOffset').value = state.offset; $('textOffsetNumber').value = state.offset; $('nudgeX').value = state.nudgeX.toFixed(2); $('nudgeY').value = state.nudgeY.toFixed(2); $('invertBackNudge').checked = state.invertBackNudge; renderTable(); const pages=$('pages'); const previewPages=$('previewPages'); pages.innerHTML=''; previewPages.innerHTML=''; for(let i=0;i<state.rows.length;i+=6){ const batch=state.rows.slice(i,i+6); while(batch.length<6) batch.push({name:'',school:''}); const frontHtml=`<div class="cards-grid">${batch.map((r, idx)=>cardHtml(r,state.frontImageSrc,false,idx)).join('')}</div>`; const frontPrint=document.createElement('section'); frontPrint.className='sheet'; frontPrint.innerHTML=frontHtml; const frontPreview=frontPrint.cloneNode(true); pages.appendChild(frontPrint); previewPages.appendChild(frontPreview); if(state.enableBack){ const backHtml=`<div class="cards-grid">${batch.map((_, idx)=>cardHtml({},state.backImageSrc,true,idx)).join('')}</div>`; const backPrint=document.createElement('section'); backPrint.className='sheet'; backPrint.innerHTML=backHtml; const backPreview=backPrint.cloneNode(true); pages.appendChild(backPrint); previewPages.appendChild(backPreview);} }
+}
+function setNudge(axis, value){
+  const parsed = Number(value);
+  state[axis] = Number.isFinite(parsed) ? parsed : 0;
+  render();
+}
+function adjustNudge(axis, delta){
+  state[axis] = Number((state[axis] + delta).toFixed(3));
+  render();
+}
+$('csvFile').addEventListener('change', async (e)=>{ const file=e.target.files[0]; if(!file) return; const text=await file.text(); state.rows=normalizeRows(parseCSV(text)); render(); });
+$('rowsBody').addEventListener('input',(e)=>{ const t=e.target; if(!t.classList.contains('row-input')) return; state.rows[+t.dataset.i][t.dataset.k]=t.value; render(); });
+$('downloadTemplate').addEventListener('click',()=>{ const csv='Name,School\nJane Student,Example School\n'; const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='name-tag-template.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); });
+$('frontImage').addEventListener('change',(e)=>readImage(e.target.files[0],'frontImageSrc'));
+$('backImage').addEventListener('change',(e)=>readImage(e.target.files[0],'backImageSrc'));
+$('bgFit').addEventListener('change',(e)=>{ state.fit=e.target.value; render(); });
+$('bgPos').addEventListener('change',(e)=>{ state.pos=e.target.value; render(); });
+function setTextOffset(value) {
+  const parsed = Number(value);
+  const clamped = Math.max(-400, Math.min(400, Number.isFinite(parsed) ? parsed : 0));
+  state.offset = clamped;
+  $('textOffset').value = clamped;
+  $('textOffsetNumber').value = clamped;
+  $('offsetVal').textContent = `${clamped}px`;
+  render();
+}
+$('textOffset').addEventListener('input', (e) => {
+  setTextOffset(e.target.value);
+});
+$('textOffsetNumber').addEventListener('input', (e) => {
+  setTextOffset(e.target.value);
+});
+$('nameSize').addEventListener('input',(e)=>{ state.nameSize=Math.max(12,+e.target.value||34); render(); });
+$('schoolSize').addEventListener('input',(e)=>{ state.schoolSize=Math.max(10,+e.target.value||18); render(); });
+$('frontFlipH').addEventListener('change',(e)=>{ state.frontFlipH=e.target.checked; render(); });
+$('frontFlipV').addEventListener('change',(e)=>{ state.frontFlipV=e.target.checked; render(); });
+$('backFlipH').addEventListener('change',(e)=>{ state.backFlipH=e.target.checked; render(); });
+$('backFlipV').addEventListener('change',(e)=>{ state.backFlipV=e.target.checked; render(); });
+$('enableBack').addEventListener('change',(e)=>{ state.enableBack=e.target.checked; $('backFields').style.display=state.enableBack?'grid':'none'; render(); });
+$('nudgeX').addEventListener('input',(e)=>setNudge('nudgeX', e.target.value));
+$('nudgeY').addEventListener('input',(e)=>setNudge('nudgeY', e.target.value));
+$('nudgeLeft').addEventListener('click',()=>adjustNudge('nudgeX', -0.125));
+$('nudgeRight').addEventListener('click',()=>adjustNudge('nudgeX', 0.125));
+$('nudgeUp').addEventListener('click',()=>adjustNudge('nudgeY', -0.125));
+$('nudgeDown').addEventListener('click',()=>adjustNudge('nudgeY', 0.125));
+$('nudgeReset').addEventListener('click',()=>{ state.nudgeX = 0; state.nudgeY = 0; render(); });
+$('invertBackNudge').addEventListener('change',(e)=>{ state.invertBackNudge=e.target.checked; render(); });
+$('applyPresetBtn').addEventListener('click', () => {
+  const key = $('nudgePresetSelect').value;
+  if (!key || !NUDGE_PRESETS[key]) return;
+
+  const preset = NUDGE_PRESETS[key];
+  state.nudgeX = preset.x;
+  state.nudgeY = preset.y;
+
+  $('nudgeX').value = preset.x;
+  $('nudgeY').value = preset.y;
+
+  render();
+});
+$('printBtn').addEventListener('click',()=>window.print());
+render();
+</script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    (none)
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quote Generator</title>
+  <style>
+    :root{
+      --bg:#f4f7f9;
+      --surface:#ffffff;
+      --surface-soft:#eef6f7;
+      --text:#183042;
+      --muted:#5f7385;
+      --primary:#087E8B;
+      --primary-dark:#0B3954;
+      --border:#d9e5ec;
+      --shadow:0 18px 40px rgba(11,57,84,.08);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:'Manrope',sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(8,126,139,.08), transparent 32%),
+        linear-gradient(180deg, #f9fbfc, var(--bg));
+      color:var(--text);
+      min-height:100vh;
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:1.4rem 1rem 2rem}
+    .hero,.panel{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+    .hero{padding:1.3rem 1.35rem;margin-bottom:1rem}
+    .eyebrow{font-size:.74rem;letter-spacing:1.8px;text-transform:uppercase;color:var(--primary);font-weight:800}
+    h1{margin:.35rem 0 .55rem;font:800 clamp(1.8rem,4vw,2.6rem)/1.05 'Syne',sans-serif;color:var(--primary-dark)}
+    .hero p{margin:0;color:var(--muted);max-width:72ch;line-height:1.6}
+    .layout{display:grid;grid-template-columns:1.05fr .95fr;gap:1rem}
+    .panel{padding:1rem}
+    h2{margin:.1rem 0 .85rem;font:700 1.02rem/1.2 'Syne',sans-serif;color:var(--primary-dark)}
+    .group{margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px dashed var(--border)}
+    .group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+    .field{display:flex;flex-direction:column;gap:.35rem}
+    label{font-size:.84rem;font-weight:700;color:#274457}
+    input,textarea,select{
+      width:100%;
+      border:1px solid #c8d7e1;
+      border-radius:12px;
+      padding:.72rem .78rem;
+      font:inherit;
+      color:var(--text);
+      background:#fff;
+    }
+    input[type="number"]{appearance:textfield}
+    textarea{resize:vertical;min-height:90px}
+    .tool-section{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:.8rem;
+      background:linear-gradient(180deg,#fff,#fbfdfe);
+      margin-bottom:.75rem;
+    }
+    .tool-head{display:flex;justify-content:space-between;gap:.6rem;align-items:center;margin-bottom:.6rem}
+    .tool-head input{font:700 .92rem 'Manrope',sans-serif;border:0;background:transparent;padding:0;min-width:0;color:var(--primary-dark)}
+    .line-item{
+      border:1px solid #d8e6ee;
+      border-radius:12px;
+      padding:.65rem;
+      background:#fcfeff;
+      margin-bottom:.55rem;
+    }
+    .line-item:last-child{margin-bottom:0}
+    .line-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem;gap:.5rem}
+    .line-title{font-size:.8rem;font-weight:800;color:#31566a;letter-spacing:.3px;text-transform:uppercase}
+    .line-cost{margin-top:.4rem;font-size:.8rem;color:#3b6074;text-align:right;font-weight:700}
+    .mini-btn{
+      border:1px solid #cfe0ea;
+      border-radius:999px;
+      background:#fff;
+      color:#2b4f64;
+      padding:.35rem .65rem;
+      font:700 .76rem 'Manrope',sans-serif;
+      cursor:pointer;
+    }
+    .actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1rem}
+    button,.back{
+      border:1px solid transparent;
+      border-radius:999px;
+      padding:.72rem 1rem;
+      font:700 .92rem 'Manrope',sans-serif;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+    }
+    button{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+    .back{color:var(--primary-dark);background:#f4f8fa;border-color:#d5e2ea}
+    .results-shell{background:linear-gradient(160deg,#f9fcfd,#eef7f8);border:1px solid #d6e6ea;border-radius:18px;padding:1rem}
+    .quote-sheet{background:#fff;border:1px solid #dbe6ec;border-radius:16px;padding:1.1rem}
+    .sheet-top{display:flex;justify-content:space-between;gap:1rem;padding-bottom:.9rem;margin-bottom:.9rem;border-bottom:1px solid #e5edf2}
+    .sheet-title{font:800 1.28rem/1.1 'Syne',sans-serif;color:var(--primary-dark)}
+    .sheet-sub{font-size:.83rem;color:var(--muted);margin-top:.3rem}
+    .meta-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;margin-bottom:1rem}
+    .meta-item{padding:.8rem;border:1px solid #e1ebf1;border-radius:14px;background:#fbfdfe}
+    .meta-item strong{display:block;font-size:.73rem;letter-spacing:1px;text-transform:uppercase;color:var(--primary);margin-bottom:.3rem}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:.72rem;border-bottom:1px solid #e4edf2;vertical-align:top;text-align:left}
+    th{font-size:.72rem;letter-spacing:1.1px;text-transform:uppercase;color:#5c7283}
+    .section-row td{background:#f7fbfd;font-weight:800;color:#274457}
+    .section-subtotal-row td{font-weight:700;color:#31566a}
+    .empty{padding:1rem;border:1px dashed #c7d9e0;border-radius:14px;color:var(--muted);background:#fbfdfe}
+    .total-box{margin-top:.9rem;padding:.8rem;border-radius:12px;background:#edf8f8;border:1px solid #cfe7ea;font-weight:800;color:var(--primary-dark)}
+    .notes{margin-top:1rem;padding:1rem;border-radius:14px;background:#f8fbfc;border:1px solid #e2edf2;color:#436073;line-height:1.6}
+    .footer-note{margin-top:1rem;font-size:.82rem;color:var(--muted)}
+    @media (max-width:980px){.layout,.grid,.meta-list{grid-template-columns:1fr}.sheet-top{flex-direction:column}}
+    @media print{
+      body{background:#fff}
+      .hero,.panel,.results-shell,.quote-sheet{box-shadow:none}
+      .hero,.panel,.results-shell{border:0;background:#fff;padding:0}
+      .layout{display:block}
+      .panel:first-of-type,.actions,.back{display:none!important}
+      .no-print{display:none!important}
+      .quote-sheet{border:1px solid #bbb;border-radius:0}
+      body::after{content:'Iowa-Missouri Conference of Seventh-day Adventists · tools.imsda.org';display:block;text-align:center;margin-top:1rem;font:600 11px 'Manrope',sans-serif;color:#555}
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">IMSDA Church Consulting</div>
+    </section>
+
+    <section class="layout">
+      <article class="panel">
+        <div class="group">
+          <h2>Church Details</h2>
+          <div class="grid">
+            <div class="field"><label for="clientName">Church name</label><input id="clientName" type="text" placeholder="Church or organization" /></div>
+            <div class="field"><label for="quoteContact">Contact name</label><input id="quoteContact" type="text" placeholder="Primary contact" /></div>
+            <div class="field"><label for="quotePhone">Contact phone</label><input id="quotePhone" type="text" placeholder="(555) 555-5555" /></div>
+            <div class="field"><label for="projectName">Project name</label><input id="projectName" type="text" placeholder="Project or scope summary" /></div>
+            <div class="field"><label for="quoteTitleSource">Quote Title</label><select id="quoteTitleSource"><option value="church">Church Name</option><option value="project">Project Name</option></select></div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h2>Quote Builder</h2>
+          <div class="grid" style="margin-bottom:.75rem">
+            <div class="field">
+              <label for="csvUpload">Import from CSV</label>
+              <input id="csvUpload" type="file" accept=".csv" />
+            </div>
+          </div>
+          <button id="downloadTemplateBtn" type="button" class="mini-btn" style="margin-bottom:.75rem">Download CSV Template</button>
+          <div id="sectionsContainer"></div>
+          <button id="addSectionBtn" type="button" class="mini-btn">+ Add Section</button>
+        </div>
+
+        <div class="group">
+          <h2>Additional Notes</h2>
+          <div class="field">
+            <label for="notes">Notes</label>
+            <textarea id="notes" placeholder="Scope details, assumptions, exclusions, and scheduling notes."></textarea>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2 class="no-print">Live Quote Preview</h2>
+        <div class="results-shell">
+          <div class="quote-sheet" id="quoteSheet">
+            <div class="sheet-top">
+              <div>
+                <div class="sheet-title" id="sheetTitle">Quote</div>
+                <div class="sheet-sub" id="sheetSub"></div>
+              </div>
+              <div class="sheet-sub" id="generatedDate"></div>
+            </div>
+
+            <div class="meta-list">
+              <div class="meta-item"><strong>Church</strong><span id="outClient">Not provided</span></div>
+              <div class="meta-item"><strong>Contact</strong><span id="outContact">Not provided</span></div>
+              <div class="meta-item"><strong>Phone</strong><span id="outPhone">Not provided</span></div>
+              <div class="meta-item"><strong>Project</strong><span id="outProject">Not provided</span></div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Unit Cost</th>
+                  <th>Line Total</th>
+                </tr>
+              </thead>
+              <tbody id="requestRows"></tbody>
+            </table>
+
+            <div class="total-box" id="totalOutput">Estimated Total: $0</div>
+            <div class="notes" id="outNotes">No additional notes provided.</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="printBtn" type="button">Print / Save as PDF</button>
+        </div>
+        <p class="footer-note no-print">Preview updates automatically as you edit section titles, line items, and quantities.</p>
+      </article>
+    </section>
+
+    
+  </main>
+
+  <script>
+    const sections = [];
+
+    function createId(){
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+      }
+      return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    const refs = {
+      clientName: document.getElementById('clientName'),
+      quoteContact: document.getElementById('quoteContact'),
+      quotePhone: document.getElementById('quotePhone'),
+      projectName: document.getElementById('projectName'),
+      quoteTitleSource: document.getElementById('quoteTitleSource'),
+      notes: document.getElementById('notes'),
+      sectionsContainer: document.getElementById('sectionsContainer'),
+      requestRows: document.getElementById('requestRows')
+    };
+
+    function money(value){
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(Number(value) || 0);
+    }
+
+    function dateStamp(){
+      const now = new Date();
+      return now.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+    }
+
+    function updateLineTotal(itemEl, item){
+      const cost = parseFloat(item.cost) || 0;
+      const qty = parseInt(item.qty, 10) || 0;
+      const total = cost * qty;
+
+      const totalEl = itemEl.querySelector('.line-cost');
+      if (totalEl) {
+        totalEl.textContent = `Line Total: ${money(total)}`;
+      }
+    }
+
+    function addSection(){
+      sections.push({
+        id: createId(),
+        title: `Section ${sections.length + 1}`,
+        items: []
+      });
+      renderBuilder();
+      renderQuote();
+    }
+
+    function removeSection(id){
+      if (sections.length === 1) return;
+      const idx = sections.findIndex(s => s.id === id);
+      if (idx >= 0) sections.splice(idx, 1);
+      renderBuilder();
+      renderQuote();
+    }
+
+    function addLineItem(sectionId){
+      const section = sections.find(s => s.id === sectionId);
+      if (!section) return;
+      section.items.push({ id: createId(), name: '', cost: 0, qty: 1 });
+      renderBuilder();
+      renderQuote();
+    }
+
+    function removeLineItem(sectionId, itemId){
+      const section = sections.find(s => s.id === sectionId);
+      if (!section) return;
+      section.items = section.items.filter(item => item.id !== itemId);
+      renderBuilder();
+      renderQuote();
+    }
+
+    function renderBuilder(){
+      refs.sectionsContainer.innerHTML = '';
+
+      sections.forEach((section, sectionIndex) => {
+        const sectionEl = document.createElement('section');
+        sectionEl.className = 'tool-section';
+
+        const lineItemsMarkup = section.items.map(item => `
+          <div class="line-item" data-item-id="${item.id}">
+            <div class="line-item-head">
+              <span class="line-title">Line Item</span>
+              <button type="button" class="mini-btn" data-remove-line="${item.id}">Remove Line Item</button>
+            </div>
+            <div class="grid">
+              <div class="field"><label>Item Name</label><input type="text" data-name value="${escapeAttr(item.name)}" placeholder="Line item description" /></div>
+              <div class="field"><label>Cost</label><input type="number" class="cost-input" step="0.01" min="0" inputmode="decimal" placeholder="0.00" data-cost value="${item.cost}" /></div>
+              <div class="field"><label>Quantity</label><input type="number" min="0" step="1" data-qty value="${item.qty}" /></div>
+            </div>
+            <div class="line-cost">Line Total: ${money(item.cost * item.qty)}</div>
+          </div>
+        `).join('');
+
+        sectionEl.innerHTML = `
+          <div class="tool-head">
+            <div class="field" style="flex:1">
+              <label>Section Title</label>
+              <input
+                type="text"
+                value="${escapeAttr(section.title)}"
+                data-section-title
+                placeholder="Enter section name"
+                style="font:700 .92rem 'Manrope',sans-serif;color:var(--primary-dark)"
+              />
+            </div>
+            <button type="button" class="mini-btn" data-remove-section="${section.id}" ${sections.length === 1 ? 'disabled' : ''}>Remove Section</button>
+          </div>
+          <div class="line-items-area">${lineItemsMarkup}</div>
+          <button type="button" class="mini-btn" data-add-line="${section.id}">+ Add Line Item</button>
+        `;
+
+        const titleInput = sectionEl.querySelector('[data-section-title]');
+        titleInput.addEventListener('input', (e) => {
+          section.title = e.target.value;
+          renderQuote();
+        });
+
+        sectionEl.querySelector('[data-add-line]').addEventListener('click', () => addLineItem(section.id));
+        sectionEl.querySelector('[data-remove-section]').addEventListener('click', () => removeSection(section.id));
+
+        sectionEl.querySelectorAll('[data-item-id]').forEach((itemEl) => {
+          const itemId = itemEl.dataset.itemId;
+          const item = section.items.find(i => i.id === itemId);
+          if (!item) return;
+
+          itemEl.querySelector('[data-name]').addEventListener('input', (e) => { item.name = e.target.value; renderQuote(); });
+          itemEl.querySelector('[data-cost]').addEventListener('input', (e) => { item.cost = e.target.value; updateLineTotal(itemEl, item); renderQuote(); });
+          itemEl.querySelector('[data-qty]').addEventListener('input', (e) => { item.qty = e.target.value; updateLineTotal(itemEl, item); renderQuote(); });
+          itemEl.querySelector('[data-remove-line]').addEventListener('click', () => removeLineItem(section.id, itemId));
+        });
+
+        refs.sectionsContainer.appendChild(sectionEl);
+      });
+    }
+
+    function renderQuote(){
+      const titleSource = refs.quoteTitleSource.value;
+      const churchName = refs.clientName.value.trim();
+      const projectName = refs.projectName.value.trim();
+
+      let quoteTitle = 'Quote';
+
+      if (titleSource === 'project') {
+        quoteTitle = projectName || churchName || 'Quote';
+      } else {
+        quoteTitle = churchName || projectName || 'Quote';
+      }
+
+      document.getElementById('sheetTitle').textContent = quoteTitle;
+      document.getElementById('sheetSub').textContent = '';
+      document.getElementById('generatedDate').textContent = `Generated ${dateStamp()}`;
+      document.getElementById('outClient').textContent = refs.clientName.value || 'Not provided';
+      document.getElementById('outContact').textContent = refs.quoteContact.value || 'Not provided';
+      document.getElementById('outPhone').textContent = refs.quotePhone.value || 'Not provided';
+      document.getElementById('outProject').textContent = refs.projectName.value || 'Not provided';
+      document.getElementById('outNotes').textContent = refs.notes.value || 'No additional notes provided.';
+
+      let grandTotal = 0;
+      const rows = [];
+
+      sections.forEach((section, index) => {
+        rows.push(`<tr class="section-row"><td colspan="4">${escapeHtml(section.title || `Section ${index + 1}`)}</td></tr>`);
+        if (!section.items.length) {
+          rows.push('<tr><td colspan="4"><div class="empty">No line items added yet.</div></td></tr>');
+          rows.push('<tr class="section-subtotal-row"><td colspan="3">Section Subtotal</td><td>$0.00</td></tr>');
+          return;
+        }
+
+        let sectionTotal = 0;
+        section.items.forEach(item => {
+          const cost = parseFloat(item.cost) || 0;
+          const qty = parseInt(item.qty, 10) || 0;
+          const lineTotal = cost * qty;
+          sectionTotal += lineTotal;
+          rows.push(`
+            <tr>
+              <td>${escapeHtml(item.name || 'Untitled item')}</td>
+              <td>${parseInt(item.qty, 10) || 0}</td>
+              <td>${money(parseFloat(item.cost) || 0)}</td>
+              <td>${money(lineTotal)}</td>
+            </tr>
+          `);
+        });
+
+        grandTotal += sectionTotal;
+        rows.push(`<tr class="section-subtotal-row"><td colspan="3">Section Subtotal</td><td>${money(sectionTotal)}</td></tr>`);
+      });
+
+      refs.requestRows.innerHTML = rows.join('');
+      document.getElementById('totalOutput').textContent = `Estimated Total: ${money(grandTotal)}`;
+    }
+
+    function escapeHtml(text){
+      return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function escapeAttr(text){
+      return escapeHtml(text ?? '');
+    }
+
+    function splitCSVLine(line){
+      const cols = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i += 1) {
+        const char = line[i];
+        const next = line[i + 1];
+
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            current += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+          continue;
+        }
+
+        if (char === ',' && !inQuotes) {
+          cols.push(current.trim());
+          current = '';
+          continue;
+        }
+
+        current += char;
+      }
+
+      cols.push(current.trim());
+      return cols;
+    }
+
+    function parseCSVAndBuild(csvText) {
+      const lines = csvText.split(/\r?\n/).filter(line => line.trim());
+      if (lines.length < 2) return;
+
+      const rows = lines.slice(1);
+      const sectionMap = {};
+      const sectionOrder = [];
+
+      rows.forEach(line => {
+        const cols = splitCSVLine(line);
+        const sectionName = (cols[0] || '').trim();
+        const itemName = (cols[1] || '').trim();
+        const cost = parseFloat((cols[2] || '').trim()) || 0;
+        const qty = parseInt((cols[3] || '').trim(), 10) || 1;
+
+        if (!sectionName || !itemName) return;
+
+        if (!sectionMap[sectionName]) {
+          sectionMap[sectionName] = {
+            id: createId(),
+            title: sectionName,
+            items: []
+          };
+          sectionOrder.push(sectionName);
+        }
+
+        sectionMap[sectionName].items.push({
+          id: createId(),
+          name: itemName,
+          cost,
+          qty
+        });
+      });
+
+      sections.length = 0;
+      sectionOrder.forEach(sectionName => {
+        sections.push(sectionMap[sectionName]);
+      });
+
+      if (sections.length === 0) addSection();
+
+      renderBuilder();
+      renderQuote();
+    }
+
+    function handleCSVUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        parseCSVAndBuild(e.target.result || '');
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    document.getElementById('addSectionBtn').addEventListener('click', addSection);
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+    document.getElementById('csvUpload').addEventListener('change', handleCSVUpload);
+    document.getElementById('downloadTemplateBtn').addEventListener('click', () => {
+      const csv = `Section,Item,Cost,Quantity
+Section 1,Sample Item 1,100.00,1
+Section 1,Sample Item 2,25.50,2
+Section 2,Sample Item 3,250.00,1`;
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'quote-template.csv';
+      a.click();
+
+      URL.revokeObjectURL(url);
+    });
+    document.getElementById('quoteTitleSource').addEventListener('change', renderQuote);
+    ['clientName','quoteContact','quotePhone','projectName','notes'].forEach(id => {
+      document.getElementById(id).addEventListener('input', renderQuote);
+    });
+
+    addSection();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

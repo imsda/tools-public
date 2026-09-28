@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    (none)
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Camera Quote Generator</title>
+  <style>
+    :root{--bg:#f4f7f9;--surface:#ffffff;--surface-soft:#eef6f7;--text:#183042;--muted:#5f7385;--primary:#087E8B;--primary-dark:#0B3954;--border:#d9e5ec;--shadow:0 18px 40px rgba(11,57,84,.08);--radius:16px}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'Manrope',sans-serif;background:radial-gradient(circle at top right, rgba(8,126,139,.08), transparent 32%),linear-gradient(180deg, #f9fbfc, var(--bg));color:var(--text);min-height:100vh}
+    .local-tools-nav{background:#fff;border-bottom:1px solid var(--border);box-shadow:0 4px 18px rgba(11,57,84,.06)}
+    .local-tools-nav-inner{max-width:1180px;margin:0 auto;padding:.7rem 1rem;display:flex;align-items:center}
+    .local-tools-nav a{display:inline-flex;align-items:center;gap:.4rem;color:var(--primary-dark);font-size:.9rem;font-weight:800;text-decoration:none;padding:.48rem .75rem;border:1px solid var(--border);border-radius:999px;background:#fff}
+    .local-tools-nav a:hover{border-color:var(--primary);color:var(--primary)}
+    .wrap{max-width:1180px;margin:0 auto;padding:1.4rem 1rem 2rem}
+    .hero,.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .hero{padding:1.3rem 1.35rem;margin-bottom:1rem}.eyebrow{font-size:.74rem;letter-spacing:1.8px;text-transform:uppercase;color:var(--primary);font-weight:800}
+    h1{margin:.35rem 0 .55rem;font:800 clamp(1.8rem,4vw,2.6rem)/1.05 'Syne',sans-serif;color:var(--primary-dark)} .hero p{margin:0;color:var(--muted);max-width:72ch;line-height:1.6}
+    .layout{display:grid;grid-template-columns:1.05fr .95fr;gap:1rem}.panel{padding:1rem}
+    .group{margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px dashed var(--border)} .group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+    h2{margin:.1rem 0 .85rem;font:700 1.02rem/1.2 'Syne',sans-serif;color:var(--primary-dark)}
+    .field{display:flex;flex-direction:column;gap:.35rem} label{font-size:.84rem;font-weight:700;color:#274457}
+    input,select,textarea{width:100%;border:1px solid #c8d7e1;border-radius:12px;padding:.72rem .78rem;font:inherit;color:var(--text);background:#fff}
+    input[type='checkbox']{width:auto} textarea{resize:vertical;min-height:90px}
+    .tool-section{border:1px solid var(--border);border-radius:14px;padding:.8rem;background:linear-gradient(180deg,#fff,#fbfdfe);margin-bottom:.75rem}
+    .tool-head{display:flex;gap:.6rem;align-items:flex-start;margin-bottom:.6rem}.tool-head label{font-size:.92rem;color:var(--primary-dark)}
+    .tool-content{display:none;padding-top:.2rem}.tool-section.active .tool-content{display:block}
+    .stack{display:flex;flex-direction:column;gap:.55rem}.line-item{border:1px solid #d8e6ee;border-radius:12px;padding:.65rem;background:#fcfeff}
+    .line-item-head{display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.45rem}.line-title{font-size:.8rem;font-weight:800;color:#31566a;letter-spacing:.3px;text-transform:uppercase}
+    .mini-btn{border:1px solid #cfe0ea;border-radius:999px;background:#fff;color:#2b4f64;padding:.35rem .65rem;font:700 .76rem 'Manrope',sans-serif;cursor:pointer}
+    .line-cost{margin-top:.4rem;font-size:.8rem;color:#3b6074;display:flex;justify-content:space-between;gap:.5rem}
+    .info-note{margin:.85rem 0 1rem;padding:.85rem 1rem;border-radius:12px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-size:.92rem;line-height:1.45;font-weight:600}
+    .validation-box{margin:.75rem 0;padding:.8rem .9rem;border-radius:12px;border:1px solid #d6e6ea;background:#f8fbfc;font-size:.86rem;line-height:1.5}
+    .validation-box.ok{border-color:#a7d7bd;background:#effaf4;color:#185b37}.validation-box.warn{border-color:#f2cf82;background:#fff8e8;color:#7a4b00}.validation-box.error{border-color:#efb1b1;background:#fff1f1;color:#8b1e1e}
+    .validation-box strong{display:block;margin-bottom:.3rem}.validation-box ul{margin:.35rem 0 0;padding-left:1.15rem}
+    .results-shell{background:linear-gradient(160deg,#f9fcfd,#eef7f8);border:1px solid #d6e6ea;border-radius:18px;padding:1rem}
+    .quote-sheet{background:#fff;border:1px solid #dbe6ec;border-radius:16px;padding:1.1rem}.sheet-top{display:flex;justify-content:space-between;gap:1rem;padding-bottom:.9rem;margin-bottom:.9rem;border-bottom:1px solid #e5edf2}
+    .sheet-title{font:800 1.28rem/1.1 'Syne',sans-serif;color:var(--primary-dark)}.sheet-sub{font-size:.83rem;color:var(--muted);margin-top:.3rem}
+    .meta-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;margin-bottom:1rem}.meta-item{padding:.8rem;border:1px solid #e1ebf1;border-radius:14px;background:#fbfdfe}
+    .meta-item strong{display:block;font-size:.73rem;letter-spacing:1px;text-transform:uppercase;color:var(--primary);margin-bottom:.3rem}
+    table{width:100%;border-collapse:collapse}th,td{padding:.72rem;border-bottom:1px solid #e4edf2;text-align:left}th{font-size:.72rem;letter-spacing:1.1px;text-transform:uppercase;color:#5c7283}
+    .total-box{margin-top:.9rem;padding:.8rem;border-radius:12px;background:#edf8f8;border:1px solid #cfe7ea;font-weight:800;color:var(--primary-dark)}
+    .notes{margin-top:1rem;padding:1rem;border-radius:14px;background:#f8fbfc;border:1px solid #e2edf2;color:#436073;line-height:1.6}
+    .actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1rem}button{border:1px solid transparent;border-radius:999px;padding:.72rem 1rem;font:700 .92rem 'Manrope',sans-serif;cursor:pointer;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+    .hidden{display:none!important}
+    @media (max-width:980px){.layout,.meta-list{grid-template-columns:1fr}.sheet-top{flex-direction:column}}
+    @media print{body{background:#fff}.local-tools-nav{display:none!important}.hero,.panel,.results-shell,.quote-sheet{box-shadow:none}.hero,.panel,.results-shell{border:0;background:#fff;padding:0}.layout{display:block}.panel:first-of-type,.actions{display:none!important}.quote-sheet{border:1px solid #bbb;border-radius:0}}
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+<main class="wrap">
+  <section class="hero"><div class="eyebrow">IMSDA Church Consulting</div><h1>Security Camera Quote Generator</h1><p>Build a structured security camera quote request and print/save for review.</p></section>
+  <section class="layout">
+    <article class="panel">
+      <div class="info-note hidden" id="importBanner"></div>
+      <div class="group">
+        <h2>System Type</h2>
+        <div class="field"><label for="stackType">Camera system option</label><select id="stackType"><option value="custom">Custom</option><option value="allinone">All in One</option></select></div>
+        <div class="field" style="margin-top:.65rem;"><label for="subType" id="subTypeLabel">Camera Ecosystem</label><select id="subType"></select></div>
+        <div class="info-note" id="recommendationBox" style="margin-bottom:0;"></div>
+      </div>
+      <div id="compatibilityBox" class="validation-box">Select an NVR and cameras to check compatibility.</div>
+      <div class="group"><h2>Scope Selection</h2><div id="editor"></div></div>
+      <div class="group"><h2>Additional Notes</h2><div class="field"><label for="notes">Notes for conference office</label><textarea id="notes"></textarea></div></div>
+    </article>
+    <article class="panel">
+      <h2>Live Quote Summary</h2>
+      <div class="results-shell"><div class="quote-sheet">
+        <div class="sheet-top"><div><div class="sheet-title">Security Camera Quote Request</div><div class="sheet-sub">Iowa-Missouri Conference of Seventh-day Adventists</div></div><div class="sheet-sub" id="generatedDate"></div></div>
+        <div class="meta-list"><div class="meta-item"><strong>Church</strong><span id="outChurch">Not provided</span></div><div class="meta-item"><strong>Contact</strong><span id="outContact">Not provided</span></div><div class="meta-item"><strong>System Type</strong><span id="outStack">Custom</span></div><div class="meta-item"><strong>Ecosystem / Kit Type</strong><span id="outSubType">UniFi Protect</span></div><div class="meta-item"><strong>Recommendation</strong><span id="outRecommendation">Not provided</span></div><div class="meta-item"><strong>PoE Estimate</strong><span id="poeInfo">Estimated camera PoE need: Not applicable / unknown</span></div></div>
+        <table><thead><tr><th>Section</th><th>Selection</th><th>Qty</th><th>Subtotal</th></tr></thead><tbody id="rows"><tr><td colspan="4">No items selected yet.</td></tr></tbody></table>
+        <div class="total-box" id="total">Estimated Total: $0.00</div>
+        <div id="summaryCompatibility" class="validation-box">Compatibility will be checked as items are selected.</div>
+        <div class="notes" id="outNotes">No additional notes provided.</div>
+      </div></div>
+      <div class="actions"><button id="printBtn" type="button">Print / Save as PDF</button></div>
+    </article>
+  </section>
+</main>
+<script>
+const IMPORT_KEY='securityCameraCoverageEstimate';
+/*
+  CAMERA_CATALOG maintenance notes:
+  - Edit product names and MSRP values here.
+  - Custom ecosystems live under CAMERA_CATALOG.custom.
+  - All-in-one kit options live under CAMERA_CATALOG.allinone.
+  - Product IDs must be unique within each category.
+  - Totals, dropdowns, PoE estimates, and capacity checks are generated from this catalog.
+*/
+/*
+  DRIVE PRICE MAINTENANCE
+  Planning prices checked July 27, 2026. Verify before a final quote.
+  Quantity means number of drives; driveCapacityTB is capacity per drive.
+*/
+const SURVEILLANCE_DRIVES = [
+  {
+    id: 'wd-purple-4tb',
+    name: 'WD Purple 4 TB Surveillance HDD',
+    msrp: 129.99,
+    driveCapacityTB: 4,
+    storageTB: 4,
+    formFactor: '3.5',
+    interface: 'SATA',
+    priceSource: 'US retail planning price',
+    priceChecked: '2026-07-27'
+  },
+  {
+    id: 'wd-purple-8tb',
+    name: 'WD Purple 8 TB Surveillance HDD',
+    msrp: 354.99,
+    driveCapacityTB: 8,
+    storageTB: 8,
+    formFactor: '3.5',
+    interface: 'SATA',
+    priceSource: 'B&H retail planning price',
+    priceChecked: '2026-07-27'
+  },
+  {
+    id: 'seagate-skyhawk-ai-16tb',
+    name: 'Seagate SkyHawk AI 16 TB Surveillance HDD',
+    msrp: 579.99,
+    driveCapacityTB: 16,
+    storageTB: 16,
+    formFactor: '3.5',
+    interface: 'SATA',
+    priceSource: 'US retail planning price',
+    priceChecked: '2026-07-27'
+  },
+  {
+    id: 'unifi-enterprise-8tb',
+    name: 'UniFi Enterprise 8 TB HDD',
+    msrp: 359,
+    driveCapacityTB: 8,
+    storageTB: 8,
+    formFactor: '3.5',
+    interface: 'SATA',
+    ecosystemOnly: 'unifi',
+    priceSource: 'Ubiquiti Store',
+    priceChecked: '2026-07-27'
+  },
+  {
+    id: 'unifi-enterprise-16tb',
+    name: 'UniFi Enterprise 16 TB HDD',
+    msrp: 579,
+    driveCapacityTB: 16,
+    storageTB: 16,
+    formFactor: '3.5',
+    interface: 'SATA',
+    ecosystemOnly: 'unifi',
+    priceSource: 'Ubiquiti Store',
+    priceChecked: '2026-07-27'
+  },
+  {
+    id: 'unifi-enterprise-24tb',
+    name: 'UniFi Enterprise 24 TB HDD',
+    msrp: 819,
+    driveCapacityTB: 24,
+    storageTB: 24,
+    formFactor: '3.5',
+    interface: 'SATA',
+    ecosystemOnly: 'unifi',
+    priceSource: 'Ubiquiti Store',
+    priceChecked: '2026-07-27'
+  }
+];
+const storageFor=ecosystem=>SURVEILLANCE_DRIVES.filter(d=>!d.ecosystemOnly||d.ecosystemOnly===ecosystem);
+const SHARED_CUSTOM_UPS = [
+  {
+    id: 'ups-small',
+    name: 'Small UPS Placeholder',
+    msrp: 0
+  },
+  {
+    id: 'ups-medium',
+    name: 'Medium UPS Placeholder',
+    msrp: 0
+  },
+  {
+    id: 'ups-rackmount',
+    name: 'Rackmount UPS Placeholder',
+    msrp: 0
+  }
+];
+const SHARED_AIO_ADDONS = [
+  {
+    id: 'addon-camera',
+    name: 'Extra Camera Placeholder',
+    msrp: 0,
+    cameraCountImpact: 1
+  },
+  {
+    id: 'addon-storage',
+    name: 'Extra Storage Placeholder',
+    msrp: 0,
+    storageTB: 4
+  },
+  {
+    id: 'addon-ups',
+    name: 'UPS Placeholder',
+    msrp: 0
+  }
+];
+const CAMERA_CATALOG = {
+  custom: {
+    unifi: {
+      label: "UniFi Protect",
+      recommendation: "Best for churches already using UniFi, easiest remote support, clean interface, no subscription, but higher camera cost and locked ecosystem.",
+      nvrs: [
+        { id: 'unifi-cloudkey-plus', name: 'UniFi CloudKey+', msrp: 249, nvrCapacity: 8, cameraBrand: 'unifi', supportsOnvif: true, onvifLimitations: true, driveBays: 1, maxDriveTB: 1, storageType: '2.5-ssd', storageIncluded: true },
+        { id: 'unifi-unvr', name: 'UniFi UNVR', msrp: 299, nvrCapacity: 18, cameraBrand: 'unifi', supportsOnvif: true, onvifLimitations: true, driveBays: 4, maxDriveTB: 24, storageType: '3.5-sata' },
+        { id: 'unifi-unvr-pro', name: 'UniFi UNVR Pro', msrp: 499, nvrCapacity: 24, cameraBrand: 'unifi', supportsOnvif: true, onvifLimitations: true, driveBays: 7, maxDriveTB: 24, storageType: '3.5-sata' }
+      ],
+      cameras: [
+        { id: 'unifi-g5-turret-ultra', name: 'UniFi G5 Turret Ultra (Indoor/Outdoor)', msrp: 129, cameraCountImpact: 1, poeWatts: 8, cameraBrand: 'unifi' },
+        { id: 'unifi-g5-bullet', name: 'UniFi G5 Bullet', msrp: 129, cameraCountImpact: 1, poeWatts: 10, cameraBrand: 'unifi' },
+        { id: 'unifi-g5-flex', name: 'UniFi G5 Flex', msrp: 129, cameraCountImpact: 1, poeWatts: 5, cameraBrand: 'unifi' },
+        { id: 'unifi-g5-pro-4k', name: 'UniFi G5 Pro 4K', msrp: 379, cameraCountImpact: 1, poeWatts: 13, cameraBrand: 'unifi' },
+        { id: 'unifi-g5-ptz', name: 'UniFi G5 PTZ', msrp: 599, cameraCountImpact: 1, poeWatts: 25, cameraBrand: 'unifi' },
+        { id: 'unifi-g4-doorbell-pro', name: 'UniFi G4 Doorbell Pro', msrp: 299, cameraCountImpact: 1, poeWatts: 7, cameraBrand: 'unifi' }
+      ],
+      storage: storageFor('unifi'),
+      ups: SHARED_CUSTOM_UPS
+    },
+    reolink: {
+      label: "Reolink",
+      recommendation: "Best budget/value option for small churches and simple installs. Good image quality for the price, but less polished central management.",
+      nvrs: [
+        { id: 'reolink-rln8-410', name: 'Reolink RLN8-410', msrp: 349.99, nvrCapacity: 12, cameraBrand: 'reolink', driveBays: 1, maxDriveTB: 16, storageType: '3.5-sata', storageIncluded: true, hardwareVersionWarning: true },
+        { id: 'reolink-rln16-410', name: 'Reolink RLN16-410 (16 Channel)', msrp: 499.99, nvrCapacity: 16, cameraBrand: 'reolink', driveBays: 2, maxDriveTB: 16, storageType: '3.5-sata', storageIncluded: true, hardwareVersionWarning: true },
+        { id: 'reolink-rln36', name: 'Reolink RLN36 (36 Channel)', msrp: 249.99, nvrCapacity: 36, cameraBrand: 'reolink', driveBays: 3, maxDriveTB: 16, storageType: '3.5-sata', storageIncluded: false }
+      ],
+      cameras: [
+        { id: 'reolink-rlc-810a', name: 'Reolink RLC-810A 4K Bullet', msrp: 89.99, cameraCountImpact: 1, poeWatts: 8, cameraBrand: 'reolink' },
+        { id: 'reolink-rlc-820a', name: 'Reolink RLC-820A 4K Dome', msrp: 99.99, cameraCountImpact: 1, poeWatts: 8, cameraBrand: 'reolink' },
+        { id: 'reolink-rlc-833a', name: 'Reolink RLC-833A PTZ', msrp: 159.99, cameraCountImpact: 1, poeWatts: 16, cameraBrand: 'reolink' },
+        { id: 'reolink-duo-3', name: 'Reolink Duo 3 Wide Angle', msrp: 189.99, cameraCountImpact: 1, poeWatts: 12, cameraBrand: 'reolink' }
+      ],
+      storage: storageFor('reolink'),
+      ups: SHARED_CUSTOM_UPS
+    },
+    hikvision: {
+      label: "Hikvision / Dahua",
+      recommendation: "Best value for larger installs and high camera counts, but requires more setup care and should be isolated on a camera VLAN.",
+      nvrs: [
+        { id: 'hikvision-dahua-8', name: 'Hikvision / Dahua 8 Channel ONVIF NVR', msrp: 249, nvrCapacity: 8, cameraBrand: 'onvif', supportsOnvif: true, driveBays: 1, maxDriveTB: 10, storageType: '3.5-sata', modelVerificationRequired: true },
+        { id: 'hikvision-dahua-16', name: 'Hikvision / Dahua 16 Channel ONVIF NVR', msrp: 399, nvrCapacity: 16, cameraBrand: 'onvif', supportsOnvif: true, driveBays: 2, maxDriveTB: 10, storageType: '3.5-sata', modelVerificationRequired: true },
+        { id: 'hikvision-dahua-32', name: 'Hikvision / Dahua 32 Channel ONVIF NVR', msrp: 699, nvrCapacity: 32, cameraBrand: 'onvif', supportsOnvif: true, driveBays: 4, maxDriveTB: 16, storageType: '3.5-sata', modelVerificationRequired: true }
+      ],
+      cameras: [
+        { id: 'hikvision-dahua-turret', name: 'Hikvision / Dahua Color Night Turret', msrp: 149, cameraCountImpact: 1, poeWatts: 9, cameraBrand: 'onvif', requiresModelVerification: true },
+        { id: 'hikvision-dahua-bullet', name: 'Hikvision / Dahua Color Night Bullet', msrp: 159, cameraCountImpact: 1, poeWatts: 9, cameraBrand: 'onvif', requiresModelVerification: true },
+        { id: 'hikvision-dahua-ptz', name: 'Hikvision / Dahua PTZ Camera', msrp: 699, cameraCountImpact: 1, poeWatts: 30, cameraBrand: 'onvif', requiresModelVerification: true }
+      ],
+      storage: storageFor('hikvision'),
+      ups: SHARED_CUSTOM_UPS
+    }
+  },
+  allinone: {
+    reolink: {
+      label: "Reolink Kit",
+      recommendation: "Good cost-effective kit option for smaller churches that want a bundled NVR/camera system.",
+      systems: [
+        { id: 'reolink-kit-4', name: 'Reolink 4-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 4 },
+        { id: 'reolink-kit-8', name: 'Reolink 8-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 8 },
+        { id: 'reolink-kit-12', name: 'Reolink 12-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 12 },
+        { id: 'reolink-kit-16', name: 'Reolink 16-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 16 }
+      ],
+      addons: SHARED_AIO_ADDONS
+    },
+    nightowl: {
+      label: "Night Owl Kit",
+      recommendation: "Simple retail kit option for basic coverage needs. Best for budget installs where advanced management is not required.",
+      systems: [
+        { id: 'nightowl-kit-4', name: 'Night Owl 4-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 4 },
+        { id: 'nightowl-kit-8', name: 'Night Owl 8-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 8 },
+        { id: 'nightowl-kit-12', name: 'Night Owl 12-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 12 },
+        { id: 'nightowl-kit-16', name: 'Night Owl 16-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 16 }
+      ],
+      addons: SHARED_AIO_ADDONS
+    },
+    generic: {
+      label: "Generic NVR Kit",
+      recommendation: "Placeholder option for comparing basic all-in-one kits or local vendor packages.",
+      systems: [
+        { id: 'generic-kit-4', name: 'Generic 4-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 4 },
+        { id: 'generic-kit-8', name: 'Generic 8-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 8 },
+        { id: 'generic-kit-12', name: 'Generic 12-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 12 },
+        { id: 'generic-kit-16', name: 'Generic 16-Camera NVR Kit Placeholder', msrp: 0, kitCapacity: 16 }
+      ],
+      addons: SHARED_AIO_ADDONS
+    }
+  }
+};
+const state={stack:'custom',subType:'unifi',imported:null,selections:{custom:{},allinone:{}}};
+const STACK_LABELS={custom:'Custom',allinone:'All in One'};
+const money=v=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v||0);
+function rowsFor(k){return state.selections[state.stack][k]||(state.selections[state.stack][k]=[{include:false,id:'',qty:1}]);}
+function currentCatalog(){return CAMERA_CATALOG[state.stack][state.subType];}
+function currentSystemType(){return state.stack;}
+function currentCatalogKey(){return state.subType;}
+function currentCatalogGroup(){
+  if(currentSystemType()==='custom') return CAMERA_CATALOG.custom[currentCatalogKey()];
+  return CAMERA_CATALOG.allinone[currentCatalogKey()];
+}
+function getCatalogItems(category){
+  const group=currentCatalogGroup()||{};
+  if(currentSystemType()==='custom'){
+    const sharedCatalog={storage:storageFor(state.subType),ups:SHARED_CUSTOM_UPS};
+    return group[category]||sharedCatalog[category]||[];
+  }
+  return group[category]||[];
+}
+function findCatalogItem(category,id){return getCatalogItems(category).find(item=>item.id===id)||null;}
+function setSubTypeOptions(){const subType=document.getElementById('subType');const label=document.getElementById('subTypeLabel');const opts=Object.entries(CAMERA_CATALOG[state.stack]);label.textContent=state.stack==='custom'?'Camera Ecosystem':'Kit Type'; if(!CAMERA_CATALOG[state.stack][state.subType]) state.subType=opts[0][0]; subType.innerHTML=opts.map(([k,v])=>`<option value="${k}" ${k===state.subType?'selected':''}>${v.label}</option>`).join(''); document.getElementById('recommendationBox').textContent=currentCatalog().recommendation;}
+function render(){setSubTypeOptions(); const c=currentCatalog(); const editor=document.getElementById('editor'); editor.innerHTML='';
+  const customMarkup=`
+  <section class="tool-section" id="nvrSection"><div class="tool-head"><input id="includeNvr" type="checkbox" /><label for="includeNvr">NVR / Recorder</label></div><div class="tool-content"><div class="stack" id="stack-nvr"></div></div></section>
+  <section class="tool-section" id="cameraSection"><div class="tool-head"><input id="includeCameras" type="checkbox" /><label for="includeCameras">Cameras</label></div><div class="tool-content"><div class="stack" id="cameraLineItems"></div><div style="margin-top:.55rem;"><button type="button" class="mini-btn" id="addCameraLineBtn">+ Add Camera</button></div></div></section>
+  <section class="tool-section" id="storageSection"><div class="tool-head"><input id="includeStorage" type="checkbox" /><label for="includeStorage">Storage</label></div><div class="tool-content"><div class="stack" id="stack-storage"></div></div></section>
+  <section class="tool-section" id="upsSection"><div class="tool-head"><input id="includeUps" type="checkbox" /><label for="includeUps">UPS / Power</label></div><div class="tool-content"><div class="stack" id="stack-ups"></div></div></section>`;
+  const aioMarkup=`
+  <section class="tool-section" id="systemsSection"><div class="tool-head"><input id="includeSystems" type="checkbox" /><label for="includeSystems">All-in-One Systems</label></div><div class="tool-content"><div class="stack" id="stack-systems"></div></div></section>
+  <section class="tool-section" id="addonsSection"><div class="tool-head"><input id="includeAddons" type="checkbox" /><label for="includeAddons">Optional Add-ons</label></div><div class="tool-content"><div class="stack" id="addonLineItems"></div><div style="margin-top:.55rem;"><button type="button" class="mini-btn" id="addAddonLineBtn">+ Add Add-on</button></div></div></section>`;
+  editor.innerHTML=state.stack==='custom'?customMarkup:aioMarkup;
+
+  [['nvr',false],['cameras',true],['storage',false],['ups',false],['systems',false],['addons',true]].forEach(([k,m])=>{if(!c[k])return; if(m&&!state.selections[state.stack][k]) state.selections[state.stack][k]=[{include:false,id:'',qty:1}]; if(!m){const it=rowsFor(k); if(it.length!==1) state.selections[state.stack][k]=[{include:it[0]?.include||false,id:it[0]?.id||'',qty:it[0]?.qty||1}];}});
+
+  if(state.stack==='custom'){paintLines('nvr','nvrs',false,'stack-nvr'); paintLines('cameras','cameras',true,'cameraLineItems'); paintLines('storage','storage',false,'stack-storage'); paintLines('ups','ups',false,'stack-ups');}
+  else {paintLines('systems','systems',false,'stack-systems'); paintLines('addons','addons',true,'addonLineItems');}
+
+  setSectionActiveState({ include: 'includeNvr', section: 'nvrSection', key:'nvr' });
+  setSectionActiveState({ include: 'includeCameras', section: 'cameraSection', key:'cameras' });
+  setSectionActiveState({ include: 'includeStorage', section: 'storageSection', key:'storage' });
+  setSectionActiveState({ include: 'includeUps', section: 'upsSection', key:'ups' });
+  setSectionActiveState({ include: 'includeSystems', section: 'systemsSection', key:'systems' });
+  setSectionActiveState({ include: 'includeAddons', section: 'addonsSection', key:'addons' });
+
+  const addMap={addCameraLineBtn:'cameras',addAddonLineBtn:'addons'};
+  Object.entries(addMap).forEach(([id,key])=>{const b=document.getElementById(id); if(b) b.onclick=()=>{rowsFor(key).push({id:'',qty:1}); render();};});
+  refreshSummary();
+}
+function setSectionActiveState({include,section,key}){const cb=document.getElementById(include); const sec=document.getElementById(section); if(!cb||!sec||!state.selections[state.stack][key]) return; const on=!!state.selections[state.stack][key][0]?.include; cb.checked=on; sec.classList.toggle('active',on); cb.onchange=(e)=>{state.selections[state.stack][key][0].include=e.target.checked; sec.classList.toggle('active',e.target.checked); refreshSummary();};}
+function paintLines(key,category,isMulti,hostId){const host=document.getElementById(hostId||('stack-'+key)); const catalog=getCatalogItems(category); const items=rowsFor(key); if(!host) return; host.innerHTML=''; items.forEach((row,i)=>{const d=document.createElement('div');d.className='line-item'; const selectId=`${key}Option${i||''}`; const qtyId=`${key}Qty${i||''}`; const unitId=`${key}UnitCost${i||''}`; const lineId=`${key}LineTotal${i||''}`; d.innerHTML=`<div class="line-item-head"><span class="line-title">${key} line ${i+1}</span>${isMulti&&items.length>1?`<button type="button" class="mini-btn" data-remove="${key}" data-i="${i}">Remove</button>`:''}</div><div class="field"><label>Model</label><select id="${i===0&&['nvr','storage','ups'].includes(key)?(key+'Option'):selectId}" data-key="${key}" data-category="${category}" data-i="${i}">${catalog.map(o=>`<option value="${o.id}" ${o.id===row.id?'selected':''}>${o.name}</option>`).join('')}</select></div><div class="field"><label>Quantity</label><input id="${i===0&&['nvr','storage','ups'].includes(key)?(key+'Qty'):qtyId}" type="number" min="1" value="${row.qty||1}" data-qty="${key}" data-category="${category}" data-i="${i}"></div><div class="line-cost"><span>Unit cost: <span id="${i===0&&['nvr','storage','ups'].includes(key)?(key+'UnitCost'):unitId}" data-unit="${key}" data-category="${category}" data-i="${i}"></span></span><span>Line total: <span id="${i===0&&['nvr','storage','ups'].includes(key)?(key+'LineTotal'):lineId}" data-total="${key}" data-category="${category}" data-i="${i}"></span></span></div>`; host.appendChild(d);
+    if(!row.id&&catalog[0]) row.id=catalog[0].id;
+  });
+  host.querySelectorAll('select').forEach(el=>el.oninput=(e)=>{const r=rowsFor(e.target.dataset.key)[+e.target.dataset.i];r.id=e.target.value; refreshSummary();});
+  host.querySelectorAll('input[type="number"]').forEach(el=>el.oninput=(e)=>{const r=rowsFor(e.target.dataset.qty)[+e.target.dataset.i];r.qty=Math.max(1,+e.target.value||1); refreshSummary();});
+  host.querySelectorAll('[data-remove]').forEach(btn=>btn.onclick=()=>{const arr=rowsFor(btn.dataset.remove); arr.splice(+btn.dataset.i,1); render();});
+}
+function storageTargetFromImport(d,count){const m=String(d.storageRecommendation||'').match(/(\d+)\s*TB/i);if(m)return +m[1];return count<=4?4:count<=8?8:16;}
+function applyImport(){const d=state.imported;if(!d?.cameraCount)return;state.stack='custom';state.subType='unifi';document.getElementById('stackType').value='custom';
+ const catalog=CAMERA_CATALOG.custom.unifi;
+ const cam=catalog.cameras[0]; state.selections.custom.cameras=[{include:true,id:cam.id,qty:+d.cameraCount||1}];
+ const target=storageTargetFromImport(d,+d.cameraCount||0);
+ const nvr=catalog.nvrs.find(x=>x.nvrCapacity>=d.cameraCount&&x.storageType==='3.5-sata')||catalog.nvrs.at(-1); state.selections.custom.nvr=[{include:true,id:nvr.id,qty:1}];
+ const st=catalog.storage.filter(x=>!nvr.maxDriveTB||x.driveCapacityTB<=nvr.maxDriveTB).slice().sort((a,b)=>Math.abs(a.storageTB-target)-Math.abs(b.storageTB-target))[0]; state.selections.custom.storage=[{include:true,id:st.id,qty:1}];
+ document.getElementById('importBanner').textContent=`Imported estimate applied: ${d.cameraCount} cameras · ${d.nvrRecommendation||'NVR TBD'} · ${d.storageRecommendation||'Storage TBD'}. You can adjust everything manually.`; document.getElementById('importBanner').classList.remove('hidden');
+}
+function sectionLabelForKey(key){return key==='nvr' ? 'NVR / Recorder' : (key==='systems'?'All-in-One Systems':key==='addons'?'Optional Add-ons':key.charAt(0).toUpperCase()+key.slice(1));}
+function selectedRows(key,category){
+ const list=state.selections[state.stack][key]||[];
+ if(!list[0]?.include)return[];
+ return list.map(row=>({row,item:findCatalogItem(category,row.id)})).filter(x=>x.item);
+}
+function compatibilityReport(){
+ if(state.stack==='allinone'){
+  return selectedRows('systems','systems').length
+   ?{level:'ok',title:'Package compatibility',messages:['This is a matched package. Confirm that any optional add-on camera is listed for the exact kit model before purchase.']}
+   :{level:'warn',title:'Compatibility not checked',messages:['Select an all-in-one system to establish recorder and camera compatibility.']};
+ }
+ const nvrPick=selectedRows('nvr','nvrs')[0];
+ const cameras=selectedRows('cameras','cameras');
+ const drives=selectedRows('storage','storage');
+ if(!nvrPick)return{level:'warn',title:'Compatibility not checked',messages:['Select an NVR / Recorder to validate the cameras and drives.']};
+ const nvr=nvrPick.item,messages=[];let level='ok';
+ const count=cameras.reduce((sum,x)=>sum+(x.item.cameraCountImpact||1)*Math.max(1,+x.row.qty||1),0);
+ if(!cameras.length){level='warn';messages.push('Select at least one camera to validate it against the recorder.');}
+ cameras.forEach(({item})=>{
+  if(item.cameraBrand===nvr.cameraBrand)return;
+  if(nvr.supportsOnvif){level=level==='error'?'error':'warn';messages.push(`${item.name} may connect by ONVIF, but vendor-specific analytics, audio, PTZ, or detections may be reduced. Verify exact model and firmware.`);}
+  else{level='error';messages.push(`${item.name} is not listed as compatible with ${nvr.name}.`);}
+ });
+ if(count>nvr.nvrCapacity){level='error';messages.push(`${count} selected cameras exceed the recorder planning capacity of ${nvr.nvrCapacity}.`);}
+ else if(count)messages.push(`${count} selected camera${count===1?'':'s'} fit within the recorder planning capacity of ${nvr.nvrCapacity}.`);
+ if(state.subType==='reolink')messages.push('Reolink states its NVRs are designed for Reolink cameras only.');
+ if(nvr.onvifLimitations)messages.push('UniFi Protect accepts ONVIF cameras, but third-party cameras do not receive every Protect feature.');
+ if(nvr.hardwareVersionWarning){level=level==='error'?'error':'warn';messages.push('Reolink HDD and channel limits vary by NVR hardware version. Confirm the hardware version before ordering an upgrade drive.');}
+ if(nvr.modelVerificationRequired){level=level==='error'?'error':'warn';messages.push('Hikvision and Dahua are separate families. Replace this planning placeholder with exact recorder and camera model numbers before issuing a final quote.');}
+ drives.forEach(({item,row})=>{
+  const size=item.driveCapacityTB||item.storageTB||0,qty=Math.max(1,+row.qty||1);
+  if(nvr.storageType==='2.5-ssd'){level='error';messages.push(`${nvr.name} uses its included 2.5-inch SSD; ${item.name} is not a direct-fit replacement.`);}
+  else if(item.interface!=='SATA'||item.formFactor!=='3.5'){level='error';messages.push(`${item.name} does not match the recorder's 3.5-inch SATA drive requirement.`);}
+  else if(nvr.maxDriveTB&&size>nvr.maxDriveTB){level='error';messages.push(`${item.name} exceeds the recorder's ${nvr.maxDriveTB} TB per-drive planning limit.`);}
+  else if(nvr.driveBays&&qty>nvr.driveBays){level='error';messages.push(`${qty} drives exceed the recorder's ${nvr.driveBays} drive bay${nvr.driveBays===1?'':'s'}.`);}
+  else messages.push(`${item.name} matches the recorder's 3.5-inch SATA storage profile.`);
+ });
+ if(!drives.length&&!nvr.storageIncluded){level=level==='error'?'error':'warn';messages.push(`${nvr.name} does not include storage in this catalog; select a compatible drive.`);}
+ return{level,title:level==='error'?'Compatibility issue':'Compatibility check',messages};
+}
+function paintCompatibility(){
+ const r=compatibilityReport();
+ const html=`<strong>${r.title}</strong><ul>${r.messages.map(m=>`<li>${m}</li>`).join('')}</ul>`;
+ ['compatibilityBox','summaryCompatibility'].forEach(id=>{const box=document.getElementById(id);if(box){box.className=`validation-box ${r.level}`;box.innerHTML=html;}});
+}
+function refreshSummary(){let total=0,poe=0,hasP=false; const rows=[];
+ const keys=Object.keys(state.selections[state.stack]); keys.forEach(k=>{const arr=state.selections[state.stack][k]||[]; const include=arr[0]?.include; if(!include)return; const category=k==='nvr'?'nvrs':k; arr.forEach(r=>{const item=findCatalogItem(category,r.id); if(!item)return; const q=Math.max(1,+r.qty||1), line=(item.msrp||0)*q; total+=line; if(item.poeWatts&&item.cameraCountImpact){poe+=item.poeWatts*q;hasP=true;} rows.push(`<tr><td>${sectionLabelForKey(k)}</td><td>${item.name}</td><td>${q}</td><td>${money(line)}</td></tr>`);});});
+ document.getElementById('rows').innerHTML=rows.join('')||"<tr><td colspan='4'>No items selected yet.</td></tr>";
+ document.getElementById('total').textContent=`Estimated Total: ${money(total)}`;
+ document.getElementById('poeInfo').textContent=hasP?`Estimated camera PoE need: ${poe} watts`:'Estimated camera PoE need: Not applicable / unknown';
+ const activeGroup=currentCatalogGroup();
+ document.getElementById('outStack').textContent=STACK_LABELS[state.stack]; document.getElementById('outSubType').textContent=activeGroup?.label||'Not selected'; document.getElementById('outRecommendation').textContent=activeGroup?.recommendation||'Not provided'; document.getElementById('generatedDate').textContent=new Date().toLocaleDateString();
+ document.getElementById('outNotes').textContent=(document.getElementById('notes').value||'').trim()||'No additional notes provided.';
+ keys.forEach(k=>rowsFor(k).forEach((r,i)=>{const category=k==='nvr'?'nvrs':k; const item=findCatalogItem(category,r.id); if(!item)return; const q=Math.max(1,+r.qty||1); const unit=document.querySelector(`[data-unit="${k}"][data-i="${i}"]`); const line=document.querySelector(`[data-total="${k}"][data-i="${i}"]`); if(unit)unit.textContent=money(item.msrp); if(line)line.textContent=money((item.msrp||0)*q);}));
+ paintCompatibility();
+}
+function readImport(){const params=new URLSearchParams(location.search);if(params.get('import')!=='security-camera-coverage')return null; try{return JSON.parse(localStorage.getItem(IMPORT_KEY)||'null')}catch{return null}}
+document.getElementById('stackType').addEventListener('change',e=>{state.stack=e.target.value; state.subType=Object.keys(CAMERA_CATALOG[state.stack])[0]; state.selections[state.stack]={}; if(state.stack==='allinone'){state.selections.custom={};} render();
+ if(state.imported?.cameraCount&&state.stack==='allinone'){const kits=currentCatalog().systems; const n=+state.imported.cameraCount||1; const kit=kits.find(x=>x.kitCapacity>=n)||kits.at(-1); state.selections.allinone.systems=[{include:true,id:kit.id,qty:1}]; refreshSummary();}
+});
+document.getElementById('subType').addEventListener('change',e=>{state.subType=e.target.value; state.selections[state.stack]={}; render();
+ if(state.imported?.cameraCount&&state.stack==='allinone'){const kits=currentCatalog().systems; const n=+state.imported.cameraCount||1; const kit=kits.find(x=>x.kitCapacity>=n)||kits.at(-1); state.selections.allinone.systems=[{include:true,id:kit.id,qty:1}]; refreshSummary();}
+});
+document.getElementById('notes').addEventListener('input',refreshSummary); document.getElementById('printBtn').onclick=()=>window.print();
+state.imported=readImport(); if(state.imported)applyImport(); render();
+</script>
+<script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

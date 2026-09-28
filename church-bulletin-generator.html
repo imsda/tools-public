@@ -1,0 +1,2760 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - images/Bi-fold Default Cover.png  (default bi-fold cover image)
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    (none)
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Church Bulletin Generator</title>
+  <style>
+    :root {
+      /* BACKEND TYPOGRAPHY CONFIG
+         Typography CSS variables are controlled by APP_CONFIG.typography via applyBackendCssVars(). */
+
+      /* BACKEND PAGE MARGIN CONFIG */
+      --print-page-margin-top: 0.25in;
+      --print-page-margin-right: 0.25in;
+      --print-page-margin-bottom: 0.25in;
+      --print-page-margin-left: 0.25in;
+
+      /* BACKEND PANEL SPACING CONFIG */
+      --panel-padding-top: 0in;
+      --panel-padding-right: 0.22in;
+      --panel-padding-bottom: 0in;
+      --panel-padding-left: 0.22in;
+      --panel-left-extra-padding-left: 0.08in;
+      --panel-left-extra-padding-right: 0.26in;
+      --panel-right-extra-padding-left: 0.26in;
+      --panel-right-extra-padding-right: 0.08in;
+
+      /* BACKEND IMAGE CONFIG */
+      --print-image-max-width: 100%;
+      --print-image-max-height: 2.6in;
+      --web-image-max-width: 100%;
+      --web-image-max-height: 340px;
+      --image-align: center;
+      --image-margin-top: 0.08rem;
+      --image-margin-bottom: 0.08rem;
+      --bg: #f3f6f9;
+      --surface: #ffffff;
+      --border: #d6e0e8;
+      --text: #1d2a36;
+      --muted: #4e6070;
+      --primary: #255f7a;
+      --primary-dark: #1c4b61;
+      --shadow: 0 12px 24px rgba(9, 31, 46, 0.08);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(circle at top right, rgba(37, 95, 122, 0.08), transparent 38%), var(--bg);
+      color: var(--text);
+    }
+    .app { max-width: 1360px; margin: 0 auto; padding: 1rem; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    h1 { margin: 0; font-size: clamp(1.3rem, 2.4vw, 1.9rem); color: var(--primary-dark); }
+    .btn, .back-btn {
+      border: 1px solid #c9d8e3;
+      border-radius: 999px;
+      padding: 0.56rem 0.95rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      background: #fff;
+      color: #1f4960;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.14s ease;
+    }
+    .btn:hover, .back-btn:hover { transform: translateY(-1px); }
+    .btn.primary {
+      color: #fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    }
+    .btn.warn { border-color: #e5ced2; color: #8a2f3f; background: #fff8f9; }
+
+    .layout { display: grid; gap: 1rem; grid-template-columns: minmax(320px, 470px) 1fr; }
+    .panel {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .editor { padding: 0.9rem; max-height: calc(100vh - 140px); overflow: auto; }
+    .group-title {
+      margin: 1rem 0 0.55rem;
+      font-size: 0.93rem;
+      color: #1f4f67;
+      font-weight: 800;
+      letter-spacing: 0.22px;
+      border-bottom: 1px dashed #d2dee8;
+      padding-bottom: 0.28rem;
+    }
+    .field { margin-bottom: 0.62rem; }
+    label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 0.28rem;
+      color: #2d4659;
+    }
+    input[type="text"], input[type="date"], textarea, select {
+      width: 100%;
+      border: 1px solid #bfd0dc;
+      border-radius: 10px;
+      font: inherit;
+      color: #132635;
+      padding: 0.55rem 0.62rem;
+      background: #fff;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #2a6a87;
+      box-shadow: 0 0 0 3px rgba(42, 106, 135, 0.18);
+    }
+    textarea { min-height: 90px; resize: vertical; line-height: 1.4; }
+
+    .section-list { display: grid; gap: 0.65rem; }
+    .section-card {
+      border: 1px solid #d5e2eb;
+      border-radius: 12px;
+      padding: 0.62rem;
+      background: #fbfdff;
+    }
+    .section-card.front-cover-card {
+      border-color: #9fbcd0;
+      background: #f2f8fc;
+      box-shadow: inset 0 0 0 1px rgba(37, 95, 122, 0.15);
+    }
+    .section-card.front-image-card {
+      border-color: #7ea7c0;
+      background: #eef7ff;
+      box-shadow: inset 0 0 0 1px rgba(26, 94, 130, 0.2);
+    }
+    .badge-front-cover {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      color: #12445d;
+      background: #dcecf7;
+      border: 1px solid #b2cddd;
+      border-radius: 999px;
+      padding: 0.16rem 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+    .badge-front-image {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      color: #0f4664;
+      background: #d3eafd;
+      border: 1px solid #9cc9e6;
+      border-radius: 999px;
+      padding: 0.16rem 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+    .section-card-head {
+      display: grid;
+      gap: 0.45rem;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      margin-bottom: 0.4rem;
+    }
+    .section-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      justify-content: flex-end;
+    }
+    .mini {
+      border: 1px solid #d2dee7;
+      background: #f9fbfc;
+      color: #3b5365;
+      border-radius: 9px;
+      cursor: pointer;
+      min-width: 34px;
+      padding: 0.32rem 0.42rem;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+    .section-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.45rem;
+      align-items: end;
+      margin-bottom: 0.45rem;
+    }
+    .check-inline {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      border: 1px solid #dbe6ee;
+      background: #f7fbfd;
+      border-radius: 10px;
+      padding: 0.52rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #2d4659;
+      height: 40px;
+    }
+    .subrows { display: grid; gap: 0.42rem; }
+    .row-item {
+      display: grid;
+      gap: 0.36rem;
+      align-items: center;
+      grid-template-columns: 1fr 1fr auto auto;
+    }
+    .row-item.three { grid-template-columns: 1fr 1fr 1fr auto auto; }
+    .row-item.one { grid-template-columns: 1fr auto; }
+
+    .action-wrap { display: flex; flex-wrap: wrap; gap: 0.44rem; margin-top: 0.72rem; }
+    .thumb-preview {
+      border: 1px solid #d5e2eb;
+      border-radius: 10px;
+      padding: 0.4rem;
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 72px;
+    }
+    .thumb-preview img {
+      max-width: 100%;
+      max-height: 140px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .preview { padding: 0.85rem; display: flex; flex-direction: column; min-width: 0; }
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.66rem;
+    }
+    .tabs { display: flex; flex-wrap: wrap; gap: 0.42rem; }
+    .tab.active { background: #e8f1f7; border-color: #b6ccda; color: #15384f; }
+    .canvas {
+      border: 1px solid #d4e0e7;
+      border-radius: 12px;
+      padding: 0.74rem;
+      background: #eef3f7;
+      min-height: 640px;
+      overflow: auto;
+    }
+    .print-note {
+      font-size: 0.79rem;
+      color: #2f4d61;
+      border: 1px solid #cddde8;
+      background: #f4f9fc;
+      border-radius: 999px;
+      padding: 0.3rem 0.7rem;
+      font-weight: 700;
+    }
+    .overflow-warning {
+      margin-top: 0.62rem;
+      border: 1px solid #e2afb8;
+      background: #fff4f6;
+      color: #7b1f33;
+      border-radius: 10px;
+      padding: 0.55rem 0.7rem;
+      font-size: 0.84rem;
+      font-weight: 700;
+      display: none;
+    }
+    .overflow-warning.show { display: block; }
+    .overflow-warning small {
+      display: block;
+      margin-top: 0.15rem;
+      font-weight: 600;
+      font-size: 0.77rem;
+      color: #8c3045;
+    }
+
+    .booklet-preview { display: grid; gap: 1rem; }
+    .print-preview-frame {
+      border: 1px solid #c9d8e3;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #f7fbff, #edf3f8);
+      padding: 0.7rem;
+      overflow: hidden;
+    }
+    .preview-sheet-label {
+      margin: 0 0 0.5rem;
+      color: #1d3d53;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    .print-preview-wrap {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 170px;
+      position: relative;
+    }
+    .sheet-scale-shell { width: 11in; height: 8.5in; transform-origin: top center; }
+    .sheet-scale-shell.trifold { width: 14in; height: 8.5in; }
+
+    .bulletin-sheet {
+      width: 11in;
+      height: 8.5in;
+      margin: 0 auto;
+      background: #fff;
+      color: #000;
+      font-family: Georgia, "Times New Roman", Times, serif;
+      border: 1px solid #cfcfcf;
+      box-shadow: 0 8px 22px rgba(9, 20, 31, 0.08);
+      padding-top: var(--print-page-margin-top);
+      padding-right: var(--print-page-margin-right);
+      padding-bottom: var(--print-page-margin-bottom);
+      padding-left: var(--print-page-margin-left);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+      box-sizing: border-box;
+      page-break-after: always;
+      overflow: hidden;
+    }
+    .bulletin-sheet:last-child { page-break-after: auto; }
+    .bulletin-sheet.trifold-sheet {
+      width: 14in;
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .preview-only-divider {
+      position: absolute;
+      top: var(--print-page-margin-top);
+      bottom: var(--print-page-margin-bottom);
+      left: 50%;
+      border-left: 1px solid #9f9f9f;
+      transform: translateX(-0.5px);
+      pointer-events: none;
+    }
+    .preview-only-divider.trifold-divider.first { left: 33.3333%; }
+    .preview-only-divider.trifold-divider.second { left: 66.6666%; }
+    .bulletin-panel {
+      padding-top: var(--panel-padding-top);
+      padding-right: var(--panel-padding-right);
+      padding-bottom: var(--panel-padding-bottom);
+      padding-left: var(--panel-padding-left);
+      min-width: 0;
+      font-size: var(--print-font-size-body);
+      line-height: 1.23;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+      position: relative;
+    }
+    .bulletin-panel.panel-overflow {
+      outline: 2px solid #c84b4b;
+      outline-offset: -2px;
+    }
+    .bulletin-panel.panel-overflow::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 20px;
+      pointer-events: none;
+      background: linear-gradient(to top, rgba(200, 75, 75, 0.24), rgba(200, 75, 75, 0));
+    }
+    .overflow-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      font-size: 0.64rem;
+      letter-spacing: 0.22px;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: #fff;
+      background: #b53b4a;
+      border-radius: 999px;
+      padding: 0.12rem 0.42rem;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .bulletin-panel.full-panel {
+      padding: 0 !important;
+    }
+    .bulletin-panel-left { padding-left: var(--panel-left-extra-padding-left); padding-right: var(--panel-left-extra-padding-right); }
+    .bulletin-panel-right { padding-left: var(--panel-right-extra-padding-left); padding-right: var(--panel-right-extra-padding-right); }
+    .bulletin-panel-trifold {
+      padding-top: var(--trifold-panel-padding-top);
+      padding-right: var(--trifold-panel-padding-right);
+      padding-bottom: var(--trifold-panel-padding-bottom);
+      padding-left: var(--trifold-panel-padding-left);
+    }
+
+    .bb-header {
+      text-align: center;
+      border-bottom: 1px solid #000;
+      padding-bottom: 0.2rem;
+      margin-bottom: 0.28rem;
+    }
+    .bb-logo {
+      max-width: 76px;
+      max-height: 76px;
+      object-fit: contain;
+      margin: 0 auto 0.18rem;
+      display: block;
+    }
+    .bb-header h2 {
+      margin: 0;
+      font-size: var(--print-font-size-cover-title);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .bb-contact, .bb-date { margin: 0.14rem 0 0; font-size: var(--print-font-size-meta); }
+    .bb-date { font-weight: 700; margin-top: 0.16rem; }
+    .front-cover-block {
+      display: grid;
+      gap: 0.2rem;
+      align-content: start;
+      min-height: 100%;
+      text-align: center;
+    }
+    .front-cover-image-wrap {
+      margin: 0 0 0.22rem;
+      text-align: center;
+    }
+    .front-cover-image-wrap img {
+      display: inline-block;
+      width: auto;
+      height: auto;
+      max-width: var(--print-image-max-width);
+      max-height: calc(var(--print-image-max-height) * 1.55);
+      object-fit: contain;
+      border: 0;
+    }
+    .front-cover-church { margin: 0; font-size: var(--print-font-size-meta); letter-spacing: 0.5px; text-transform: uppercase; }
+    .front-cover-title { margin: 0.08rem 0 0; font-size: calc(var(--print-font-size-cover-title) * 1.24); letter-spacing: 0.5px; text-transform: uppercase; }
+    .front-cover-subtitle { margin: 0.03rem 0 0.08rem; font-size: var(--print-font-size-meta); }
+    .front-cover-sermon { margin: 0.08rem 0 0; font-size: var(--print-font-size-section-title); font-weight: 700; }
+    .front-cover-speaker, .front-cover-date, .front-cover-note { margin: 0.02rem 0 0; font-size: var(--print-font-size-body); }
+    .front-cover-note { font-style: italic; }
+    .front-image-panel {
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      display: block;
+      line-height: 0;
+    }
+    .front-image-panel img {
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      display: block;
+      object-fit: var(--front-image-fit);
+      object-position: var(--front-image-position);
+      border: 0;
+    }
+
+    .sec { margin-bottom: 0.2rem; break-inside: avoid; }
+    .sec-title {
+      margin: 0 0 0.13rem;
+      font-size: var(--print-font-size-section-title);
+      font-weight: 700;
+      letter-spacing: 0.46px;
+      text-transform: uppercase;
+    }
+    .announcement-list { margin: 0; padding-left: 1rem; }
+    .announcement-list li { margin: 0 0 0.11rem; font-size: var(--print-font-size-body); }
+    .list-rows { display: block; }
+    .list-row-2,
+    .list-row-3 {
+      position: relative;
+      display: grid;
+      align-items: baseline;
+      gap: 0.3rem;
+      font-size: var(--print-font-size-body);
+      padding: 0.04rem 0 0.12rem;
+    }
+    .list-row-2.with-underline::after,
+    .list-row-3.with-underline::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-bottom: 1px dotted #a4a4a4;
+      pointer-events: none;
+    }
+    .list-row-2.no-underline::after,
+    .list-row-3.no-underline::after { content: none; }
+    .list-row-2 { grid-template-columns: 1fr auto; }
+    .list-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .list-row-2 span:nth-child(2),
+    .list-row-3 span:nth-child(3) { text-align: right; white-space: nowrap; }
+    .list-row-3 span:nth-child(2) { text-align: center; }
+    .text-block {
+      margin: 0;
+      font-size: var(--print-font-size-body);
+      white-space: pre-wrap;
+      line-height: 1.28;
+    }
+    .image-wrap {
+      margin-top: var(--image-margin-top);
+      margin-bottom: var(--image-margin-bottom);
+      text-align: var(--image-align);
+    }
+    .image-wrap img {
+      display: inline-block;
+      width: auto;
+      height: auto;
+      max-width: var(--print-image-max-width);
+      max-height: var(--print-image-max-height);
+      object-fit: contain;
+      border: 0;
+    }
+    .rule { border-top: 1px solid #000; margin: 0.2rem 0; }
+
+    .bulletin-web {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #fff;
+      color: #101922;
+      border: 1px solid #d6e3ec;
+      border-radius: 10px;
+      padding: 1rem;
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.42;
+    }
+    .bulletin-web .sec-title { font-size: var(--web-font-size-section-title); }
+    .bulletin-web .announcement-list li,
+    .bulletin-web .list-row-2,
+    .bulletin-web .list-row-3,
+    .bulletin-web .text-block { font-size: var(--web-font-size-body); }
+    .bulletin-web .image-wrap img { max-width: var(--web-image-max-width); max-height: var(--web-image-max-height); }
+    .bulletin-web .front-cover-title { font-size: calc(var(--web-font-size-section-title) * 1.45); }
+    .bulletin-web .front-cover-image-wrap img { max-width: var(--web-image-max-width); max-height: var(--web-image-max-height); }
+
+    .wp-wrap { display: grid; gap: 0.5rem; }
+    #wpOutput {
+      width: 100%;
+      min-height: 560px;
+      border: 1px solid #c4d3de;
+      border-radius: 10px;
+      padding: 0.74rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.83rem;
+      background: #fff;
+      color: #102233;
+      line-height: 1.4;
+    }
+    .error-box {
+      border: 1px solid #f1b7c1;
+      background: #fff4f6;
+      color: #7d1d31;
+      padding: 0.8rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+    }
+    .print-only { display: none; }
+
+    @media (max-width: 1060px) {
+      .layout { grid-template-columns: 1fr; }
+      .editor { max-height: none; }
+      .section-meta { grid-template-columns: 1fr; }
+      .row-item { grid-template-columns: 1fr auto; }
+      .row-item.three { grid-template-columns: 1fr auto; }
+      .row-item input { grid-column: 1 / -1; }
+    }
+    @media print {
+      body { background: #fff !important; }
+      .app > *:not(.print-only) { display: none !important; }
+      .print-only { display: block !important; }
+      .print-only .bulletin-sheet {
+        width: 11in;
+        height: 8.5in;
+        margin: 0 auto;
+        border: none;
+        box-shadow: none;
+      }
+      .preview-only-divider { display: none !important; }
+      .overflow-warning, .overflow-badge { display: none !important; }
+      .bulletin-panel.panel-overflow { outline: none !important; }
+      .bulletin-panel.panel-overflow::after { display: none !important; }
+      @page { size: Letter landscape; margin: var(--print-page-margin-top) var(--print-page-margin-right) var(--print-page-margin-bottom) var(--print-page-margin-left); }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <h1>Church Bulletin Generator</h1>
+      
+    </header>
+
+    <section class="layout">
+      <aside class="panel editor">
+        <div class="field">
+          <label for="layoutModeSelect">Layout Mode</label>
+          <select id="layoutModeSelect">
+            <option value="bifold-letter">Bi-fold (Letter)</option>
+            <option value="trifold-legal">Tri-fold (Legal)</option>
+          </select>
+        </div>
+        <div class="group-title">Movable Sections</div>
+        <div id="sectionList" class="section-list"></div>
+        <div class="action-wrap"><button class="btn" type="button" id="addSectionBtn">+ Add Section</button></div>
+
+        <div class="action-wrap">
+          <button class="btn primary" type="button" id="loadSampleBtn">Load Sample Data</button>
+          <button class="btn warn" type="button" id="resetBtn">Reset</button>
+          <button class="btn" type="button" id="printBtn">Print Bulletin</button>
+          <button class="btn" type="button" id="pdfBtn">Download PDF</button>
+          <button class="btn" type="button" id="wordBtn">Download Word Doc</button>
+          <button class="btn" type="button" id="exportJsonBtn">Export JSON</button>
+          <button class="btn" type="button" id="importJsonBtn">Import JSON</button>
+          <input type="file" id="importJsonInput" accept=".json,application/json" style="display:none;" />
+        </div>
+      </aside>
+
+      <section class="panel preview">
+        <div class="preview-head">
+          <div class="tabs">
+            <button class="btn tab active" type="button" data-tab="print">Print Bulletin Preview</button>
+            <button class="btn tab" type="button" data-tab="web">Web Bulletin Preview</button>
+            <button class="btn tab" type="button" data-tab="wp">WordPress HTML</button>
+          </div>
+          <div><button class="btn" type="button" id="copyHtmlBtn">Copy HTML</button></div>
+        </div>
+        <div class="print-note" id="printNote">Print double-sided • Flip on short edge • Fold in half</div>
+        <div class="overflow-warning" id="overflowWarning"></div>
+        <div class="canvas" id="previewCanvas"></div>
+      </section>
+    </section>
+
+    <section class="print-only" id="printContainer"></section>
+  </main>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = "imsda.churchBulletin.v5";
+
+      const APP_CONFIG = {
+        /* BACKEND TYPOGRAPHY CONFIG */
+        typography: {
+          printBody: "10pt",
+          printSectionTitle: "1.04rem",
+          printCoverTitle: "1.125rem",
+          printMeta: "1rem",
+          webBody: "1rem",
+          webSectionTitle: "1.04rem",
+          wordBody: "10pt",
+          webImageMeta: "1rem"
+        },
+        /* BACKEND PAGE MARGIN CONFIG */
+        printPageMargin: {
+          top: "0.35in",
+          right: "0.35in",
+          bottom: "0.35in",
+          left: "0.35in"
+        },
+        /* BACKEND PANEL SPACING CONFIG */
+        panelPadding: {
+          top: "0in",
+          right: "0.22in",
+          bottom: "0in",
+          left: "0.22in",
+          leftPanelLeft: "0.08in",
+          leftPanelRight: "0.26in",
+          rightPanelLeft: "0.26in",
+          rightPanelRight: "0.08in"
+        },
+        /* BACKEND TRI-FOLD CONFIG */
+        triFold: {
+          legalWidthIn: 14,
+          legalHeightIn: 8.5,
+          panelPaddingTop: "0in",
+          panelPaddingRight: "0.2in",
+          panelPaddingBottom: "0in",
+          panelPaddingLeft: "0.2in",
+          previewPixelsPerInch: 96,
+          wordPanelWidth: "33.33%"
+        },
+      /* BACKEND IMAGE CONFIG */
+      image: {
+          printMaxWidth: "100%",
+          printMaxHeight: "2.6in",
+          webMaxWidth: "100%",
+          webMaxHeight: "340px",
+          align: "center",
+          marginTop: "0.08rem",
+          marginBottom: "0.08rem"
+        },
+        /* BACKEND FRONT IMAGE CONFIG */
+        frontImage: {
+          fit: "cover",
+          position: "center center"
+        },
+        /* BACKEND WORD EXPORT IMAGE CONFIG */
+        wordExportImage: {
+          wordFrontImageMaxWidth: "4.75in",
+          wordFrontImageMaxHeight: "7.1in",
+          wordImageMaxWidth: "4.7in",
+          wordImageMaxHeight: "2.6in"
+        }
+      };
+      const FRONT_IMAGE_DEFAULT_SRC = "images/Bi-fold Default Cover.png";
+      let defaultFrontImageDataUrlCache = null;
+      let defaultFrontImageDataUrlPromise = null;
+      const exportImageDataUrlCache = new Map();
+
+      /* BACKEND TYPOGRAPHY CONFIG */
+      const TYPOGRAPHY = APP_CONFIG.typography;
+
+      const previewCanvas = document.getElementById("previewCanvas");
+      const printContainer = document.getElementById("printContainer");
+      const printNote = document.getElementById("printNote");
+      const overflowWarning = document.getElementById("overflowWarning");
+      const layoutModeSelect = document.getElementById("layoutModeSelect");
+      const sectionList = document.getElementById("sectionList");
+      const tabs = Array.from(document.querySelectorAll(".tab"));
+      let currentTab = "print";
+      let sections = [];
+      let layoutMode = "bifold-letter";
+
+      const placementMap = {
+        "front-cover": "page1",
+        "inside-left": "page2",
+        "inside-right": "page3",
+        "back-cover": "page4"
+      };
+      const TRI_FOLD_PLACEMENTS = ["front-left", "front-center", "front-right", "back-left", "back-center", "back-right"];
+      const BI_FOLD_PLACEMENTS = ["front-cover", "inside-left", "inside-right", "back-cover"];
+      const placementLabelMap = {
+        "front-cover": "Front Cover",
+        "inside-left": "Inside Left",
+        "inside-right": "Inside Right",
+        "back-cover": "Back Cover",
+        "front-left": "Front Left",
+        "front-center": "Front Center",
+        "front-right": "Front Right",
+        "back-left": "Back Left",
+        "back-center": "Back Center",
+        "back-right": "Back Right"
+      };
+
+      const CORE_KINDS = ["church-info", "sermon-info"];
+
+      function esc(text) {
+        return String(text || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function formatDate(value) {
+        if (!value) return "";
+        const date = new Date(value + "T12:00:00");
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+      }
+
+      function uid() {
+        return "sec_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      }
+
+      function typographyCssVars() {
+        const margin = APP_CONFIG.printPageMargin;
+        const panel = APP_CONFIG.panelPadding;
+        const triFold = APP_CONFIG.triFold;
+        const image = APP_CONFIG.image;
+        const frontImage = APP_CONFIG.frontImage;
+        return `:root{
+          --print-font-size-body:${TYPOGRAPHY.printBody};
+          --print-font-size-section-title:${TYPOGRAPHY.printSectionTitle};
+          --print-font-size-cover-title:${TYPOGRAPHY.printCoverTitle};
+          --print-font-size-meta:${TYPOGRAPHY.printMeta};
+          --web-font-size-body:${TYPOGRAPHY.webBody};
+          --web-font-size-section-title:${TYPOGRAPHY.webSectionTitle};
+          --word-font-size-body:${TYPOGRAPHY.wordBody};
+          --web-font-size-image-meta:${TYPOGRAPHY.webImageMeta};
+          --print-page-margin-top:${margin.top};
+          --print-page-margin-right:${margin.right};
+          --print-page-margin-bottom:${margin.bottom};
+          --print-page-margin-left:${margin.left};
+          --panel-padding-top:${panel.top};
+          --panel-padding-right:${panel.right};
+          --panel-padding-bottom:${panel.bottom};
+          --panel-padding-left:${panel.left};
+          --panel-left-extra-padding-left:${panel.leftPanelLeft};
+          --panel-left-extra-padding-right:${panel.leftPanelRight};
+          --panel-right-extra-padding-left:${panel.rightPanelLeft};
+          --panel-right-extra-padding-right:${panel.rightPanelRight};
+          --trifold-panel-padding-top:${triFold.panelPaddingTop};
+          --trifold-panel-padding-right:${triFold.panelPaddingRight};
+          --trifold-panel-padding-bottom:${triFold.panelPaddingBottom};
+          --trifold-panel-padding-left:${triFold.panelPaddingLeft};
+          --print-image-max-width:${image.printMaxWidth};
+          --print-image-max-height:${image.printMaxHeight};
+          --web-image-max-width:${image.webMaxWidth};
+          --web-image-max-height:${image.webMaxHeight};
+          --image-align:${image.align};
+          --image-margin-top:${image.marginTop};
+          --image-margin-bottom:${image.marginBottom};
+          --front-image-fit:${frontImage.fit};
+          --front-image-position:${frontImage.position};
+        }`;
+      }
+
+      function applyBackendCssVars() {
+        let style = document.getElementById("backend-css-vars");
+        if (!style) {
+          style = document.createElement("style");
+          style.id = "backend-css-vars";
+          document.head.appendChild(style);
+        }
+        style.textContent = typographyCssVars();
+      }
+
+      function defaultDataForType(type) {
+        if (type === "announcement") return { items: [""] };
+        if (type === "list") return { columns: 2, rows: [createDefaultListRow()] };
+        if (type === "image") return { src: "", alt: "" };
+        if (type === "front-image") return { src: FRONT_IMAGE_DEFAULT_SRC, alt: "" };
+        return { content: "" };
+      }
+
+      function createDefaultListRow() {
+        return { cells: ["", "", ""], underline: true };
+      }
+
+      function normalizeListRow(rawRow) {
+        if (Array.isArray(rawRow)) {
+          return {
+            cells: [String(rawRow[0] || ""), String(rawRow[1] || ""), String(rawRow[2] || "")],
+            underline: true
+          };
+        }
+        if (rawRow && typeof rawRow === "object") {
+          const sourceCells = Array.isArray(rawRow.cells) ? rawRow.cells : [rawRow[0], rawRow[1], rawRow[2]];
+          return {
+            cells: [String(sourceCells[0] || ""), String(sourceCells[1] || ""), String(sourceCells[2] || "")],
+            underline: rawRow.underline !== false
+          };
+        }
+        return createDefaultListRow();
+      }
+
+      function normalizeListRows(rows) {
+        const sourceRows = Array.isArray(rows) ? rows : [createDefaultListRow()];
+        const normalized = sourceRows.map(normalizeListRow);
+        return normalized.length ? normalized : [createDefaultListRow()];
+      }
+
+      function defaultCoreData(kind) {
+        if (kind === "church-info") {
+          return {
+            churchName: "",
+            bulletinTitle: "",
+            logoUrl: "",
+            churchWebsite: "",
+            churchEmail: "",
+            churchPhone: "",
+            churchAddress: "",
+            bulletinDate: ""
+          };
+        }
+        return { sermonTitle: "", speaker: "" };
+      }
+
+      function getPlacementOptionsForMode(mode) {
+        return mode === "trifold-legal" ? TRI_FOLD_PLACEMENTS : BI_FOLD_PLACEMENTS;
+      }
+
+      function normalizeLayoutMode(value) {
+        return value === "trifold-legal" ? "trifold-legal" : "bifold-letter";
+      }
+
+      function mapPlacementToMode(placement, toMode) {
+        if (toMode === "trifold-legal") {
+          const map = {
+            "front-cover": "front-right",
+            "inside-left": "back-left",
+            "inside-right": "back-center",
+            "back-cover": "front-left"
+          };
+          if (TRI_FOLD_PLACEMENTS.includes(placement)) return placement;
+          return map[placement] || "back-center";
+        }
+        const map = {
+          "front-right": "front-cover",
+          "back-left": "inside-left",
+          "back-center": "inside-right",
+          "front-left": "back-cover",
+          "front-center": "front-cover",
+          "back-right": "back-cover"
+        };
+        if (BI_FOLD_PLACEMENTS.includes(placement)) return placement;
+        return map[placement] || "inside-left";
+      }
+
+      function sanitizeSection(raw) {
+        if (!raw || typeof raw !== "object") return null;
+        const kind = CORE_KINDS.includes(raw.kind) ? raw.kind : "dynamic";
+        const allowedPlacements = getPlacementOptionsForMode(layoutMode);
+        const safePlacement = allowedPlacements.includes(raw.placement) ? raw.placement : mapPlacementToMode(raw.placement, layoutMode);
+        const visible = raw.visible !== false;
+        const title = typeof raw.title === "string" ? raw.title : (kind === "church-info" ? "Church Information" : (kind === "sermon-info" ? "Sermon Information" : "New Section"));
+
+        const rawType = raw.type === "front-cover" ? "front-image" : raw.type;
+        let type = ["announcement", "list", "text", "image", "front-image"].includes(rawType) ? rawType : "text";
+        let data;
+        let placement = safePlacement;
+        let previousType = typeof raw.previousType === "string" ? raw.previousType : "";
+
+        if (kind !== "dynamic") {
+          type = "text";
+          const defaults = defaultCoreData(kind);
+          data = Object.fromEntries(Object.keys(defaults).map(key => [key, String((raw.data && raw.data[key]) || defaults[key] || "")]));
+        } else if (type === "announcement") {
+          const items = Array.isArray(raw.data && raw.data.items) ? raw.data.items.map(v => String(v || "")) : [""];
+          data = { items: items.length ? items : [""] };
+        } else if (type === "list") {
+          const cols = Number(raw.data && raw.data.columns) === 3 ? 3 : 2;
+          data = { columns: cols, rows: normalizeListRows(raw.data && raw.data.rows) };
+        } else if (type === "image") {
+          data = {
+            src: String((raw.data && raw.data.src) || ""),
+            alt: String((raw.data && raw.data.alt) || "")
+          };
+        } else if (type === "front-image") {
+          placement = layoutMode === "trifold-legal" ? "front-right" : "front-cover";
+          const src = String((raw.data && (raw.data.src || raw.data.imageSrc)) || "").trim();
+          data = {
+            src: src || FRONT_IMAGE_DEFAULT_SRC,
+            alt: String((raw.data && raw.data.alt) || "")
+          };
+        } else {
+          data = { content: String((raw.data && raw.data.content) || "") };
+        }
+
+        return { id: typeof raw.id === "string" && raw.id ? raw.id : uid(), title, kind, type, placement, visible, data, previousType };
+      }
+
+      function createDefaultDynamicSection() {
+        return sanitizeSection({
+          id: uid(),
+          title: "New Section",
+          kind: "dynamic",
+          type: "text",
+          placement: layoutMode === "trifold-legal" ? "back-left" : "inside-left",
+          visible: true,
+          data: defaultDataForType("text")
+        });
+      }
+
+      function migrateLegacyState(source) {
+        if (!source || !Array.isArray(source.sections)) return source;
+        if (source.sections.some(s => s && s.kind)) return source;
+
+        const global = source.global || {};
+        const migrated = {
+          sections: [
+            sanitizeSection({
+              id: uid(),
+              title: "Church Information",
+              kind: "church-info",
+              placement: "inside-left",
+              visible: true,
+              data: {
+                churchName: global.churchName || "",
+                bulletinTitle: global.bulletinTitle || "",
+                logoUrl: global.logoUrl || "",
+                churchWebsite: global.churchWebsite || "",
+                churchEmail: global.churchEmail || "",
+                churchPhone: global.churchPhone || "",
+                churchAddress: global.churchAddress || "",
+                bulletinDate: global.bulletinDate || ""
+              }
+            }),
+            sanitizeSection({
+              id: uid(),
+              title: "Sermon Information",
+              kind: "sermon-info",
+              placement: "finside-left",
+              visible: true,
+              data: {
+                sermonTitle: global.sermonTitle || "",
+                speaker: global.speaker || ""
+              }
+            }),
+            ...source.sections.map(sanitizeSection).filter(Boolean)
+          ]
+        };
+        return migrated;
+      }
+
+      function getState() {
+        return { layoutMode, sections: sections.map(s => JSON.parse(JSON.stringify(s))) };
+      }
+
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(getState()));
+      }
+
+      function showRenderError(message) {
+        previewCanvas.innerHTML = `<div class="error-box">${esc(message || "Preview failed to render.")}</div>`;
+      }
+
+      function getSectionIndexById(sectionId) {
+        return sections.findIndex(section => section.id === sectionId);
+      }
+
+      function getFrontImageOwner(list) {
+        return (list || sections).find(section => section && section.kind === "dynamic" && section.type === "front-image") || null;
+      }
+
+      function convertFrontImageToType(section, nextType) {
+        const targetType = ["announcement", "list", "text", "image"].includes(nextType) ? nextType : "text";
+        const oldSrc = String(section.data && section.data.src || "").trim();
+        const oldAlt = String(section.data && section.data.alt || "").trim();
+        section.type = targetType;
+        if (section.placement === "front-cover" || section.placement === "front-right") {
+          section.placement = layoutMode === "trifold-legal" ? "back-left" : "inside-left";
+        }
+        if (targetType === "text") {
+          section.data = { content: "" };
+        } else if (targetType === "image") {
+          section.data = { src: oldSrc === FRONT_IMAGE_DEFAULT_SRC ? "" : oldSrc, alt: oldAlt };
+        } else {
+          section.data = defaultDataForType(targetType);
+        }
+      }
+
+      function normalizeFrontImageOwner(preferredId) {
+        const dynamicFronts = sections.filter(section => section.kind === "dynamic" && section.type === "front-image");
+        if (!dynamicFronts.length) return;
+        const owner = dynamicFronts.find(section => section.id === preferredId) || dynamicFronts[dynamicFronts.length - 1];
+        dynamicFronts.forEach(section => {
+          if (section.id === owner.id) {
+            section.placement = layoutMode === "trifold-legal" ? "front-right" : "front-cover";
+            return;
+          }
+          convertFrontImageToType(section, "image");
+        });
+      }
+
+      function normalizeSectionsOrder() {
+        const frontOwner = getFrontImageOwner();
+        if (frontOwner) sections = [frontOwner, ...sections.filter(section => section.id !== frontOwner.id)];
+      }
+
+      function renderCoreFields(section) {
+        if (section.kind === "church-info") {
+          return `
+            <div class="subrows">
+              <div class="field"><label>Church Name</label><input type="text" data-action="core-field" data-field="churchName" data-section-id="${section.id}" value="${esc(section.data.churchName)}" placeholder="Example Seventh-day Adventist Church" /></div>
+              <div class="field"><label>Bulletin Title</label><input type="text" data-action="core-field" data-field="bulletinTitle" data-section-id="${section.id}" value="${esc(section.data.bulletinTitle)}" placeholder="Sabbath Worship Bulletin" /></div>
+              <div class="field"><label>Logo URL</label><input type="text" data-action="core-field" data-field="logoUrl" data-section-id="${section.id}" value="${esc(section.data.logoUrl)}" placeholder="https://example.org/logo.png" /></div>
+              <div class="field"><label>Church Website</label><input type="text" data-action="core-field" data-field="churchWebsite" data-section-id="${section.id}" value="${esc(section.data.churchWebsite)}" placeholder="https://example.org" /></div>
+              <div class="field"><label>Church Email</label><input type="text" data-action="core-field" data-field="churchEmail" data-section-id="${section.id}" value="${esc(section.data.churchEmail)}" placeholder="info@example.org" /></div>
+              <div class="field"><label>Church Phone</label><input type="text" data-action="core-field" data-field="churchPhone" data-section-id="${section.id}" value="${esc(section.data.churchPhone)}" placeholder="(555) 123-4567" /></div>
+              <div class="field"><label>Church Address</label><textarea data-action="core-field" data-field="churchAddress" data-section-id="${section.id}" placeholder="123 Church St, City, ST 00000">${esc(section.data.churchAddress)}</textarea></div>
+              <div class="field"><label>Date</label><input type="date" data-action="core-field" data-field="bulletinDate" data-section-id="${section.id}" value="${esc(section.data.bulletinDate)}" /></div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="subrows">
+            <div class="field"><label>Sermon Title</label><input type="text" data-action="core-field" data-field="sermonTitle" data-section-id="${section.id}" value="${esc(section.data.sermonTitle)}" placeholder="Walking by Faith" /></div>
+            <div class="field"><label>Speaker / Pastor</label><input type="text" data-action="core-field" data-field="speaker" data-section-id="${section.id}" value="${esc(section.data.speaker)}" placeholder="Pastor Name" /></div>
+          </div>
+        `;
+      }
+
+      function renderSectionEditor(section, index) {
+        const card = document.createElement("div");
+        card.className = `section-card ${section.kind === "dynamic" && section.type === "front-image" ? "front-image-card" : ""}`;
+        card.dataset.sectionId = section.id;
+
+        const isCore = section.kind !== "dynamic";
+        const isFrontImageType = !isCore && section.type === "front-image";
+        const placementOptions = getPlacementOptionsForMode(layoutMode);
+
+        const typeControls = (() => {
+          if (isCore) return renderCoreFields(section);
+          if (section.type === "announcement") {
+            const items = section.data.items || [""];
+            return `
+              <div class="field"><label>Announcement Items</label></div>
+              <div class="subrows">
+                ${items.map((item, i) => `
+                  <div class="row-item one">
+                    <textarea data-action="ann-item" data-section-id="${section.id}" data-item-index="${i}" placeholder="Announcement item">${esc(item)}</textarea>
+                    <button type="button" class="mini" data-action="remove-ann-item" data-section-id="${section.id}" data-item-index="${i}">✕</button>
+                  </div>
+                `).join("")}
+              </div>
+              <div class="action-wrap"><button type="button" class="btn" data-action="add-ann-item" data-section-id="${section.id}">+ Add Item</button></div>
+            `;
+          }
+          if (section.type === "list") {
+            const rows = normalizeListRows(section.data.rows);
+            const cols = section.data.columns === 3 ? 3 : 2;
+            return `
+              <div class="field">
+                <label>Row Layout</label>
+                <select data-action="list-cols" data-section-id="${section.id}">
+                  <option value="2" ${cols === 2 ? "selected" : ""}>2-column</option>
+                  <option value="3" ${cols === 3 ? "selected" : ""}>3-column</option>
+                </select>
+              </div>
+              <div class="field"><label>Rows</label></div>
+              <div class="subrows">
+                ${rows.map((row, rIdx) => `
+                  <div class="row-item ${cols === 3 ? "three" : ""}">
+                    <input type="text" data-action="list-cell" data-section-id="${section.id}" data-row-index="${rIdx}" data-col-index="0" placeholder="Left" value="${esc(row.cells[0] || "")}" />
+                    <input type="text" data-action="list-cell" data-section-id="${section.id}" data-row-index="${rIdx}" data-col-index="1" placeholder="${cols === 3 ? "Center" : "Right"}" value="${esc(row.cells[1] || "")}" />
+                    ${cols === 3 ? `<input type="text" data-action="list-cell" data-section-id="${section.id}" data-row-index="${rIdx}" data-col-index="2" placeholder="Right" value="${esc(row.cells[2] || "")}" />` : ""}
+                    <label class="check-inline" style="height:auto;padding:0.4rem 0.52rem;">
+                      <input type="checkbox" data-action="list-underline" data-section-id="${section.id}" data-row-index="${rIdx}" ${row.underline ? "checked" : ""} />
+                      Underline
+                    </label>
+                    <button type="button" class="mini" data-action="remove-list-row" data-section-id="${section.id}" data-row-index="${rIdx}">✕</button>
+                  </div>
+                `).join("")}
+              </div>
+              <div class="action-wrap"><button type="button" class="btn" data-action="add-list-row" data-section-id="${section.id}">+ Add Row</button></div>
+            `;
+          }
+          if (section.type === "image") {
+            const src = String(section.data.src || "").trim();
+            return `
+              <div class="field">
+                <label>Image Upload</label>
+                <input type="file" accept="image/*" data-action="image-upload" data-section-id="${section.id}" />
+              </div>
+              <div class="field">
+                <label>Alt Text / Internal Note (Optional)</label>
+                <input type="text" data-action="image-alt" data-section-id="${section.id}" value="${esc(section.data.alt || "")}" placeholder="Optional alt text or note" />
+              </div>
+              ${src ? `<div class="thumb-preview"><img src="${esc(src)}" alt="${esc(section.data.alt || "Uploaded image")}" /></div>` : `<div class="thumb-preview"><span style="font-size:0.78rem;color:#486276;">No image uploaded.</span></div>`}
+              <div class="action-wrap">
+                <button type="button" class="btn" data-action="clear-image" data-section-id="${section.id}" ${src ? "" : "disabled"}>Clear Image</button>
+              </div>
+            `;
+          }
+          if (section.type === "front-image") {
+            const imageSrc = String(section.data.src || "").trim() || FRONT_IMAGE_DEFAULT_SRC;
+            return `
+              <div class="field"><label>Front Image Upload</label><input type="file" accept="image/*" data-action="front-image-upload" data-section-id="${section.id}" /></div>
+              ${imageSrc ? `<div class="thumb-preview"><img src="${esc(imageSrc)}" alt="Front cover image preview" /></div>` : `<div class="thumb-preview"><span style="font-size:0.78rem;color:#486276;">No image uploaded.</span></div>`}
+              <div class="action-wrap"><button type="button" class="btn" data-action="clear-front-image" data-section-id="${section.id}">Reset to Default Image</button></div>
+            `;
+          }
+          return `
+            <div class="field">
+              <label>Text Content</label>
+              <textarea data-action="text-content" data-section-id="${section.id}" placeholder="Section content">${esc(section.data.content || "")}</textarea>
+            </div>
+          `;
+        })();
+
+        card.innerHTML = `
+          <div class="section-card-head">
+            <div class="field" style="margin:0;">
+              ${isFrontImageType ? '<span class="badge-front-image">Front Image</span>' : ""}
+              <label>Section Title</label>
+              <input type="text" data-action="title" data-section-id="${section.id}" value="${esc(section.title)}" placeholder="New Section" />
+            </div>
+            <div class="section-controls">
+              <button type="button" class="mini" title="Move up" data-action="move-up" data-section-id="${section.id}" ${index === 0 || isFrontImageType ? "disabled" : ""}>↑</button>
+              <button type="button" class="mini" title="Move down" data-action="move-down" data-section-id="${section.id}" ${index === sections.length - 1 || isFrontImageType ? "disabled" : ""}>↓</button>
+              ${isCore ? "" : `<button type="button" class="mini" title="Delete" data-action="delete" data-section-id="${section.id}">✕</button>`}
+            </div>
+          </div>
+          <div class="section-meta">
+            <div class="field" style="margin:0;">
+              <label>Section Type</label>
+              ${isCore ? `<input type="text" value="${section.kind === "church-info" ? "Church Info" : "Sermon Info"}" readonly />` : `<select data-action="type" data-section-id="${section.id}">
+                <option value="announcement" ${section.type === "announcement" ? "selected" : ""}>Announcement Type</option>
+                <option value="list" ${section.type === "list" ? "selected" : ""}>List Type</option>
+                <option value="text" ${section.type === "text" ? "selected" : ""}>Text Type</option>
+                <option value="image" ${section.type === "image" ? "selected" : ""}>Image Type</option>
+                <option value="front-image" ${section.type === "front-image" ? "selected" : ""}>Front Image</option>
+              </select>`}
+            </div>
+            <div class="field" style="margin:0;${isFrontImageType ? "display:none;" : ""}">
+              <label>Placement</label>
+              <select data-action="placement" data-section-id="${section.id}">
+                ${placementOptions.map(place => `<option value="${place}" ${section.placement === place ? "selected" : ""}>${placementLabelMap[place] || sectionNameFromPlacement(place)}</option>`).join("")}
+              </select>
+            </div>
+            <label class="check-inline"><input type="checkbox" data-action="visible" data-section-id="${section.id}" ${section.visible ? "checked" : ""} /> Visible</label>
+          </div>
+          ${typeControls}
+        `;
+
+        return card;
+      }
+
+      function renderEditor() {
+        sectionList.innerHTML = "";
+        sections.forEach((section, index) => sectionList.appendChild(renderSectionEditor(section, index)));
+      }
+
+      function patchSectionEditor(sectionId) {
+        const sectionIndex = getSectionIndexById(sectionId);
+        if (sectionIndex === -1) return;
+        const current = sectionList.querySelector(`[data-section-id="${sectionId}"]`);
+        const next = renderSectionEditor(sections[sectionIndex], sectionIndex);
+        if (!current) sectionList.appendChild(next);
+        else current.replaceWith(next);
+      }
+
+      function sectionIsEmpty(section) {
+        if (!section || !section.visible) return true;
+        if (section.kind === "church-info") {
+          return !Object.values(section.data || {}).some(v => String(v || "").trim());
+        }
+        if (section.kind === "sermon-info") {
+          return !String(section.data.sermonTitle || "").trim() && !String(section.data.speaker || "").trim();
+        }
+        if (section.type === "announcement") return !(section.data.items || []).some(item => String(item || "").trim());
+        if (section.type === "list") return !normalizeListRows(section.data.rows).some(row => row.cells.some(v => String(v || "").trim()));
+        if (section.type === "image") return !String(section.data.src || "").trim();
+        if (section.type === "front-image") return !String((section.data && section.data.src) || "").trim();
+        return !String(section.data.content || "").trim();
+      }
+
+      function renderChurchInfoSection(section) {
+        const contactLines = [section.data.churchWebsite, section.data.churchEmail, section.data.churchPhone].filter(v => String(v || "").trim());
+        const dateLine = formatDate(section.data.bulletinDate) || "Sabbath Bulletin";
+        return `
+          <section class="sec">
+            <header class="bb-header">
+              ${section.data.logoUrl ? `<img class="bb-logo" src="${esc(section.data.logoUrl)}" alt="Church logo" />` : ""}
+              <h2>${esc(section.data.churchName || "Church Name")}</h2>
+              ${contactLines.length ? `<p class="bb-contact">${esc(contactLines.join(" | "))}</p>` : ""}
+              ${section.data.churchAddress ? `<p class="bb-contact">${esc(section.data.churchAddress)}</p>` : ""}
+              <p class="bb-date">${esc(dateLine)}</p>
+            </header>
+            ${section.data.bulletinTitle ? `<p class="text-block"><strong>${esc(section.data.bulletinTitle)}</strong></p>` : ""}
+          </section>
+        `;
+      }
+
+      function renderSermonInfoSection(section) {
+        const sermonTitle = String(section.data.sermonTitle || "").trim();
+        const speaker = String(section.data.speaker || "").trim();
+        if (!sermonTitle && !speaker) return "";
+        return `<section class="sec"><h3 class="sec-title">${esc(section.title || "Sermon Information")}</h3>${sermonTitle ? `<p class="text-block"><strong>${esc(sermonTitle)}</strong></p>` : ""}${speaker ? `<p class="text-block">${esc(speaker)}</p>` : ""}</section>`;
+      }
+
+      function renderAnnouncementSection(section) {
+        const items = (section.data.items || []).map(v => String(v || "").trim()).filter(Boolean);
+        if (!items.length) return "";
+        return `<section class="sec"><h3 class="sec-title">${esc(section.title || "Section")}</h3><ul class="announcement-list">${items.map(v => `<li>${esc(v)}</li>`).join("")}</ul></section>`;
+      }
+
+      function renderListSection(section) {
+        const cols = section.data.columns === 3 ? 3 : 2;
+        const rows = normalizeListRows(section.data.rows).filter(row => row.cells.some(v => String(v || "").trim()));
+        if (!rows.length) return "";
+        return `<section class="sec"><h3 class="sec-title">${esc(section.title || "Section")}</h3><div class="list-rows">${rows.map(row => {
+          const underlineClass = row.underline ? "with-underline" : "no-underline";
+          if (cols === 3) return `<div class="list-row-3 ${underlineClass}"><span>${esc(row.cells[0] || "")}</span><span>${esc(row.cells[1] || "")}</span><span>${esc(row.cells[2] || "")}</span></div>`;
+          return `<div class="list-row-2 ${underlineClass}"><span>${esc(row.cells[0] || "")}</span><span>${esc(row.cells[1] || "")}</span></div>`;
+        }).join("")}</div></section>`;
+      }
+
+      function renderTextSection(section) {
+        const content = String(section.data.content || "").trim();
+        if (!content) return "";
+        return `<section class="sec"><h3 class="sec-title">${esc(section.title || "Section")}</h3><p class="text-block">${esc(content)}</p></section>`;
+      }
+
+      function renderImageSection(section) {
+        const src = String(section.data.src || "").trim();
+        if (!src) return "";
+        const alt = String(section.data.alt || "").trim();
+        return `<section class="sec image-wrap"><img src="${esc(src)}" alt="${esc(alt || "Bulletin image")}" loading="lazy" /></section>`;
+      }
+
+      function renderFrontImageSection(section) {
+        const src = String((section.data && section.data.src) || "").trim() || FRONT_IMAGE_DEFAULT_SRC;
+        const alt = String((section.data && section.data.alt) || "").trim() || "Front cover image";
+        return `<section class="front-image-panel"><img src="${esc(src)}" alt="${esc(alt)}" loading="lazy" /></section>`;
+      }
+
+      function renderSectionForHtml(section) {
+        if (sectionIsEmpty(section)) return "";
+        if (section.kind === "church-info") return renderChurchInfoSection(section);
+        if (section.kind === "sermon-info") return renderSermonInfoSection(section);
+        if (section.type === "announcement") return renderAnnouncementSection(section);
+        if (section.type === "list") return renderListSection(section);
+        if (section.type === "image") return renderImageSection(section);
+        if (section.type === "front-image") return renderFrontImageSection(section);
+        return renderTextSection(section);
+      }
+
+      function getPanelOrderForLayout(mode) {
+        return mode === "trifold-legal"
+          ? ["front-left", "front-center", "front-right", "back-left", "back-center", "back-right"]
+          : ["front-cover", "inside-left", "inside-right", "back-cover"];
+      }
+
+      function getPanelDisplayName(placement) {
+        return placementLabelMap[placement] || sectionNameFromPlacement(placement);
+      }
+
+      function getPanelClassForPlacement(mode, placement, isFullPanel) {
+        if (mode === "trifold-legal") return `bulletin-panel bulletin-panel-trifold ${isFullPanel ? "full-panel" : ""}`.trim();
+        if (placement === "front-cover" || placement === "inside-right") {
+          return `bulletin-panel bulletin-panel-right ${isFullPanel ? "full-panel" : ""}`.trim();
+        }
+        return `bulletin-panel bulletin-panel-left ${isFullPanel ? "full-panel" : ""}`.trim();
+      }
+
+      function createRenderableBlocks(state) {
+        const blocks = [];
+        const frontImageOwner = getFrontImageOwner(state.sections);
+        const frontPlacement = layoutMode === "trifold-legal" ? "front-right" : "front-cover";
+        const frontImageActive = !!(frontImageOwner && frontImageOwner.visible);
+        (state.sections || []).forEach(section => {
+          if (!section || !section.visible || sectionIsEmpty(section)) return;
+          if (section.kind === "dynamic" && section.type === "front-image") {
+            if (!frontImageOwner || section.id !== frontImageOwner.id) return;
+          }
+          if (frontImageActive && section.placement === frontPlacement && section.type !== "front-image") return;
+          const placement = getPanelOrderForLayout(layoutMode).includes(section.placement) ? section.placement : (layoutMode === "trifold-legal" ? "back-center" : "inside-left");
+          const baseTitle = String(section.title || "Section").trim() || "Section";
+          if (section.type === "announcement") {
+            const items = (section.data.items || []).map(v => String(v || "").trim()).filter(Boolean);
+            if (!items.length) return;
+            blocks.push({ id: section.id, placement, type: "announcement", split: true, title: baseTitle, items, section });
+            return;
+          }
+          if (section.type === "list") {
+            const cols = section.data.columns === 3 ? 3 : 2;
+            const rows = normalizeListRows(section.data.rows).filter(r => r.cells.some(v => String(v || "").trim()));
+            if (!rows.length) return;
+            blocks.push({ id: section.id, placement, type: "list", split: true, title: baseTitle, rows, cols, section });
+            return;
+          }
+          if (section.type === "text") {
+            const content = String(section.data.content || "").trim();
+            if (!content) return;
+            const lines = content.split(/\r?\n/);
+            blocks.push({ id: section.id, placement, type: "text", split: true, title: baseTitle, lines, section });
+            return;
+          }
+          blocks.push({ id: section.id, placement, type: section.type || "text", split: false, section });
+        });
+        return blocks;
+      }
+
+      function buildMeasurePanel(panelClass) {
+        const probe = document.createElement("div");
+        probe.style.position = "fixed";
+        probe.style.left = "-30000px";
+        probe.style.top = "0";
+        probe.style.visibility = "hidden";
+        probe.style.pointerEvents = "none";
+        probe.innerHTML = `<article class="bulletin-sheet ${layoutMode === "trifold-legal" ? "trifold-sheet" : ""}"><section class="${esc(panelClass)}" data-panel-name="Measure"></section></article>`;
+        document.body.appendChild(probe);
+        const panel = probe.querySelector(".bulletin-panel");
+        return { probe, panel };
+      }
+
+      function measureFitsInPanel(existingHtml, chunkHtml, panelClass) {
+        const { probe, panel } = buildMeasurePanel(panelClass);
+        panel.innerHTML = `${existingHtml}${chunkHtml}`;
+        const fits = panel.scrollHeight - panel.clientHeight <= 1;
+        probe.remove();
+        return fits;
+      }
+
+      function renderAnnouncementChunk(block, start, end, continued) {
+        const title = continued ? `${block.title} (continued)` : block.title;
+        return `<section class="sec"><h3 class="sec-title">${esc(title)}</h3><ul class="announcement-list">${block.items.slice(start, end).map(v => `<li>${esc(v)}</li>`).join("")}</ul></section>`;
+      }
+
+      function renderListChunk(block, start, end, continued) {
+        const title = continued ? `${block.title} (continued)` : block.title;
+        const rows = block.rows.slice(start, end).map(row => {
+          const underlineClass = row.underline ? "with-underline" : "no-underline";
+          if (block.cols === 3) return `<div class="list-row-3 ${underlineClass}"><span>${esc(row.cells[0] || "")}</span><span>${esc(row.cells[1] || "")}</span><span>${esc(row.cells[2] || "")}</span></div>`;
+          return `<div class="list-row-2 ${underlineClass}"><span>${esc(row.cells[0] || "")}</span><span>${esc(row.cells[1] || "")}</span></div>`;
+        }).join("");
+        return `<section class="sec"><h3 class="sec-title">${esc(title)}</h3><div class="list-rows">${rows}</div></section>`;
+      }
+
+      function renderTextChunk(block, start, end, continued) {
+        const title = continued ? `${block.title} (continued)` : block.title;
+        const text = block.lines.slice(start, end).join("\n");
+        return `<section class="sec"><h3 class="sec-title">${esc(title)}</h3><p class="text-block">${esc(text)}</p></section>`;
+      }
+
+      function findChunkEndByFit(block, startIndex, panelClass, existingHtml, renderer, totalCount, continued) {
+        let low = startIndex;
+        let high = totalCount;
+        let best = startIndex;
+        while (low <= high) {
+          const mid = Math.floor((low + high) / 2);
+          if (mid <= startIndex) {
+            low = startIndex + 1;
+            continue;
+          }
+          const chunk = renderer(block, startIndex, mid, continued);
+          if (measureFitsInPanel(existingHtml, chunk, panelClass)) {
+            best = mid;
+            low = mid + 1;
+          } else {
+            high = mid - 1;
+          }
+        }
+        return best;
+      }
+
+      function layoutBlocksIntoPanels(state) {
+        const panelOrder = getPanelOrderForLayout(layoutMode);
+        const blocks = createRenderableBlocks(state);
+        const panels = {};
+        panelOrder.forEach(k => { panels[k] = []; });
+        const issues = [];
+        const frontPlacement = layoutMode === "trifold-legal" ? "front-right" : "front-cover";
+        const frontImageOwner = getFrontImageOwner(state.sections);
+        const frontImageActive = !!(frontImageOwner && frontImageOwner.visible);
+
+        const placeInPanel = (panelIdx, html) => {
+          const key = panelOrder[panelIdx];
+          panels[key].push(html);
+        };
+
+        blocks.forEach(block => {
+          let panelIdx = Math.max(0, panelOrder.indexOf(block.placement));
+          if (panelIdx < 0) panelIdx = 0;
+
+          if (!block.split) {
+            const fullHtml = renderSectionForHtml(block.section);
+            if (!fullHtml) return;
+            let placed = false;
+            for (let idx = panelIdx; idx < panelOrder.length; idx += 1) {
+              const key = panelOrder[idx];
+              const isFull = !!(frontImageActive && key === frontPlacement && block.type === "front-image");
+              const panelClass = getPanelClassForPlacement(layoutMode, key, isFull);
+              const existing = panels[key].join("");
+              if (!existing && measureFitsInPanel("", fullHtml, panelClass)) {
+                placeInPanel(idx, fullHtml);
+                placed = true;
+                break;
+              }
+              if (measureFitsInPanel(existing, fullHtml, panelClass)) {
+                placeInPanel(idx, fullHtml);
+                placed = true;
+                break;
+              }
+            }
+            if (!placed) issues.push({ title: block.section.title || sectionNameFromPlacement(block.placement), panel: getPanelDisplayName(block.placement) });
+            return;
+          }
+
+          const total = block.type === "announcement" ? block.items.length : (block.type === "list" ? block.rows.length : block.lines.length);
+          let cursor = 0;
+          let continued = false;
+
+          while (cursor < total && panelIdx < panelOrder.length) {
+            const key = panelOrder[panelIdx];
+            const panelClass = getPanelClassForPlacement(layoutMode, key, false);
+            const existing = panels[key].join("");
+            const renderer = block.type === "announcement" ? renderAnnouncementChunk : (block.type === "list" ? renderListChunk : renderTextChunk);
+            let end = findChunkEndByFit(block, cursor, panelClass, existing, renderer, total, continued);
+            if (end <= cursor) {
+              if (existing) {
+                panelIdx += 1;
+                continue;
+              }
+              end = findChunkEndByFit(block, cursor, panelClass, "", renderer, total, continued);
+              if (end <= cursor) break;
+            }
+            placeInPanel(panelIdx, renderer(block, cursor, end, continued));
+            cursor = end;
+            continued = true;
+            if (cursor < total) panelIdx += 1;
+          }
+
+          if (cursor < total) {
+            issues.push({ title: block.title, panel: getPanelDisplayName(panelOrder[Math.min(panelOrder.length - 1, panelIdx)] || block.placement) });
+          }
+        });
+
+        return { panels, issues, panelOrder };
+      }
+
+      function withPanelMeta(panelHtml, panelName) {
+        if (!panelHtml) return panelHtml;
+        return panelHtml.replace("<section ", `<section data-panel-name="${esc(panelName || "")}" `);
+      }
+
+      function buildBookletSheet(leftHtml, rightHtml, includePreviewDivider, leftName, rightName) {
+        return `<article class="bulletin-sheet">${includePreviewDivider ? '<div class="preview-only-divider"></div>' : ''}${withPanelMeta(leftHtml, leftName)}${withPanelMeta(rightHtml, rightName)}</article>`;
+      }
+
+      function buildTriFoldSheet(panelHtml, includePreviewDivider) {
+        return `<article class="bulletin-sheet trifold-sheet">
+          ${includePreviewDivider ? '<div class="preview-only-divider trifold-divider first"></div><div class="preview-only-divider trifold-divider second"></div>' : ""}
+          ${panelHtml}
+        </article>`;
+      }
+
+      function buildFlowedPrintHtml(layoutResult, includePreviewDivider) {
+        if (layoutMode === "trifold-legal") {
+          return `${buildTriFoldSheet(
+            `<section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Front Left">${layoutResult.panels["front-left"].join("")}</section>
+             <section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Front Center">${layoutResult.panels["front-center"].join("")}</section>
+             <section class="bulletin-panel bulletin-panel-trifold ${layoutResult.panels["front-right"].some(h => h.includes("front-image-panel")) ? "full-panel" : ""}" data-panel-name="Front Right">${layoutResult.panels["front-right"].join("")}</section>`,
+            includePreviewDivider
+          )}${buildTriFoldSheet(
+            `<section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Back Left">${layoutResult.panels["back-left"].join("")}</section>
+             <section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Back Center">${layoutResult.panels["back-center"].join("")}</section>
+             <section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Back Right">${layoutResult.panels["back-right"].join("")}</section>`,
+            includePreviewDivider
+          )}`;
+        }
+        const page1 = `<section class="bulletin-panel bulletin-panel-right ${layoutResult.panels["front-cover"].some(h => h.includes("front-image-panel")) ? "full-panel" : ""}" data-panel-name="Front Cover">${layoutResult.panels["front-cover"].join("")}</section>`;
+        const page2 = `<section class="bulletin-panel bulletin-panel-left" data-panel-name="Inside Left">${layoutResult.panels["inside-left"].join("")}</section>`;
+        const page3 = `<section class="bulletin-panel bulletin-panel-right" data-panel-name="Inside Right">${layoutResult.panels["inside-right"].join("")}</section>`;
+        const page4 = `<section class="bulletin-panel bulletin-panel-left" data-panel-name="Back Cover">${layoutResult.panels["back-cover"].join("")}</section>`;
+        return `${buildBookletSheet(page4, page1, includePreviewDivider, "Back Cover", "Front Cover")}${buildBookletSheet(page2, page3, includePreviewDivider, "Inside Left", "Inside Right")}`;
+      }
+
+      function detectRemainingOverflow(layoutResult) {
+        const names = [];
+        const html = buildFlowedPrintHtml(layoutResult, false);
+        const detached = detectOverflowInDetachedPrintLayout(html);
+        detached.forEach(item => names.push(item.panelName));
+        layoutResult.issues.forEach(item => names.push(`${item.title} (${item.panel})`));
+        return Array.from(new Set(names));
+      }
+      function buildWebBulletin(state) {
+        const flow = layoutBlocksIntoPanels(state);
+        if (layoutMode === "trifold-legal") {
+          const panels = flow.panels;
+          return `<article class="bulletin-web">
+            ${["front-left", "front-center", "front-right", "back-left", "back-center", "back-right"].map((key, idx) =>
+              `${idx ? '<div class="rule"></div>' : ""}<section>${panels[key].join("")}</section>`).join("")}
+          </article>`;
+        }
+        return `<article class="bulletin-web"><section>${flow.panels["front-cover"].join("")}</section><div class="rule"></div><section>${flow.panels["inside-left"].join("")}</section><div class="rule"></div><section>${flow.panels["inside-right"].join("")}</section><div class="rule"></div><section>${flow.panels["back-cover"].join("")}</section></article>`;
+      }
+
+      function sectionNameFromPlacement(place) {
+        if (placementLabelMap[place]) return placementLabelMap[place];
+        return String(place || "").split("-").map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+      }
+
+      function buildWordPressHtml(state) {
+        const placementOrder = layoutMode === "trifold-legal"
+          ? ["front-left", "front-center", "front-right", "back-left", "back-center", "back-right"]
+          : ["front-cover", "inside-left", "inside-right", "back-cover"];
+        const chunks = ["<div>"];
+        const frontImageOwner = getFrontImageOwner(state.sections);
+
+        placementOrder.forEach(place => {
+          const group = state.sections.filter(s => {
+            if (!s.visible || s.placement !== place) return false;
+            if (frontImageOwner && frontImageOwner.visible && place === (layoutMode === "trifold-legal" ? "front-right" : "front-cover") && s.id !== frontImageOwner.id) return false;
+            if (s.kind === "dynamic" && s.type === "front-image" && frontImageOwner && s.id !== frontImageOwner.id) return false;
+            return true;
+          });
+          if (!group.length) return;
+          chunks.push(`<h3>${esc(sectionNameFromPlacement(place))}</h3>`);
+          group.forEach(section => {
+            if (sectionIsEmpty(section)) return;
+            if (section.kind === "church-info") {
+              chunks.push(`<h4>${esc(section.title || "Church Information")}</h4>`);
+              if (section.data.churchName) chunks.push(`<p><strong>${esc(section.data.churchName)}</strong></p>`);
+              if (section.data.bulletinTitle) chunks.push(`<p>${esc(section.data.bulletinTitle)}</p>`);
+              if (section.data.bulletinDate) chunks.push(`<p><strong>${esc(formatDate(section.data.bulletinDate))}</strong></p>`);
+              const contact = [section.data.churchWebsite, section.data.churchEmail, section.data.churchPhone, section.data.churchAddress].filter(Boolean);
+              if (contact.length) chunks.push(`<p>${contact.map(v => esc(v)).join(" | ")}</p>`);
+              if (section.data.logoUrl) chunks.push(`<p>Logo: ${esc(section.data.logoUrl)}</p>`);
+              return;
+            }
+            if (section.kind === "sermon-info") {
+              chunks.push(`<h4>${esc(section.title || "Sermon Information")}</h4><p>${section.data.sermonTitle ? `<strong>${esc(section.data.sermonTitle)}</strong>` : ""}${section.data.speaker ? `${section.data.sermonTitle ? "<br>" : ""}${esc(section.data.speaker)}` : ""}</p>`);
+              return;
+            }
+
+            const title = esc(section.title || "Section");
+            if (section.type === "front-image") {
+              const src = String((section.data && section.data.src) || "").trim() || FRONT_IMAGE_DEFAULT_SRC;
+              if (src.length > 350000) chunks.push("<!-- Front image omitted from WordPress HTML: data URL too large. -->");
+              else chunks.push(`<p><img src="${esc(src)}" alt="Front cover image" style="max-width:100%;height:auto;" /></p>`);
+            } else if (section.type === "announcement") {
+              const items = (section.data.items || []).map(v => String(v || "").trim()).filter(Boolean);
+              if (!items.length) return;
+              chunks.push(`<h4>${title}</h4><ul>${items.map(v => `<li>${esc(v)}</li>`).join("")}</ul>`);
+            } else if (section.type === "list") {
+              const rows = normalizeListRows(section.data.rows).filter(r => r.cells.some(v => String(v || "").trim()));
+              if (!rows.length) return;
+              const cols = section.data.columns === 3 ? 3 : 2;
+              chunks.push(`<h4>${title}</h4>`);
+              rows.forEach(row => {
+                const borderStyle = row.underline ? "border-bottom:1px dotted #a4a4a4;" : "";
+                if (cols === 3) chunks.push(`<div style="padding:2px 0;${borderStyle}"><span>${esc(row.cells[0] || "")}</span> <span style="display:inline-block;min-width:120px;text-align:center;">${esc(row.cells[1] || "")}</span> <span style="float:right;">${esc(row.cells[2] || "")}</span></div>`);
+                else chunks.push(`<div style="padding:2px 0;${borderStyle}"><span>${esc(row.cells[0] || "")}</span><span style="float:right;">${esc(row.cells[1] || "")}</span></div>`);
+              });
+            } else if (section.type === "image") {
+              const src = String(section.data.src || "").trim();
+              if (!src) return;
+              if (src.length > 350000) {
+                chunks.push("<!-- Image section omitted from WordPress HTML: data URL too large. -->");
+              } else {
+                chunks.push(`<p><img src="${esc(src)}" alt="${esc(section.data.alt || "Bulletin image")}" style="max-width:100%;height:auto;" /></p>`);
+              }
+            } else {
+              const content = String(section.data.content || "").trim();
+              if (!content) return;
+              chunks.push(`<h4>${title}</h4><p>${esc(content).replace(/\n/g, "<br>")}</p>`);
+            }
+          });
+        });
+
+        chunks.push("</div>");
+        return chunks.join("\n");
+      }
+
+      function renderPrintPreview(state) {
+        const flow = layoutBlocksIntoPanels(state);
+        if (layoutMode === "trifold-legal") {
+          const frontSheet = buildTriFoldSheet(
+            `<section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Front Left">${flow.panels["front-left"].join("")}</section>
+             <section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Front Center">${flow.panels["front-center"].join("")}</section>
+             <section class="bulletin-panel bulletin-panel-trifold ${flow.panels["front-right"].some(h => h.includes("front-image-panel")) ? "full-panel" : ""}" data-panel-name="Front Right">${flow.panels["front-right"].join("")}</section>`,
+            true
+          );
+          const backSheet = buildTriFoldSheet(
+            `<section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Back Left">${flow.panels["back-left"].join("")}</section>
+             <section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Back Center">${flow.panels["back-center"].join("")}</section>
+             <section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Back Right">${flow.panels["back-right"].join("")}</section>`,
+            true
+          );
+          previewCanvas.innerHTML = `
+            <div class="booklet-preview">
+              <div class="print-preview-frame">
+                <p class="preview-sheet-label">Front Side (Left: Front Left, Center: Front Center, Right: Front Right)</p>
+                <div class="print-preview-wrap"><div class="sheet-scale-shell trifold">${frontSheet}</div></div>
+              </div>
+              <div class="print-preview-frame">
+                <p class="preview-sheet-label">Back Side (Left: Back Left, Center: Back Center, Right: Back Right)</p>
+                <div class="print-preview-wrap"><div class="sheet-scale-shell trifold">${backSheet}</div></div>
+              </div>
+            </div>
+          `;
+          const ppi = APP_CONFIG.triFold.previewPixelsPerInch;
+          previewCanvas.querySelectorAll(".print-preview-wrap").forEach((wrap, idx) => {
+            const shell = previewCanvas.querySelectorAll(".sheet-scale-shell")[idx];
+            if (!shell) return;
+            const availableWidth = Math.max(200, wrap.clientWidth);
+            const scale = Math.min(1, availableWidth / (APP_CONFIG.triFold.legalWidthIn * ppi));
+            shell.style.transform = `scale(${scale})`;
+            wrap.style.height = `${APP_CONFIG.triFold.legalHeightIn * ppi * scale}px`;
+          });
+        } else {
+          const page1 = `<section class="bulletin-panel bulletin-panel-right ${flow.panels["front-cover"].some(h => h.includes("front-image-panel")) ? "full-panel" : ""}" data-panel-name="Front Cover">${flow.panels["front-cover"].join("")}</section>`;
+          const page2 = `<section class="bulletin-panel bulletin-panel-left" data-panel-name="Inside Left">${flow.panels["inside-left"].join("")}</section>`;
+          const page3 = `<section class="bulletin-panel bulletin-panel-right" data-panel-name="Inside Right">${flow.panels["inside-right"].join("")}</section>`;
+          const page4 = `<section class="bulletin-panel bulletin-panel-left" data-panel-name="Back Cover">${flow.panels["back-cover"].join("")}</section>`;
+          const outerSheet = buildBookletSheet(page4, page1, true, "Back Cover", "Front Cover");
+          const innerSheet = buildBookletSheet(page2, page3, true, "Inside Left", "Inside Right");
+          previewCanvas.innerHTML = `
+            <div class="booklet-preview">
+              <div class="print-preview-frame">
+                <p class="preview-sheet-label">Outer Side (Left: Page 4, Right: Page 1)</p>
+                <div class="print-preview-wrap"><div class="sheet-scale-shell">${outerSheet}</div></div>
+              </div>
+              <div class="print-preview-frame">
+                <p class="preview-sheet-label">Inner Side (Left: Page 2, Right: Page 3)</p>
+                <div class="print-preview-wrap"><div class="sheet-scale-shell">${innerSheet}</div></div>
+              </div>
+            </div>
+          `;
+          const wraps = previewCanvas.querySelectorAll(".print-preview-wrap");
+          const shells = previewCanvas.querySelectorAll(".sheet-scale-shell");
+          wraps.forEach((wrap, idx) => {
+            const shell = shells[idx];
+            if (!shell) return;
+            const availableWidth = Math.max(200, wrap.clientWidth);
+            const scale = Math.min(1, availableWidth / (11 * 96));
+            shell.style.transform = `scale(${scale})`;
+            wrap.style.height = `${8.5 * 96 * scale}px`;
+          });
+        }
+        const overflowNames = detectRemainingOverflow(flow);
+        renderOverflowWarnings(overflowNames.map(name => ({ panelName: name })));
+      }
+
+      function renderWebPreview(state) {
+        previewCanvas.innerHTML = buildWebBulletin(state);
+      }
+
+      function renderWordPressPreview(state) {
+        previewCanvas.innerHTML = '<div class="wp-wrap"><textarea id="wpOutput" readonly></textarea></div>';
+        const output = previewCanvas.querySelector("#wpOutput");
+        output.value = buildWordPressHtml(state);
+      }
+
+      function clearOverflowWarnings() {
+        overflowWarning.classList.remove("show");
+        overflowWarning.innerHTML = "";
+        previewCanvas.querySelectorAll(".bulletin-panel.panel-overflow").forEach(panel => panel.classList.remove("panel-overflow"));
+        previewCanvas.querySelectorAll(".overflow-badge").forEach(badge => badge.remove());
+      }
+
+      function detectPanelOverflow(container) {
+        const results = [];
+        if (!container) return results;
+        const panels = Array.from(container.querySelectorAll(".bulletin-panel"));
+        panels.forEach((panel, index) => {
+          panel.classList.remove("panel-overflow");
+          panel.querySelectorAll(":scope > .overflow-badge").forEach(badge => badge.remove());
+          const overflowPx = Math.ceil(panel.scrollHeight - panel.clientHeight);
+          if (overflowPx > 1) {
+            panel.classList.add("panel-overflow");
+            const badge = document.createElement("span");
+            badge.className = "overflow-badge";
+            badge.textContent = "Overflow";
+            panel.appendChild(badge);
+            results.push({
+              panelName: panel.dataset.panelName || `Panel ${index + 1}`,
+              overflowPx
+            });
+          }
+        });
+        return results;
+      }
+
+      function renderOverflowWarnings(results) {
+        if (!results || !results.length) {
+          overflowWarning.classList.remove("show");
+          overflowWarning.innerHTML = "";
+          return;
+        }
+        const labels = results.map(item => item.panelName);
+        overflowWarning.innerHTML = `Overflow detected: ${esc(labels.join(", "))}<small>Some content exceeds the panel height and may be clipped in print/PDF.</small>`;
+        overflowWarning.classList.add("show");
+      }
+
+      function runOverflowDetection() {
+        clearOverflowWarnings();
+        if (currentTab !== "print") return;
+        const results = detectPanelOverflow(previewCanvas);
+        renderOverflowWarnings(results);
+      }
+
+      function queueOverflowDetection() {
+        runOverflowDetection();
+        const panels = Array.from(previewCanvas.querySelectorAll(".bulletin-panel"));
+        panels.forEach(panel => {
+          panel.querySelectorAll("img").forEach(img => {
+            if (img.complete) return;
+            img.addEventListener("load", runOverflowDetection, { once: true });
+            img.addEventListener("error", runOverflowDetection, { once: true });
+          });
+        });
+      }
+
+      function updatePrintLayoutStyle() {
+        let style = document.getElementById("print-layout-style");
+        if (!style) {
+          style = document.createElement("style");
+          style.id = "print-layout-style";
+          document.head.appendChild(style);
+        }
+        const pageSize = layoutMode === "trifold-legal" ? "legal landscape" : "Letter landscape";
+        style.textContent = `@media print { @page { size: ${pageSize}; margin: var(--print-page-margin-top) var(--print-page-margin-right) var(--print-page-margin-bottom) var(--print-page-margin-left); } }`;
+      }
+
+      function renderPreviews() {
+        const state = getState();
+        try {
+          printNote.textContent = layoutMode === "trifold-legal"
+            ? "Print double-sided • Legal landscape • Tri-fold into 3 panels"
+            : "Print double-sided • Flip on short edge • Fold in half";
+          const flow = layoutBlocksIntoPanels(state);
+          if (currentTab === "print") renderPrintPreview(state);
+          else if (currentTab === "web") renderWebPreview(state);
+          else renderWordPressPreview(state);
+          printContainer.innerHTML = buildFlowedPrintHtml(flow, false);
+          updatePrintLayoutStyle();
+        } catch (error) {
+          showRenderError(`Render error: ${error && error.message ? error.message : String(error)}`);
+        }
+      }
+
+      function commitPreviewOnly() {
+        saveState();
+        renderPreviews();
+      }
+
+      function commitSectionPatch(sectionId) {
+        saveState();
+        patchSectionEditor(sectionId);
+        renderPreviews();
+      }
+
+      function commitEditorRefresh() {
+        normalizeFrontImageOwner();
+        normalizeSectionsOrder();
+        saveState();
+        renderEditor();
+        renderPreviews();
+      }
+
+      function addSection() {
+        sections.push(createDefaultDynamicSection());
+        commitEditorRefresh();
+      }
+
+      function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(new Error("Failed to read file."));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function updateStateFromInput(target) {
+        const sectionId = target.dataset.sectionId;
+        const sectionIndex = getSectionIndexById(sectionId);
+        if (sectionIndex === -1) return false;
+        const sec = sections[sectionIndex];
+        const action = target.dataset.action;
+
+        if (action === "title") { sec.title = target.value; return true; }
+        if (action === "core-field") { sec.data[target.dataset.field] = target.value; return true; }
+        if (action === "ann-item") {
+          const itemIdx = Number(target.dataset.itemIndex);
+          if (Number.isNaN(itemIdx)) return false;
+          sec.data.items[itemIdx] = target.value;
+          return true;
+        }
+        if (action === "list-cell") {
+          const row = Number(target.dataset.rowIndex);
+          const col = Number(target.dataset.colIndex);
+          if (Number.isNaN(row) || Number.isNaN(col)) return false;
+          if (!sec.data.rows[row]) sec.data.rows[row] = createDefaultListRow();
+          sec.data.rows[row] = normalizeListRow(sec.data.rows[row]);
+          sec.data.rows[row].cells[col] = target.value;
+          return true;
+        }
+        if (action === "image-alt") { sec.data.alt = target.value; return true; }
+        if (action === "text-content") { sec.data.content = target.value; return true; }
+        return false;
+      }
+
+      sectionList.addEventListener("input", event => {
+        if (!updateStateFromInput(event.target)) return;
+        commitPreviewOnly();
+      });
+
+      sectionList.addEventListener("change", async event => {
+        const target = event.target;
+        const sectionId = target.dataset.sectionId;
+        const sectionIndex = getSectionIndexById(sectionId);
+        if (sectionIndex === -1) return;
+        const sec = sections[sectionIndex];
+        const action = target.dataset.action;
+
+        if ((action === "image-upload" && sec.kind === "dynamic" && sec.type === "image") || (action === "front-image-upload" && sec.kind === "dynamic" && sec.type === "front-image")) {
+          const file = target.files && target.files[0];
+          if (!file) return;
+          try {
+            const imageData = await readFileAsDataUrl(file);
+            if (action === "front-image-upload") sec.data.src = imageData;
+            else sec.data.src = imageData;
+            commitSectionPatch(sectionId);
+          } catch {
+            alert("Could not load image.");
+          } finally {
+            target.value = "";
+          }
+          return;
+        }
+
+        if (action === "type" && sec.kind === "dynamic") {
+          const nextType = target.value;
+          const previousType = sec.type;
+          if (nextType === "front-image") {
+            if (previousType !== "front-image") sec.previousType = previousType;
+            sec.type = "front-image";
+            sec.placement = layoutMode === "trifold-legal" ? "front-right" : "front-cover";
+            sec.data = defaultDataForType("front-image");
+            normalizeFrontImageOwner(sec.id);
+            normalizeSectionsOrder();
+            commitEditorRefresh();
+            return;
+          }
+          if (previousType === "front-image") {
+            convertFrontImageToType(sec, nextType);
+            normalizeSectionsOrder();
+            commitEditorRefresh();
+            return;
+          }
+          sec.type = nextType;
+          sec.data = defaultDataForType(nextType);
+          commitSectionPatch(sectionId);
+          return;
+        }
+        if (action === "placement") {
+          if (sec.kind === "dynamic" && sec.type === "front-image") {
+            sec.placement = layoutMode === "trifold-legal" ? "front-right" : "front-cover";
+            commitPreviewOnly();
+            return;
+          }
+          sec.placement = mapPlacementToMode(target.value, layoutMode);
+          commitPreviewOnly();
+          return;
+        }
+        if (action === "visible") {
+          sec.visible = !!target.checked;
+          commitPreviewOnly();
+          return;
+        }
+        if (action === "list-underline" && sec.kind === "dynamic" && sec.type === "list") {
+          const row = Number(target.dataset.rowIndex);
+          if (Number.isNaN(row)) return;
+          if (!sec.data.rows[row]) sec.data.rows[row] = createDefaultListRow();
+          sec.data.rows[row] = normalizeListRow(sec.data.rows[row]);
+          sec.data.rows[row].underline = !!target.checked;
+          commitPreviewOnly();
+          return;
+        }
+        if (action === "list-cols" && sec.kind === "dynamic") {
+          sec.data.columns = Number(target.value) === 3 ? 3 : 2;
+          sec.data.rows = normalizeListRows(sec.data.rows);
+          commitSectionPatch(sectionId);
+        }
+      });
+
+      sectionList.addEventListener("click", event => {
+        const target = event.target.closest("[data-action]");
+        if (!target) return;
+        const sectionId = target.dataset.sectionId;
+        const sectionIndex = getSectionIndexById(sectionId);
+        if (sectionIndex === -1) return;
+        const action = target.dataset.action;
+
+        if (action === "delete" && sections[sectionIndex].kind === "dynamic") {
+          sections.splice(sectionIndex, 1);
+          commitEditorRefresh();
+          return;
+        }
+        if (action === "move-up" && sectionIndex > 0) {
+          [sections[sectionIndex - 1], sections[sectionIndex]] = [sections[sectionIndex], sections[sectionIndex - 1]];
+          commitEditorRefresh();
+          return;
+        }
+        if (action === "move-down" && sectionIndex < sections.length - 1) {
+          [sections[sectionIndex + 1], sections[sectionIndex]] = [sections[sectionIndex], sections[sectionIndex + 1]];
+          commitEditorRefresh();
+          return;
+        }
+        if (action === "add-ann-item") {
+          sections[sectionIndex].data.items.push("");
+          commitSectionPatch(sectionId);
+          return;
+        }
+        if (action === "remove-ann-item") {
+          const itemIdx = Number(target.dataset.itemIndex);
+          if (Number.isNaN(itemIdx)) return;
+          sections[sectionIndex].data.items.splice(itemIdx, 1);
+          if (!sections[sectionIndex].data.items.length) sections[sectionIndex].data.items.push("");
+          commitSectionPatch(sectionId);
+          return;
+        }
+        if (action === "add-list-row") {
+          sections[sectionIndex].data.rows.push(createDefaultListRow());
+          commitSectionPatch(sectionId);
+          return;
+        }
+        if (action === "remove-list-row") {
+          const row = Number(target.dataset.rowIndex);
+          if (Number.isNaN(row)) return;
+          sections[sectionIndex].data.rows.splice(row, 1);
+          if (!sections[sectionIndex].data.rows.length) sections[sectionIndex].data.rows.push(createDefaultListRow());
+          commitSectionPatch(sectionId);
+          return;
+        }
+        if (action === "clear-image" && sections[sectionIndex].type === "image") {
+          sections[sectionIndex].data.src = "";
+          commitSectionPatch(sectionId);
+          return;
+        }
+        if (action === "clear-front-image" && sections[sectionIndex].type === "front-image") {
+          sections[sectionIndex].data.src = FRONT_IMAGE_DEFAULT_SRC;
+          commitSectionPatch(sectionId);
+        }
+      });
+
+      function getSampleState() {
+        return {
+          layoutMode: "bifold-letter",
+          sections: [
+            {
+              id: uid(),
+              title: "Church Information",
+              kind: "church-info",
+              placement: "inside-left",
+              visible: true,
+              data: {
+                churchName: "IMSDA Seventh-day Adventist Church",
+                bulletinTitle: "Sabbath Worship Bulletin",
+                logoUrl: "",
+                churchWebsite: "https://IMSDA.org",
+                churchEmail: "website@imsda.org",
+                churchPhone: "(515) 223-1197",
+                churchAddress: "1005 Grand Ave, West Des Moines, IA 50265",
+                bulletinDate: new Date().toISOString().slice(0, 10)
+              }
+            },
+            {
+              id: uid(),
+              title: "Sermon Information",
+              kind: "sermon-info",
+              placement: "inside-left",
+              visible: true,
+              data: {
+                sermonTitle: "Standing on the Promises",
+                speaker: "Pastor Eleanor Thomas"
+              }
+            },
+            {
+              id: uid(),
+              title: "Front Cover Image",
+              kind: "dynamic",
+              type: "front-image",
+              placement: "front-cover",
+              visible: true,
+              data: { src: FRONT_IMAGE_DEFAULT_SRC, alt: "" }
+            },
+            {
+              id: uid(),
+              title: "Order of Worship",
+              kind: "dynamic",
+              type: "list",
+              placement: "inside-left",
+              visible: true,
+              data: {
+                columns: 2,
+                rows: [
+                  { cells: ["Prelude", "10:55 AM", ""], underline: true },
+                  { cells: ["Welcome", "11:00 AM", ""], underline: true },
+                  { cells: ["Invocation", "", ""], underline: true },
+                  { cells: ["Scripture Reading", "John 14:1-6", ""], underline: true },
+                  { cells: ["Offering", "Local Church Budget", ""], underline: true },
+                  { cells: ["Sermon", "11:30 AM", ""], underline: true },
+                  { cells: ["Closing Hymn", "#290", ""], underline: true }
+                ]
+              }
+            },
+            {
+              id: uid(),
+              title: "Announcements",
+              kind: "dynamic",
+              type: "announcement",
+              placement: "inside-right",
+              visible: true,
+              data: { items: ["Choir rehearsal today at 4:00 PM.", "Community food pantry outreach on Tuesday.", "Youth vespers Friday at 7:15 PM."] }
+            },
+            {
+              id: uid(),
+              title: "Prayer Requests / Notes",
+              kind: "dynamic",
+              type: "text",
+              placement: "inside-right",
+              visible: true,
+              data: { content: "Visitors are warmly welcomed. Fellowship meal follows service in the social hall." }
+            },
+            {
+              id: uid(),
+              title: "Sunset Times",
+              kind: "dynamic",
+              type: "list",
+              placement: "back-cover",
+              visible: true,
+              data: {
+                columns: 3,
+                rows: [
+                  { cells: ["Friday", "Sunset", "6:41 PM"], underline: true },
+                  { cells: ["Saturday", "Sunset", "6:42 PM"], underline: true }
+                ]
+              }
+            },
+            {
+              id: uid(),
+              title: "Bulletin Submissions",
+              kind: "dynamic",
+              type: "text",
+              placement: "back-cover",
+              visible: true,
+              data: { content: "Submit bulletin items by Thursday 12:00 PM to bulletin@riverviewsda.org." }
+            }
+          ]
+        };
+      }
+
+      function applyState(data) {
+        const sample = getSampleState();
+        const source = migrateLegacyState(data && typeof data === "object" ? data : sample) || sample;
+        layoutMode = normalizeLayoutMode(source.layoutMode);
+        if (layoutModeSelect) layoutModeSelect.value = layoutMode;
+        const rawSections = Array.isArray(source.sections) ? source.sections : sample.sections;
+        sections = rawSections.map(sanitizeSection).filter(Boolean);
+        if (!sections.length) sections = sample.sections.map(sanitizeSection).filter(Boolean);
+
+        const hasChurch = sections.some(s => s.kind === "church-info");
+        const hasSermon = sections.some(s => s.kind === "sermon-info");
+        if (!hasChurch) sections.unshift(sanitizeSection(getSampleState().sections[0]));
+        if (!hasSermon) sections.splice(1, 0, sanitizeSection(getSampleState().sections[1]));
+        normalizeFrontImageOwner();
+        normalizeSectionsOrder();
+      }
+
+      function applyLayoutMode(nextMode) {
+        const mode = normalizeLayoutMode(nextMode);
+        if (mode === layoutMode) return;
+        layoutMode = mode;
+        sections = sections.map(section => {
+          const clone = { ...section };
+          if (clone.kind === "dynamic" && clone.type === "front-image") {
+            clone.placement = layoutMode === "trifold-legal" ? "front-right" : "front-cover";
+            return clone;
+          }
+          clone.placement = mapPlacementToMode(clone.placement, layoutMode);
+          return clone;
+        });
+      }
+
+      function loadState() {
+        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("imsda.churchBulletin.v4") || localStorage.getItem("imsda.churchBulletin.v3");
+        if (!raw) return false;
+        try {
+          applyState(JSON.parse(raw));
+          return true;
+        } catch {
+          localStorage.removeItem(STORAGE_KEY);
+          return false;
+        }
+      }
+
+      function resetAll() {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem("imsda.churchBulletin.v4");
+        localStorage.removeItem("imsda.churchBulletin.v3");
+        applyState(getSampleState());
+        commitEditorRefresh();
+      }
+
+      function loadSampleData() {
+        applyState(getSampleState());
+        commitEditorRefresh();
+      }
+
+      function exportJsonState() {
+        return getState();
+      }
+
+      function downloadJson(state) {
+        const safeState = migrateLegacyState(state && typeof state === "object" ? state : {}) || {};
+        const payload = JSON.stringify(safeState, null, 2);
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "church-bulletin.json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function applyImportedState(parsed) {
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new Error("The selected file is not a valid bulletin save file.");
+        }
+        if (Object.prototype.hasOwnProperty.call(parsed, "sections") && !Array.isArray(parsed.sections)) {
+          throw new Error("The save file has invalid section data.");
+        }
+        applyState(parsed);
+        renderEditor();
+        renderPreviews();
+        saveState();
+      }
+
+      async function importJsonFile(file) {
+        if (!file) return;
+        let text = "";
+        try {
+          text = await file.text();
+        } catch {
+          throw new Error("Could not read the selected file.");
+        }
+        let parsed;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          throw new Error("That file is not valid JSON.");
+        }
+        applyImportedState(parsed);
+      }
+
+      function detectOverflowInDetachedPrintLayout(printHtml) {
+        const probe = document.createElement("div");
+        probe.style.position = "fixed";
+        probe.style.left = "-20000px";
+        probe.style.top = "0";
+        probe.style.visibility = "hidden";
+        probe.style.pointerEvents = "none";
+        probe.innerHTML = printHtml;
+        document.body.appendChild(probe);
+        const results = detectPanelOverflow(probe).map(item => ({ panelName: item.panelName, overflowPx: item.overflowPx }));
+        probe.remove();
+        return results;
+      }
+
+      async function openPrintWindow(state) {
+        const resolvedState = await buildResolvedPrintState(state);
+        const flow = layoutBlocksIntoPanels(resolvedState);
+        const overflowNames = detectRemainingOverflow(flow);
+        if (overflowNames.length) {
+          const proceed = window.confirm(`Content still overflows after panel flow: ${overflowNames.join(", ")}.\n\nPress OK to continue with clipped output, or Cancel to go back and edit.`);
+          if (!proceed) return;
+        }
+        const isTriFold = layoutMode === "trifold-legal";
+        const printHtml = buildFlowedPrintHtml(flow, false).replace(/\sloading=("|')lazy\1/gi, ' loading="eager"');
+        const autoPrintScript = `<scr` + `ipt>(function(){
+          let settled = false;
+          function finish(){
+            if (settled) return;
+            settled = true;
+            setTimeout(function(){ window.print(); }, 220);
+          }
+          function waitForImage(img){
+            if (!img) return Promise.resolve();
+            try { img.loading = "eager"; } catch (_) {}
+            const isReady = img.complete && img.naturalWidth > 0;
+            if (isReady) {
+              if (typeof img.decode === "function") {
+                try { return img.decode().catch(function(){ }); } catch (_) { return Promise.resolve(); }
+              }
+              return Promise.resolve();
+            }
+            return new Promise(function(resolve){
+              let done = false;
+              function settle(){
+                if (done) return;
+                done = true;
+                resolve();
+              }
+              img.addEventListener("load", function(){
+                if (typeof img.decode === "function") {
+                  try { img.decode().then(settle).catch(settle); } catch (_) { settle(); }
+                } else {
+                  settle();
+                }
+              }, { once: true });
+              img.addEventListener("error", settle, { once: true });
+            });
+          }
+          function waitForImagesThenPrint(){
+            const images = Array.from(document.images || []);
+            if (!images.length) {
+              finish();
+              return;
+            }
+            Promise.all(images.map(waitForImage)).then(finish).catch(finish);
+          }
+          setTimeout(finish, 4000);
+          if (document.readyState === "complete" || document.readyState === "interactive") {
+            waitForImagesThenPrint();
+          } else {
+            window.addEventListener("DOMContentLoaded", waitForImagesThenPrint, { once: true });
+          }
+        })();</scr` + `ipt>`;
+        const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bulletin PDF Export</title><style>
+          ${typographyCssVars()}
+          body{margin:0;background:#fff;font-family:Georgia,"Times New Roman",serif;color:#000;}
+          .bulletin-sheet{width:${isTriFold ? "14in" : "11in"};height:8.5in;margin:0 auto;background:#fff;padding-top:var(--print-page-margin-top);padding-right:var(--print-page-margin-right);padding-bottom:var(--print-page-margin-bottom);padding-left:var(--print-page-margin-left);display:grid;grid-template-columns:${isTriFold ? "1fr 1fr 1fr" : "1fr 1fr"};position:relative;page-break-after:always;box-sizing:border-box;overflow:hidden;}
+          .bulletin-sheet:last-child{page-break-after:auto;}
+          .preview-only-divider{display:none!important;}
+          .bulletin-panel{padding-top:var(--panel-padding-top);padding-right:var(--panel-padding-right);padding-bottom:var(--panel-padding-bottom);padding-left:var(--panel-padding-left);min-width:0;font-size:var(--print-font-size-body);line-height:1.23;overflow:hidden;overflow-wrap:anywhere;}
+          .bulletin-panel.full-panel{padding:0!important;}
+          .bulletin-panel-left{padding-left:var(--panel-left-extra-padding-left);padding-right:var(--panel-left-extra-padding-right);}
+          .bulletin-panel-right{padding-left:var(--panel-right-extra-padding-left);padding-right:var(--panel-right-extra-padding-right);}
+          .bulletin-panel-trifold{padding-top:var(--trifold-panel-padding-top);padding-right:var(--trifold-panel-padding-right);padding-bottom:var(--trifold-panel-padding-bottom);padding-left:var(--trifold-panel-padding-left);}
+          .bb-header{text-align:center;border-bottom:1px solid #000;padding-bottom:.2rem;margin-bottom:.28rem;}
+          .bb-logo{max-width:76px;max-height:76px;object-fit:contain;margin:0 auto .18rem;display:block;}
+          .bb-header h2{margin:0;font-size:var(--print-font-size-cover-title);text-transform:uppercase;}
+          .bb-contact,.bb-date{margin:.14rem 0 0;font-size:var(--print-font-size-meta);}
+          .bb-date{font-weight:700;}
+          .front-cover-block{display:grid;gap:.2rem;align-content:start;min-height:100%;text-align:center;}
+          .front-cover-image-wrap{margin:0 0 .22rem;text-align:center;}
+          .front-cover-image-wrap img{display:inline-block;width:auto;height:auto;max-width:var(--print-image-max-width);max-height:calc(var(--print-image-max-height) * 1.55);object-fit:contain;border:0;}
+          .front-cover-church{margin:0;font-size:var(--print-font-size-meta);text-transform:uppercase;}
+          .front-cover-title{margin:.08rem 0 0;font-size:calc(var(--print-font-size-cover-title) * 1.24);text-transform:uppercase;}
+          .front-cover-subtitle{margin:.03rem 0 .08rem;font-size:var(--print-font-size-meta);}
+          .front-cover-sermon{margin:.08rem 0 0;font-size:var(--print-font-size-section-title);font-weight:700;}
+          .front-cover-speaker,.front-cover-date,.front-cover-note{margin:.02rem 0 0;font-size:var(--print-font-size-body);}
+          .front-cover-note{font-style:italic;}
+          .front-image-panel{width:100%;height:100%;min-height:100%;display:block;line-height:0;}
+          .front-image-panel img{width:100%;height:100%;min-height:100%;display:block;object-fit:var(--front-image-fit);object-position:var(--front-image-position);border:0;}
+          .sec{margin-bottom:.2rem;}
+          .sec-title{margin:0 0 .13rem;font-size:var(--print-font-size-section-title);font-weight:700;text-transform:uppercase;}
+          .announcement-list{margin:0;padding-left:1rem;}
+          .announcement-list li{margin:0 0 .11rem;font-size:var(--print-font-size-body);}
+          .list-rows{display:block;}
+          .list-row-2,.list-row-3{position:relative;display:grid;align-items:baseline;gap:.3rem;font-size:var(--print-font-size-body);padding:.04rem 0 .12rem;}
+          .list-row-2.with-underline::after,.list-row-3.with-underline::after{content:"";position:absolute;left:0;right:0;bottom:0;border-bottom:1px dotted #a4a4a4;pointer-events:none;}
+          .list-row-2.no-underline::after,.list-row-3.no-underline::after{content:none;}
+          .list-row-2{grid-template-columns:1fr auto;}
+          .list-row-3{grid-template-columns:1fr 1fr 1fr;}
+          .list-row-2 span:nth-child(2),.list-row-3 span:nth-child(3){text-align:right;white-space:nowrap;}
+          .list-row-3 span:nth-child(2){text-align:center;}
+          .text-block{white-space:pre-wrap;font-size:var(--print-font-size-body);line-height:1.28;margin:0;}
+          .image-wrap{margin-top:var(--image-margin-top);margin-bottom:var(--image-margin-bottom);text-align:var(--image-align);}
+          .image-wrap img{display:inline-block;width:auto;height:auto;max-width:var(--print-image-max-width);max-height:var(--print-image-max-height);object-fit:contain;border:0;}
+          .rule{border-top:1px solid #000;margin:.2rem 0;}
+          @page{size:${isTriFold ? "legal" : "Letter"} landscape;margin:var(--print-page-margin-top) var(--print-page-margin-right) var(--print-page-margin-bottom) var(--print-page-margin-left);}
+        </style></head><body>${printHtml}${autoPrintScript}</body></html>`;
+
+        const win = window.open("", "_blank");
+        if (!win) {
+          alert("Please allow popups to export PDF.");
+          return;
+        }
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+      }
+
+      function getWordPageSections(state) {
+        if (layoutMode === "trifold-legal") {
+          const tri = { "front-left": [], "front-center": [], "front-right": [], "back-left": [], "back-center": [], "back-right": [] };
+          const frontImageOwner = getFrontImageOwner(state.sections);
+          const frontImageActive = !!(frontImageOwner && frontImageOwner.visible);
+          (state.sections || []).forEach(section => {
+            if (!section || !section.visible || sectionIsEmpty(section)) return;
+            if (section.kind === "dynamic" && section.type === "front-image") {
+              if (!frontImageOwner || section.id !== frontImageOwner.id) return;
+              tri["front-right"] = [section];
+              return;
+            }
+            if (frontImageActive && section.placement === "front-right") return;
+            const key = TRI_FOLD_PLACEMENTS.includes(section.placement) ? section.placement : "back-center";
+            tri[key].push(section);
+          });
+          return tri;
+        }
+        const pageBuckets = { page1: [], page2: [], page3: [], page4: [] };
+        const frontImageOwner = getFrontImageOwner(state.sections);
+        const frontImageActive = !!(frontImageOwner && frontImageOwner.visible);
+        (state.sections || []).forEach(section => {
+          if (!section || !section.visible || sectionIsEmpty(section)) return;
+          if (section.kind === "dynamic" && section.type === "front-image") {
+            if (!frontImageOwner || section.id !== frontImageOwner.id) return;
+            pageBuckets.page1 = [section];
+            return;
+          }
+          if (frontImageActive && section.placement === "front-cover") return;
+          const key = placementMap[section.placement] || "page2";
+          pageBuckets[key].push(section);
+        });
+        return pageBuckets;
+      }
+
+      function textToWordParagraphs(text) {
+        return String(text || "").split(/\r?\n/).map(line => `<p style="margin:0 0 6pt 0;line-height:1.25;">${esc(line)}</p>`).join("") || `<p style="margin:0 0 6pt 0;line-height:1.25;"></p>`;
+      }
+
+      async function getDefaultFrontImageDataUrl() {
+        if (defaultFrontImageDataUrlCache) return defaultFrontImageDataUrlCache;
+        if (defaultFrontImageDataUrlPromise) return defaultFrontImageDataUrlPromise;
+        defaultFrontImageDataUrlPromise = (async () => {
+          try {
+            const response = await fetch(FRONT_IMAGE_DEFAULT_SRC);
+            if (!response.ok) throw new Error(`Failed to fetch default image: ${response.status}`);
+            const blob = await response.blob();
+            const dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result || ""));
+              reader.onerror = () => reject(new Error("Failed to read default image data."));
+              reader.readAsDataURL(blob);
+            });
+            defaultFrontImageDataUrlCache = dataUrl;
+            return dataUrl;
+          } catch (error) {
+            console.warn("Default front image conversion failed for Word export.", error);
+            return "";
+          } finally {
+            defaultFrontImageDataUrlPromise = null;
+          }
+        })();
+        return defaultFrontImageDataUrlPromise;
+      }
+
+      async function resolveExportImageSrc(src) {
+        const raw = String(src || "").trim();
+        if (!raw) return "";
+        if (/^data:/i.test(raw)) return raw;
+        if (raw === FRONT_IMAGE_DEFAULT_SRC) {
+          const embedded = await getDefaultFrontImageDataUrl();
+          return embedded || raw;
+        }
+        if (exportImageDataUrlCache.has(raw)) return exportImageDataUrlCache.get(raw) || raw;
+        try {
+          const response = await fetch(raw, { mode: "cors" });
+          if (!response.ok) throw new Error(`Image fetch failed: ${response.status}`);
+          const blob = await response.blob();
+          const embedded = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(new Error("Failed to read image data."));
+            reader.readAsDataURL(blob);
+          });
+          const finalSrc = embedded || raw;
+          exportImageDataUrlCache.set(raw, finalSrc);
+          return finalSrc;
+        } catch {
+          exportImageDataUrlCache.set(raw, raw);
+          return raw;
+        }
+      }
+
+      async function buildResolvedPrintState(state) {
+        const source = migrateLegacyState(state && typeof state === "object" ? state : getState());
+        const nextState = JSON.parse(JSON.stringify(source));
+        const tasks = [];
+        (nextState.sections || []).forEach(section => {
+          if (!section || !section.data) return;
+          if (section.type === "image" || section.type === "front-image") {
+            tasks.push((async () => {
+              const src = String((section.data && section.data.src) || "").trim() || (section.type === "front-image" ? FRONT_IMAGE_DEFAULT_SRC : "");
+              if (!src) return;
+              const resolved = await resolveExportImageSrc(src);
+              if (resolved) section.data.src = resolved;
+            })());
+          }
+          if (section.kind === "church-info" && section.data.logoUrl) {
+            tasks.push((async () => {
+              const resolved = await resolveExportImageSrc(section.data.logoUrl);
+              if (resolved) section.data.logoUrl = resolved;
+            })());
+          }
+        });
+        await Promise.all(tasks);
+        return nextState;
+      }
+
+      async function buildWordImageHtml(src, alt, options = {}) {
+        const resolvedSrc = await resolveExportImageSrc(src);
+        if (!resolvedSrc) return "";
+        const safeAlt = String(alt || "").trim() || "Bulletin image";
+        const maxWidth = options.maxWidth || APP_CONFIG.wordExportImage.wordImageMaxWidth;
+        const maxHeight = options.maxHeight || APP_CONFIG.wordExportImage.wordImageMaxHeight;
+        const marginTop = options.marginTop || APP_CONFIG.image.marginTop;
+        const marginBottom = options.marginBottom || APP_CONFIG.image.marginBottom;
+        return `<div style="margin:${esc(marginTop)} 0 ${esc(marginBottom)} 0;text-align:center;line-height:0;">
+          <img src="${esc(resolvedSrc)}" alt="${esc(safeAlt)}" style="display:inline-block;border:0;max-width:${esc(maxWidth)};max-height:${esc(maxHeight)};width:auto;height:auto;" />
+        </div>`;
+      }
+
+      async function buildWordFrontImageHtml(src, alt) {
+        const safeSrc = String(src || "").trim() || FRONT_IMAGE_DEFAULT_SRC;
+        const safeAlt = String(alt || "").trim() || "Front cover image";
+        return buildWordImageHtml(safeSrc, safeAlt, {
+          maxWidth: APP_CONFIG.wordExportImage.wordFrontImageMaxWidth,
+          maxHeight: APP_CONFIG.wordExportImage.wordFrontImageMaxHeight,
+          marginTop: "0",
+          marginBottom: "0"
+        });
+      }
+
+      async function buildWordSectionHtml(section) {
+        if (!section || sectionIsEmpty(section)) return "";
+        if (section.kind === "church-info") {
+          const contactLines = [section.data.churchWebsite, section.data.churchEmail, section.data.churchPhone].filter(v => String(v || "").trim());
+          const dateLine = formatDate(section.data.bulletinDate) || "Sabbath Bulletin";
+          return `<div style="margin:0 0 10pt 0;">
+            <div style="text-align:center;border-bottom:1px solid #000;padding:0 0 7pt 0;margin:0 0 8pt 0;">
+              ${section.data.logoUrl ? `<p style="margin:0 0 6pt 0;text-align:center;"><img src="${esc(section.data.logoUrl)}" alt="Church logo" style="max-width:76px;max-height:76px;border:0;" /></p>` : ""}
+              <p style="margin:0;text-align:center;font-size:${esc(TYPOGRAPHY.printCoverTitle)};font-weight:700;text-transform:uppercase;">${esc(section.data.churchName || "Church Name")}</p>
+              ${contactLines.length ? `<p style="margin:5pt 0 0 0;text-align:center;font-size:${esc(TYPOGRAPHY.printMeta)};">${esc(contactLines.join(" | "))}</p>` : ""}
+              ${section.data.churchAddress ? `<p style="margin:3pt 0 0 0;text-align:center;font-size:${esc(TYPOGRAPHY.printMeta)};">${esc(section.data.churchAddress)}</p>` : ""}
+              <p style="margin:5pt 0 0 0;text-align:center;font-size:${esc(TYPOGRAPHY.printMeta)};font-weight:700;">${esc(dateLine)}</p>
+            </div>
+            ${section.data.bulletinTitle ? `<p style="margin:0 0 6pt 0;text-align:center;font-weight:700;">${esc(section.data.bulletinTitle)}</p>` : ""}
+          </div>`;
+        }
+        if (section.kind === "sermon-info") {
+          const sermonTitle = String(section.data.sermonTitle || "").trim();
+          const speaker = String(section.data.speaker || "").trim();
+          if (!sermonTitle && !speaker) return "";
+          return `<div style="margin:0 0 10pt 0;">
+            <p style="margin:0 0 5pt 0;font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Sermon Information")}</p>
+            ${sermonTitle ? `<p style="margin:0 0 4pt 0;font-weight:700;line-height:1.25;">${esc(sermonTitle)}</p>` : ""}
+            ${speaker ? `<p style="margin:0 0 4pt 0;line-height:1.25;">${esc(speaker)}</p>` : ""}
+          </div>`;
+        }
+        if (section.type === "announcement") {
+          const items = (section.data.items || []).map(v => String(v || "").trim()).filter(Boolean);
+          if (!items.length) return "";
+          return `<div style="margin:0 0 10pt 0;">
+            <p style="margin:0 0 5pt 0;font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Section")}</p>
+            <ul style="margin:0 0 0 18pt;padding:0;">${items.map(v => `<li style="margin:0 0 4pt 0;line-height:1.25;">${esc(v)}</li>`).join("")}</ul>
+          </div>`;
+        }
+        if (section.type === "list") {
+          const cols = section.data.columns === 3 ? 3 : 2;
+          const rows = normalizeListRows(section.data.rows).filter(r => r.cells.some(v => String(v || "").trim()));
+          if (!rows.length) return "";
+          const rowHtml = rows.map(row => {
+            const borderStyle = row.underline ? "border-bottom:1px dotted #a4a4a4;" : "border-bottom:none;";
+            if (cols === 3) {
+              return `<tr>
+                <td style="width:33.33%;padding:1pt 2pt 1pt 0;text-align:left;vertical-align:top;${borderStyle}">${esc(row.cells[0] || "")}</td>
+                <td style="width:33.33%;padding:1pt 2pt;text-align:center;vertical-align:top;${borderStyle}">${esc(row.cells[1] || "")}</td>
+                <td style="width:33.33%;padding:1pt 0 1pt 2pt;text-align:right;vertical-align:top;white-space:nowrap;${borderStyle}">${esc(row.cells[2] || "")}</td>
+              </tr>`;
+            }
+            return `<tr>
+              <td style="width:64%;padding:1pt 2pt 1pt 0;text-align:left;vertical-align:top;${borderStyle}">${esc(row.cells[0] || "")}</td>
+              <td style="width:36%;padding:1pt 0 1pt 2pt;text-align:right;vertical-align:top;white-space:nowrap;${borderStyle}">${esc(row.cells[1] || "")}</td>
+            </tr>`;
+          }).join("");
+          return `<div style="margin:0 0 10pt 0;">
+            <p style="margin:0 0 5pt 0;font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Section")}</p>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;width:100%;table-layout:fixed;">
+              ${rowHtml}
+            </table>
+          </div>`;
+        }
+        if (section.type === "image") {
+          const src = String(section.data.src || "").trim();
+          if (!src) return "";
+          const alt = String(section.data.alt || "").trim() || "Bulletin image";
+          return buildWordImageHtml(src, alt);
+        }
+        if (section.type === "front-image") {
+          const src = String((section.data && section.data.src) || "").trim() || FRONT_IMAGE_DEFAULT_SRC;
+          const alt = String((section.data && section.data.alt) || "").trim() || "Front cover image";
+          const imageHtml = await buildWordFrontImageHtml(src, alt);
+          return `<div style="width:100%;height:100%;text-align:center;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            ${imageHtml}
+          </div>`;
+        }
+        const content = String(section.data.content || "").trim();
+        if (!content) return "";
+        return `<div style="margin:0 0 10pt 0;">
+          <p style="margin:0 0 5pt 0;font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Section")}</p>
+          ${textToWordParagraphs(content)}
+        </div>`;
+      }
+
+      async function buildWordPanelHtml(sectionsForPage) {
+        const sectionHtml = await Promise.all((sectionsForPage || []).map(buildWordSectionHtml));
+        return sectionHtml.join("");
+      }
+
+      function buildWordSheetTable(leftHtml, rightHtml, rightIsFrontImage) {
+        const panel = APP_CONFIG.panelPadding;
+        const leftPad = `padding:${esc(panel.top)} ${esc(panel.leftPanelRight)} ${esc(panel.bottom)} ${esc(panel.leftPanelLeft)};`;
+        const rightPad = rightIsFrontImage ? "padding:0;" : `padding:${esc(panel.top)} ${esc(panel.rightPanelRight)} ${esc(panel.bottom)} ${esc(panel.rightPanelLeft)};`;
+        return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;margin:0;">
+          <tr>
+            <td style="width:50%;vertical-align:top;height:7.7in;${leftPad}font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${leftHtml || ""}</td>
+            <td style="width:50%;vertical-align:top;height:7.7in;${rightPad}font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${rightHtml || ""}</td>
+          </tr>
+        </table>`;
+      }
+
+      function buildWordTriFoldTable(leftHtml, centerHtml, rightHtml, rightIsFrontImage) {
+        const tri = APP_CONFIG.triFold;
+        const panelPad = `padding:${esc(tri.panelPaddingTop)} ${esc(tri.panelPaddingRight)} ${esc(tri.panelPaddingBottom)} ${esc(tri.panelPaddingLeft)};`;
+        const rightPad = rightIsFrontImage ? "padding:0;" : panelPad;
+        return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;margin:0;">
+          <tr>
+            <td style="width:${esc(tri.wordPanelWidth)};vertical-align:top;height:7.7in;${panelPad}font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${leftHtml || ""}</td>
+            <td style="width:${esc(tri.wordPanelWidth)};vertical-align:top;height:7.7in;${panelPad}font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${centerHtml || ""}</td>
+            <td style="width:${esc(tri.wordPanelWidth)};vertical-align:top;height:7.7in;${rightPad}font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${rightHtml || ""}</td>
+          </tr>
+        </table>`;
+      }
+
+      async function buildWordDocument(state) {
+        const pages = getWordPageSections(state);
+        if (layoutMode === "trifold-legal") {
+          const frontTable = buildWordTriFoldTable(
+            await buildWordPanelHtml(pages["front-left"]),
+            await buildWordPanelHtml(pages["front-center"]),
+            await buildWordPanelHtml(pages["front-right"]),
+            !!(pages["front-right"].length && pages["front-right"][0].type === "front-image")
+          );
+          const backTable = buildWordTriFoldTable(
+            await buildWordPanelHtml(pages["back-left"]),
+            await buildWordPanelHtml(pages["back-center"]),
+            await buildWordPanelHtml(pages["back-right"]),
+            false
+          );
+          return `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="UTF-8"><meta name="ProgId" content="Word.Document"><meta name="Generator" content="Microsoft Word"><title>Church Bulletin</title>
+          <style>
+            @page SectionLandscape { size:14in 8.5in; mso-page-orientation:landscape; margin:${APP_CONFIG.printPageMargin.top} ${APP_CONFIG.printPageMargin.right} ${APP_CONFIG.printPageMargin.bottom} ${APP_CONFIG.printPageMargin.left}; }
+            div.word-section { page: SectionLandscape; }
+          </style></head><body style="margin:0;padding:0;font-family:Georgia,'Times New Roman',serif;color:#000;font-size:${esc(TYPOGRAPHY.wordBody)};">
+            <div class="word-section">${frontTable}</div>
+            <div style="page-break-before:always;"></div>
+            <div class="word-section">${backTable}</div>
+          </body></html>`;
+        }
+        const outerTable = buildWordSheetTable(
+          await buildWordPanelHtml(pages.page4),
+          await buildWordPanelHtml(pages.page1),
+          !!(pages.page1.length && pages.page1[0].type === "front-image")
+        );
+        const innerTable = buildWordSheetTable(
+          await buildWordPanelHtml(pages.page2),
+          await buildWordPanelHtml(pages.page3),
+          false
+        );
+        return `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="UTF-8"><meta name="ProgId" content="Word.Document"><meta name="Generator" content="Microsoft Word"><title>Church Bulletin</title>
+        <style>
+          @page SectionLandscape { size:11in 8.5in; mso-page-orientation:landscape; margin:${APP_CONFIG.printPageMargin.top} ${APP_CONFIG.printPageMargin.right} ${APP_CONFIG.printPageMargin.bottom} ${APP_CONFIG.printPageMargin.left}; }
+          div.word-section { page: SectionLandscape; }
+        </style></head><body style="margin:0;padding:0;font-family:Georgia,'Times New Roman',serif;color:#000;font-size:${esc(TYPOGRAPHY.wordBody)};">
+          <div class="word-section">${outerTable}</div>
+          <div style="page-break-before:always;"></div>
+          <div class="word-section">${innerTable}</div>
+        </body></html>`;
+      }
+
+      async function downloadWordDoc() {
+        const state = getState();
+        const doc = await buildWordDocument(state);
+        const blob = new Blob(["﻿", doc], { type: "application/msword" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "church-bulletin.doc";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      async function copyWordPressHtml() {
+        const html = buildWordPressHtml(getState());
+        try {
+          await navigator.clipboard.writeText(html);
+          const btn = document.getElementById("copyHtmlBtn");
+          const old = btn.textContent;
+          btn.textContent = "Copied HTML";
+          setTimeout(() => { btn.textContent = old; }, 1200);
+        } catch {
+          alert("Copy failed. Select and copy manually from WordPress HTML tab.");
+        }
+      }
+
+      function bindEvents() {
+        layoutModeSelect.addEventListener("change", event => {
+          applyLayoutMode(event.target.value);
+          commitEditorRefresh();
+        });
+        document.getElementById("addSectionBtn").addEventListener("click", addSection);
+        document.getElementById("loadSampleBtn").addEventListener("click", loadSampleData);
+        document.getElementById("resetBtn").addEventListener("click", resetAll);
+        document.getElementById("printBtn").addEventListener("click", async () => {
+          try {
+            await openPrintWindow(getState());
+          } catch (error) {
+            alert(error && error.message ? error.message : "Could not open print view.");
+          }
+        });
+        document.getElementById("pdfBtn").addEventListener("click", async () => {
+          try {
+            await openPrintWindow(getState());
+          } catch (error) {
+            alert(error && error.message ? error.message : "Could not generate PDF export.");
+          }
+        });
+        document.getElementById("wordBtn").addEventListener("click", downloadWordDoc);
+        document.getElementById("exportJsonBtn").addEventListener("click", () => downloadJson(exportJsonState()));
+        document.getElementById("importJsonBtn").addEventListener("click", () => {
+          document.getElementById("importJsonInput").click();
+        });
+        document.getElementById("importJsonInput").addEventListener("change", async event => {
+          const input = event.target;
+          const file = input.files && input.files[0];
+          if (!file) return;
+          try {
+            await importJsonFile(file);
+          } catch (error) {
+            alert(error && error.message ? error.message : "Could not import that bulletin file.");
+          } finally {
+            input.value = "";
+          }
+        });
+        document.getElementById("copyHtmlBtn").addEventListener("click", copyWordPressHtml);
+
+        tabs.forEach(tab => {
+          tab.addEventListener("click", () => {
+            currentTab = tab.dataset.tab;
+            tabs.forEach(t => t.classList.toggle("active", t === tab));
+            renderPreviews();
+          });
+        });
+      }
+
+      applyBackendCssVars();
+      bindEvents();
+      if (!loadState()) applyState(getSampleState());
+      renderEditor();
+      commitPreviewOnly();
+    })();
+  </script>
+
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

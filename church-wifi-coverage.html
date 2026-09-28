@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    - Google Fonts - optional, falls back to system fonts
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Church Network & WiFi Estimator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#f4f7f9;
+      --surface:#ffffff;
+      --surface-soft:#f7fafb;
+      --text-main:#1a2b3c;
+      --text-muted:#5e7185;
+      --primary:#087e8b;
+      --primary-dark:#0b3954;
+      --border:#dfe8ed;
+      --border-strong:#c8d7e1;
+      --shadow-md:0 18px 40px rgba(11,57,84,.08);
+    }
+    *{box-sizing:border-box}
+    html{color-scheme:light}
+    body{
+      margin:0;
+      padding:1rem;
+      min-height:100vh;
+      overflow-x:hidden;
+      background:
+        radial-gradient(circle at top right,rgba(8,126,139,.08),transparent 32%),
+        linear-gradient(180deg,#f9fbfc,var(--bg));
+      color:var(--text-main);
+      font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      line-height:1.5;
+    }
+    .wrap{max-width:1180px;margin:0 auto}
+    .hero,.panel,.results{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-md)}
+    .hero{padding:1.25rem 1.35rem;margin-bottom:1rem;background:radial-gradient(circle at 100% 0,rgba(8,126,139,.12),transparent 42%),#fff}
+    .panel{padding:1rem}
+    .eyebrow{font-size:.74rem;letter-spacing:2px;text-transform:uppercase;color:var(--primary);font-weight:800}
+    h1{margin:.35rem 0 .5rem;font:800 clamp(1.7rem,4vw,2.55rem)/1.08 'Syne',sans-serif;color:var(--primary-dark)}
+    h2{margin:.15rem 0 .7rem;font:700 1.08rem/1.2 'Syne',sans-serif;color:var(--primary-dark)}
+    p{margin:.25rem 0;color:var(--text-muted);line-height:1.55}
+    .hero-actions{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:1rem}
+    .step{margin-bottom:1rem;border:1px solid var(--border);background:linear-gradient(180deg,#fff,#fbfdfe);border-radius:14px;padding:.95rem}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+    .field{display:flex;flex-direction:column;gap:.35rem}
+    label{font-size:.84rem;font-weight:700;color:#2b4f64}
+    select,input,textarea{width:100%;min-width:0;border:1px solid var(--border-strong);background:#fff;border-radius:10px;padding:.68rem .74rem;font:inherit;color:var(--text-main)}
+    input[type="checkbox"]{width:auto}
+    textarea{min-height:72px;resize:vertical}
+    select:focus,input:focus,textarea:focus,button:focus-visible{outline:3px solid rgba(8,126,139,.18);outline-offset:1px;border-color:var(--primary)}
+    .check-label{display:flex;gap:.45rem;align-items:flex-start}
+    .helper,.warning,.success{font-size:.84rem;border-radius:10px;padding:.62rem .72rem;margin-top:.55rem;line-height:1.45}
+    .helper{background:#edf8f8;color:#2c5d68;border:1px solid #cce7e8}
+    .warning{display:none;background:#fff5e8;color:#794500;border:1px solid #f2d5aa}
+    .success{background:#effaf4;color:#155f3e;border:1px solid #bfe4cf}
+    .estimate-notice{margin-top:.9rem;padding:.75rem .85rem;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;color:#1e3a5f;font-size:.86rem;line-height:1.5}
+    .estimate-notice strong{color:var(--primary-dark)}
+    .results{padding:1rem;margin-top:1rem;display:none}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem}
+    .stat{border:1px solid var(--border);background:#fff;border-radius:12px;padding:.75rem}
+    .stat strong{display:block;font-size:.7rem;letter-spacing:1px;text-transform:uppercase;color:var(--primary);margin-bottom:.2rem}
+    .recommendation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;margin-top:.8rem}
+    .recommendation-card{border:1px solid var(--border);border-radius:13px;padding:.8rem;background:#fbfdfe}
+    .recommendation-card strong{display:block;color:var(--primary-dark);margin-bottom:.3rem}
+    .recommendation-card p{font-size:.88rem}
+    .actions{display:flex;gap:.65rem;flex-wrap:wrap;margin-top:1rem}
+    button,a.back{border:1px solid transparent;border-radius:999px;padding:.72rem 1rem;font:700 .9rem 'Manrope',sans-serif;cursor:pointer;text-decoration:none}
+    button{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+    button.alt{background:#edf6fa;border-color:#d2e3ec;color:#23495d}
+    a.back{display:inline-flex;align-items:center;justify-content:center;background:#f4f8fa;border-color:#d5e2ea;color:var(--primary-dark)}
+    button:hover{filter:brightness(.97);transform:translateY(-1px)}
+    .fine-print{font-size:.78rem;margin-top:.7rem}
+    @media (max-width:900px){.grid,.stats,.recommendation-grid{grid-template-columns:1fr}}
+    @media print{
+      body{padding:0;background:#fff}
+      .hero,.step,.panel>.actions,.fine-print{display:none!important}
+      .panel{display:block;padding:0;border:0;box-shadow:none}
+      .results{display:block!important;margin:0;padding:0;border:0;box-shadow:none}
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">IMSDA Church Consulting</div>
+      <h1>Church Network & WiFi Estimator</h1>
+      <p>Answer a few questions about the building and expected use. The estimator will recommend a network stack, router size, and access point count, then carry those choices into the Network Quote Request Generator.</p>
+      <div class="estimate-notice"><strong>Planning estimate:</strong> This tool intentionally provides a conservative estimate and may recommend more capacity than the final design requires. Device models, quantities, and the network stack may change after a site review. Contact the IMSDA technology team if you would like help finalizing your network design.</div>
+    </section>
+
+    <section class="panel">
+      <div class="step">
+        <h2>1. Building profile</h2>
+        <div class="grid">
+          <div class="field"><label for="buildingSize">Approximate building size (sq ft)</label><input id="buildingSize" type="number" min="500" step="100" value="6000" /></div>
+          <div class="field"><label for="floors">Number of floors</label><input id="floors" type="number" min="1" max="10" step="1" value="1" /></div>
+          <div class="field"><label for="construction">Wall / construction difficulty</label><select id="construction"><option value="easy">Easy — drywall and open ceilings</option><option value="medium" selected>Medium — block walls or separated wings</option><option value="hard">Hard — concrete, brick, plaster, or additions</option></select></div>
+          <div class="field"><label for="internetSpeed">Internet connection</label><select id="internetSpeed"><option value="500">Up to 500 Mbps</option><option value="1000" selected>Up to 1 Gbps</option><option value="2500">1–2.5 Gbps</option><option value="5000">Faster than 2.5 Gbps</option></select></div>
+          <div class="field" style="grid-column:1/-1"><label for="layoutNotes">Layout notes (optional)</label><textarea id="layoutNotes" placeholder="Separate wings, balcony, basement, thick walls, detached classrooms…"></textarea></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <h2>2. People, devices, and network use</h2>
+        <div class="grid">
+          <div class="field"><label for="peakPeople">Peak attendance</label><input id="peakPeople" type="number" min="0" step="10" value="150" /></div>
+          <div class="field"><label for="peakDevices">Estimated devices online at once</label><input id="peakDevices" type="number" min="0" step="5" value="75" /></div>
+          <div class="field"><label for="wiredDevices">Wired devices (computers, cameras, AV, printers)</label><input id="wiredDevices" type="number" min="0" step="1" value="8" /></div>
+          <div class="field"><label for="usage">Typical demand</label><select id="usage"><option value="basic">Basic browsing and office use</option><option value="event" selected>Worship, events, AV control, and guests</option><option value="high">High-density events or school devices</option></select></div>
+          <label class="check-label"><input id="livestream" type="checkbox" checked /> Livestreaming or cloud video production runs on this network</label>
+          <label class="check-label"><input id="cameras" type="checkbox" /> The network will support IP security cameras</label>
+        </div>
+      </div>
+
+      <div class="step">
+        <h2>3. Areas that need WiFi</h2>
+        <div class="grid">
+          <div class="field"><label class="check-label"><input type="checkbox" id="sanctuaryNeed" checked /> Sanctuary / worship center</label><input id="sanctuaryCapacity" type="number" min="0" placeholder="Seating capacity" value="150" /><select id="sanctuaryUsage"><option value="basic">Basic guest browsing</option><option value="av" selected>Guests plus AV/control devices</option><option value="dense">High-density events</option></select></div>
+          <div class="field"><label class="check-label"><input type="checkbox" id="fellowshipNeed" checked /> Fellowship hall / gym</label><input id="fellowshipSize" type="number" min="0" placeholder="Approximate square feet" value="2000" /><select id="fellowshipUsage"><option value="small">Small gatherings</option><option value="events" selected>Meals and events</option><option value="dense">High-density or gym use</option></select></div>
+          <div class="field"><label class="check-label"><input type="checkbox" id="classNeed" checked /> Classrooms</label><input id="classrooms" type="number" min="0" placeholder="Number of classrooms" value="4" /><select id="classUsage"><option value="occasional">Occasional use</option><option value="regular" selected>Regular class devices</option><option value="one2one">1:1 school devices</option></select></div>
+          <div class="field"><label class="check-label"><input type="checkbox" id="officeNeed" checked /> Offices</label><input id="offices" type="number" min="0" placeholder="Number of offices" value="2" /><select id="officeUsage"><option value="staff" selected>Staff phones and laptops</option><option value="heavy">Heavy administrative use</option></select></div>
+          <div class="field"><label class="check-label"><input type="checkbox" id="lobbyNeed" checked /> Lobby and hallways</label><select id="lobbyUsage"><option value="entry">Entry / lobby only</option><option value="extended" selected>Extended hallways or multiple wings</option></select></div>
+          <div class="field"><label class="check-label"><input type="checkbox" id="outdoorNeed" /> Outdoor WiFi</label><select id="outdoorArea"><option value="entrance">Main entrance</option><option value="courtyard">Courtyard / patio</option><option value="playground">Playground</option><option value="parking">Parking area</option></select></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <h2>4. Equipment preference</h2>
+        <div class="grid">
+          <div class="field"><label for="stack">Preferred system</label><select id="stack"><option value="unsure" selected>Recommend the best fit</option><option value="unifi">UniFi</option><option value="tplink">TP-Link Omada</option><option value="allinone">All-in-one WiFi router, if suitable</option></select></div>
+          <div class="field"><label for="priority">Preferred ecosystem when either fits</label><select id="priority"><option value="tplink">TP-Link Omada</option><option value="unifi">UniFi</option><option value="simple" selected>Simplest suitable system</option></select></div>
+        </div>
+        <div id="aioWarning" class="warning">All-in-one equipment is recommended only for a small, simple, single-floor building with one WiFi coverage zone.</div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="calcBtn">Get Recommendation</button>
+        <button class="alt" type="button" id="resetBtn">Reset</button>
+        <button class="alt" type="button" id="printBtn">Print / Save Summary</button>
+      </div>
+      <p class="fine-print">Final AP placement should be confirmed with a walkthrough or RF survey, especially in hard construction or high-density spaces.</p>
+      <section id="results" class="results" aria-live="polite"></section>
+    </section>
+  </main>
+
+  <script>
+    const $=(id)=>document.getElementById(id);
+    const num=(id)=>Math.max(0,Number($(id).value)||0);
+    const on=(id)=>$(id).checked;
+    const val=(id)=>$(id).value;
+    const CLASS_RATIO={easy:{occasional:5,regular:4,one2one:2},medium:{occasional:4,regular:3,one2one:2},hard:{occasional:3,regular:2,one2one:1}};
+    const OFFICE_RATIO={easy:{staff:6,heavy:4},medium:{staff:5,heavy:3},hard:{staff:4,heavy:2}};
+
+    function chooseRouter(stack,devices,speed,complexity){
+      if(stack==='all-in-one') return devices>30||speed>1000?'udr7':'er706w';
+      if(stack==='tplink'){
+        if(speed>2500||devices>350) return 'er8411';
+        if(speed>1000||devices>200) return 'er7412';
+        if(devices>100||complexity>=5) return 'er7206';
+        if(devices>50) return 'er707';
+        return 'er605';
+      }
+      if(speed>1000) return 'gateway-fiber';
+      if(devices>150||complexity>=7) return 'udm-pro';
+      if(devices>75||complexity>=5) return 'gateway-max';
+      return 'gateway-ultra';
+    }
+
+    function routerLabel(id){
+      return {
+        udr7:'UniFi Dream Router 7 (all-in-one)',er706w:'TP-Link ER706W (all-in-one)',
+        er605:'TP-Link ER605',er707:'TP-Link ER707-M2',er7206:'TP-Link ER7206',
+        er7412:'TP-Link ER7412-M2',er8411:'TP-Link ER8411',
+        'gateway-ultra':'UniFi Cloud Gateway Ultra','gateway-max':'UniFi Gateway Max','gateway-fiber':'UniFi Gateway Fiber','udm-pro':'UniFi Dream Machine Pro'
+      }[id]||id;
+    }
+
+    function calculate(){
+      const construction=val('construction'),size=num('buildingSize'),floors=Math.max(1,num('floors'));
+      const devices=num('peakDevices'),people=num('peakPeople'),speed=num('internetSpeed');
+      let indoor=0,outdoor=0,complexity=0;
+      const notes=[],warnings=[];
+
+      if(on('sanctuaryNeed')){
+        const capacity=num('sanctuaryCapacity'),usage=val('sanctuaryUsage');
+        let count=1;
+        if(capacity>350||usage==='dense') count=3;
+        else if(capacity>150||usage==='av'||construction==='hard') count=2;
+        indoor+=count; complexity+=usage==='dense'?3:1;
+        notes.push(`Sanctuary: ${count} AP${count===1?'':'s'}; avoid mounting excessively high without a placement review.`);
+      }
+      if(on('fellowshipNeed')){
+        const area=num('fellowshipSize'),usage=val('fellowshipUsage');
+        let count=1;
+        if(area>5000||usage==='dense') count=3;
+        else if(area>2500||usage==='events'||construction==='hard') count=2;
+        indoor+=count; complexity+=usage==='dense'?2:1; notes.push(`Fellowship hall / gym: ${count} AP${count===1?'':'s'}.`);
+      }
+      if(on('classNeed')){
+        const ratio=CLASS_RATIO[construction][val('classUsage')],count=Math.ceil(num('classrooms')/ratio);
+        indoor+=count; complexity+=val('classUsage')==='one2one'?3:1;
+        if(count) notes.push(`Classrooms: ${count} AP${count===1?'':'s'} (about one per ${ratio} rooms).`);
+      }
+      if(on('officeNeed')){
+        const ratio=OFFICE_RATIO[construction][val('officeUsage')],count=Math.ceil(num('offices')/ratio);
+        indoor+=count; if(count) notes.push(`Offices: ${count} AP${count===1?'':'s'}.`);
+      }
+      if(on('lobbyNeed')){
+        const count=val('lobbyUsage')==='extended'||construction==='hard'?2:1;
+        indoor+=count; notes.push(`Lobby / hallways: ${count} AP${count===1?'':'s'}.`);
+      }
+      if(on('outdoorNeed')){
+        outdoor={entrance:1,courtyard:1,playground:2,parking:2}[val('outdoorArea')]||1;
+        notes.push(`Outdoor: ${outdoor} outdoor-rated AP${outdoor===1?'':'s'}.`);
+      }
+
+      const coverageRate={easy:3200,medium:2400,hard:1700}[construction];
+      const sizeFloor=Math.ceil(size/coverageRate);
+      indoor=Math.max(indoor,sizeFloor);
+      if(sizeFloor>0) notes.push(`Building-size check: at least ${sizeFloor} indoor coverage zone${sizeFloor===1?'':'s'} for ${size.toLocaleString()} sq ft.`);
+      if(floors>1){indoor=Math.max(indoor,floors);complexity+=2;warnings.push('Confirm AP placement separately on each floor.');}
+      if(devices>150||people>300){indoor=Math.max(indoor,Math.ceil(devices/45));complexity+=2;warnings.push('Capacity, not just square footage, affects AP count during peak events.');}
+      if(val('usage')==='high'){indoor=Math.max(indoor,Math.ceil(devices/35));complexity+=3;}
+      if(on('livestream')) complexity+=1;
+      if(on('cameras')) complexity+=2;
+      if(construction==='hard'){complexity+=2;warnings.push('Hard wall materials may require more APs at lower transmit power.');}
+
+      const separateApTotal=indoor+outdoor;
+      const allInOneEligible=size<=3500&&floors===1&&construction!=='hard'&&devices<=40&&outdoor===0&&separateApTotal<=2&&!on('cameras')&&val('usage')!=='high';
+      const preference=val('stack');
+      let recommendedStack;
+      if(preference==='unifi'||preference==='tplink') recommendedStack=preference;
+      else if(preference==='allinone'&&allInOneEligible) recommendedStack='all-in-one';
+      else if(preference==='allinone'&&!allInOneEligible){recommendedStack='unifi';warnings.push('The building needs more coverage or capacity than an all-in-one router should handle.');}
+      else if(allInOneEligible&&val('priority')==='simple') recommendedStack='all-in-one';
+      else recommendedStack=val('priority')==='tplink'?'tplink':'unifi';
+
+      if(recommendedStack==='all-in-one') indoor=0;
+      const total=indoor+outdoor;
+      const routerId=chooseRouter(recommendedStack,devices,speed,complexity);
+      const wiredPorts=num('wiredDevices')+total+2;
+      const switchPorts=total===0?Math.max(0,num('wiredDevices')):(wiredPorts<=8?8:wiredPorts<=24?24:48);
+      const needsSurvey=construction==='hard'||complexity>=7||people>350||floors>2;
+      const confidence=needsSurvey?'Site survey recommended':complexity>=4?'Walkthrough recommended':'Good planning estimate';
+      const stackLabel=recommendedStack==='tplink'?'TP-Link Omada':recommendedStack==='unifi'?'UniFi':'All-in-one';
+      const usageLevel=val('usage')==='high'?'high-density':on('cameras')?'school':val('usage');
+      const recommendationNotes=[
+        ...notes,
+        `Estimated switch size: ${switchPorts||'no additional'} ports, including APs and growth allowance.`,
+        'Plan one Cat6 cable drop per AP and avoid placing every AP in a hallway.',
+        ...warnings
+      ];
+      if(val('layoutNotes').trim()) recommendationNotes.push(`Layout note: ${val('layoutNotes').trim()}`);
+
+      const payload={
+        source:'wifi-planner',version:2,timestamp:new Date().toISOString(),
+        preferredStack:recommendedStack,requestedStack:preference,
+        recommendedRouterId:routerId,indoorApCount:indoor,outdoorApCount:outdoor,totalApCount:total,
+        facilitySize:size,constructionDifficulty:construction,usageLevel,
+        estimatedDevices:devices,recommendedSwitchPorts:switchPorts,allInOneEligible,
+        notes:recommendationNotes
+      };
+      localStorage.setItem('imsdaWifiPlannerEstimate',JSON.stringify(payload));
+
+      const results=$('results');
+      results.style.display='block';
+      results.replaceChildren();
+      const heading=document.createElement('h2'); heading.textContent='Your recommendation'; results.appendChild(heading);
+      const stats=document.createElement('div'); stats.className='stats';
+      [
+        ['Network system',stackLabel],
+        ['Router',routerLabel(routerId)],
+        ['Indoor APs',recommendedStack==='all-in-one'?'Built into router':String(indoor)],
+        ['Outdoor APs',String(outdoor)]
+      ].forEach(([label,value])=>{const card=document.createElement('div');card.className='stat';const strong=document.createElement('strong');strong.textContent=label;card.append(strong,document.createTextNode(value));stats.appendChild(card);});
+      results.appendChild(stats);
+
+      const grid=document.createElement('div');grid.className='recommendation-grid';
+      const coverage=document.createElement('div');coverage.className='recommendation-card';
+      const coverageTitle=document.createElement('strong');coverageTitle.textContent='Coverage and cabling';
+      const coverageText=document.createElement('p');coverageText.textContent=recommendedStack==='all-in-one'?'Place the WiFi router near the center of the occupied area. No separate APs are recommended.':`${total} total AP${total===1?'':'s'} and one Cat6 cable run per AP. Plan a ${switchPorts}-port PoE switch with capacity for growth.`;
+      coverage.append(coverageTitle,coverageText);
+      const review=document.createElement('div');review.className='recommendation-card';
+      const reviewTitle=document.createElement('strong');reviewTitle.textContent='Planning confidence';
+      const reviewText=document.createElement('p');reviewText.textContent=confidence+'. '+(warnings.join(' ')||'A final placement walkthrough is still helpful before cable installation.');
+      review.append(reviewTitle,reviewText);grid.append(coverage,review);results.appendChild(grid);
+
+      const saved=document.createElement('div');saved.className='success';saved.textContent='Recommendation ready. Continue to the quote generator to review the prefilled equipment.';
+      results.appendChild(saved);
+      const actions=document.createElement('div');actions.className='actions';
+      const send=document.createElement('button');send.type='button';send.textContent='Continue to Prefilled Quote Request';
+      send.addEventListener('click',()=>{window.location.href='church-network-quote-request.html?from=wifi-estimator';});
+      actions.appendChild(send);results.appendChild(actions);
+      results.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+
+    $('stack').addEventListener('change',()=>{$('aioWarning').style.display=val('stack')==='allinone'?'block':'none';});
+    $('calcBtn').addEventListener('click',calculate);
+    $('resetBtn').addEventListener('click',()=>location.reload());
+    $('printBtn').addEventListener('click',()=>window.print());
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

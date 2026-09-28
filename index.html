@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<!--
+  PUBLIC LAUNCHER (index-public.html)
+  Copy of the launcher showing only public tools. On the PUBLIC host, upload this
+  file as index.html, and upload tools-nav-public.js as tools-nav.js.
+  index.html in this repo is the INTERNAL launcher (all tools). When adding a
+  public tool, add its card here AND in index.html, and add it to both
+  tools-nav.js and tools-nav-public.js.
+-->
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    (none - fully self-contained)
+  External (internet):
+    - Google Fonts - optional, falls back to system fonts
+    - IMSDA logo hosted on imsda.org: https://imsda.org/wp-content/uploads/2023/11/IMSDA-Logo-black.png
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IMSDA Tools</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f4f7f9; --surface: #ffffff; --text-main: #1a2b3c; --text-muted: #5e7185;
+      --primary: #087E8B; --primary-dark: #0B3954; --border: #e2e8f0;
+      --shadow-sm: 0 2px 8px rgba(11, 57, 84, 0.04); --shadow-md: 0 12px 24px rgba(11, 57, 84, 0.08);
+      --radius: 16px;
+    }
+    html { scroll-behavior: smooth; }
+    html, body { min-height: 100%; }
+    body {
+      font-family: 'Manrope', sans-serif; color: var(--text-main); background: var(--bg);
+      background-image: radial-gradient(circle at 100% 0%, rgba(8,126,139,.04) 0%, transparent 40%), radial-gradient(circle at 0% 100%, rgba(11,57,84,.03) 0%, transparent 40%);
+      background-attachment: fixed; line-height: 1.6; padding-bottom: 2rem;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:3rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border); gap:1rem; }
+    .brand { display:flex; align-items:center; gap:1rem; text-decoration:none; color:var(--primary-dark); }
+    .brand img { height:42px; width:auto; }
+    .brand-text h1 { font-family:'Syne', sans-serif; font-size:1.25rem; font-weight:800; line-height:1.1; }
+    .brand-text span { font-size:.75rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); font-weight:600; }
+    .topbar-actions { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; }
+    .back, .support-btn { display:inline-flex; align-items:center; justify-content:center; border-radius:99px; text-decoration:none; font-weight:700; font-size:.85rem; transition:all .2s ease; }
+    .back { gap:.35rem; padding:.7rem 1rem; border:1px solid var(--border); background:#f4f8fa; color:var(--primary-dark); }
+    .back:hover { background:#edf4f7; }
+    .support-btn { background:#eef2f6; color:var(--primary-dark); padding:.6rem 1.2rem; }
+    .support-btn:hover { background:var(--primary-dark); color:#fff; }
+    .tools-controls { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; box-shadow:var(--shadow-sm); margin-bottom:1.5rem; position:relative; z-index:20; }
+    .search-row { display:flex; gap:.75rem; align-items:center; margin-bottom:.85rem; }
+    .search-row label { font-weight:700; color:var(--primary-dark); white-space:nowrap; }
+    #toolSearch { flex:1; border:1px solid var(--border); border-radius:10px; padding:.65rem .75rem; font-size:.95rem; font-family:inherit; }
+    #toolSearch:focus-visible { outline:2px solid rgba(8,126,139,.35); border-color:var(--primary); }
+    .section-nav-toggle { display:none; width:100%; border:1px solid var(--border); background:#f8fbfc; border-radius:10px; padding:.6rem .75rem; font-weight:700; color:var(--primary-dark); text-align:left; }
+    .section-nav { list-style:none; display:flex; flex-wrap:wrap; gap:.6rem; position:relative; }
+    .section-nav-item { position:relative; padding-bottom:.25rem; }
+    .section-nav-link { display:inline-block; padding:.45rem .75rem; border:1px solid var(--border); border-radius:999px; background:#f9fcfd; text-decoration:none; color:var(--primary-dark); font-size:.85rem; font-weight:700; }
+    .section-nav-link:hover, .section-nav-link:focus-visible { background:#eef6f8; border-color:#cbd5e1; outline:none; }
+    .section-dropdown { list-style:none; position:absolute; left:0; top:calc(100% - .25rem); min-width:260px; max-width:340px; border:1px solid var(--border); border-radius:12px; padding:.4rem; background:#fff; box-shadow:var(--shadow-md); opacity:0; visibility:hidden; pointer-events:none; transform:translateY(6px); transition:opacity .15s ease, transform .15s ease, visibility .15s ease; z-index:30; }
+    .section-dropdown a { display:block; padding:.45rem .55rem; border-radius:8px; color:var(--text-main); text-decoration:none; font-size:.84rem; }
+    .section-dropdown a:hover, .section-dropdown a:focus-visible { background:#f1f6f8; color:var(--primary-dark); outline:none; }
+    .section-nav-item:hover .section-dropdown, .section-nav-item:focus-within .section-dropdown { opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0); }
+    .section-wrapper.is-hidden, .card.is-hidden { display:none !important; }
+    .search-empty { display:none; margin:1rem 0 2rem; padding:.85rem 1rem; border:1px dashed #cbd5e1; border-radius:10px; color:var(--text-muted); background:#f8fafc; font-weight:600; }
+    .section-header { margin:2.5rem 0 1.2rem; display:flex; align-items:center; gap:1rem; scroll-margin-top:1rem; }
+    .section-header h2 { font-family:'Syne', sans-serif; font-size:1.1rem; color:var(--primary-dark); letter-spacing:1.5px; text-transform:uppercase; white-space:nowrap; }
+    .section-header::after { content:''; height:1px; flex:1; background:linear-gradient(90deg, var(--border), transparent); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:1.25rem; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; text-decoration:none; color:inherit; display:flex; flex-direction:column; gap:1rem; box-shadow:var(--shadow-sm); transition:all .25s ease; position:relative; overflow:hidden; }
+    .card:hover { transform:translateY(-4px); box-shadow:var(--shadow-md); border-color:#cbd5e1; }
+    .card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, var(--primary), var(--primary-dark)); opacity:0; transition:opacity .25s ease; }
+    .card:hover::before { opacity:1; }
+    .card-header { display:flex; gap:1rem; align-items:flex-start; }
+    .icon-box { width:48px; height:48px; border-radius:12px; background:#f0f7f9; color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .icon-box svg { width:24px; height:24px; }
+    .icon-box.muted { background:#f1f5f9; color:#94a3b8; }
+    .card-title { font-family:'Syne', sans-serif; font-size:1.15rem; font-weight:700; color:var(--primary-dark); margin-bottom:.3rem; line-height:1.2; }
+    .muted-title { color:#64748b; }
+    .badges { display:flex; flex-wrap:wrap; gap:.4rem; }
+    .badge { font-size:.65rem; font-weight:700; letter-spacing:.5px; text-transform:uppercase; padding:.2rem .6rem; border-radius:99px; }
+    .badge-live { background:#dcfce7; color:#166534; } .badge-pwa { background:#e0f2fe; color:#075985; } .badge-soon { background:#f1f5f9; color:#475569; }
+    .card-desc { color:var(--text-muted); font-size:.9rem; flex:1; }
+    .card-footer { padding-top:1rem; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:1rem; font-size:.8rem; font-weight:600; color:var(--primary); }
+    .card-footer span:last-child { color:var(--text-muted); font-size:.75rem; text-transform:uppercase; letter-spacing:1px; text-align:right; }
+    .muted-link { color:#94a3b8 !important; }
+    .support-note { margin-top:3rem; padding:1.25rem 1.5rem; background:#eef6f8; border:1px solid #cfe3e7; border-left:4px solid var(--primary); border-radius:var(--radius); color:var(--text-main); }
+    .support-note h2 { font-family:'Syne', sans-serif; font-size:1.05rem; color:var(--primary-dark); margin-bottom:.4rem; }
+    .support-note p { font-size:.9rem; color:var(--text-muted); }
+    .support-note p + p { margin-top:.4rem; }
+    .support-note a { color:var(--primary); font-weight:700; }
+    footer { margin-top:4rem; text-align:center; padding-top:2rem; border-top:1px solid var(--border); }
+    footer p { font-size:.85rem; color:var(--text-muted); } footer a { color:var(--primary); text-decoration:none; font-weight:600; } footer a:hover { text-decoration:underline; }
+    @media (max-width:768px) {
+      .container { padding:1.25rem; } .topbar { flex-direction:column; gap:1rem; align-items:flex-start; margin-bottom:2rem; } .topbar-actions { width:100%; } .grid { grid-template-columns:1fr; }
+      .search-row { flex-direction:column; align-items:stretch; } .section-nav-toggle { display:block; margin-bottom:.65rem; } .section-nav { display:none; } .section-nav.is-open { display:grid; gap:.5rem; } .section-nav-link { width:100%; border-radius:10px; }
+      .section-dropdown { position:static; margin-top:.35rem; max-width:none; box-shadow:none; opacity:0; visibility:hidden; pointer-events:none; transform:translateY(0); transition:opacity .15s ease, visibility .15s ease; }
+      .section-nav-item:hover .section-dropdown, .section-nav-item:focus-within .section-dropdown { opacity:1; visibility:visible; pointer-events:auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header class="topbar">
+      <a class="brand" href="https://imsda.org">
+        <img src="https://imsda.org/wp-content/uploads/2023/11/IMSDA-Logo-black.png" alt="IMSDA Logo" onerror="this.style.display='none';" />
+        <div class="brand-text"><h1>IMSDA Tools</h1><span>Iowa-Missouri Conference</span></div>
+      </a>
+      <div class="topbar-actions"><a class="back" href="https://imsda.org">← Back to imsda.org</a><a class="support-btn" href="https://imsda.org/support-portal/">Get Support</a></div>
+    </header>
+    <section class="tools-controls" aria-label="Browse and search tools">
+      <div class="search-row"><label for="toolSearch">Search tools</label><input id="toolSearch" type="search" placeholder="Search by title, description, section, or keyword…" autocomplete="off" /></div>
+      <button class="section-nav-toggle" type="button" aria-expanded="false" aria-controls="sectionNav">Browse Sections</button>
+      <ul id="sectionNav" class="section-nav" aria-label="Tool sections"></ul>
+    </section>
+    <p id="noToolsFound" class="search-empty" role="status" aria-live="polite">No tools found. Try a different keyword.</p>
+    <section class="section-wrapper" id="pastors-churches">
+      <div class="section-header"><h2>Pastors / Churches</h2></div>
+      <div class="grid">
+        <a class="card" id="adventist-logo-maker" href="logo-generator.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5h16v14z"/><path d="M8 15l2.6-3 2.2 2.3 3.2-4.3L20 15"/><circle cx="9" cy="9" r="1.3"/></svg></div>
+          <div><h3 class="card-title">Adventist Logo Maker</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Generate church logos with consistent conference branding, typography, and export-ready formats.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Branding</span></div>
+      </a>
+<a class="card" id="business-card-creator" href="business-card-generator.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h10"/><path d="M7 14h6"/></svg></div>
+          <div><h3 class="card-title">Business Card Creator</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Create clean, consistent business cards for pastors and staff with proper branding and export-ready layouts.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Print · Branding</span></div>
+      </a>
+<a class="card" id="church-letterhead-pdf" href="church-letterhead-pdf-generator.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5"/><path d="M9 13h8"/><path d="M9 17h8"/></svg></div>
+          <div><h3 class="card-title">Church Letterhead PDF</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Generate official church letterhead PDFs with correct branding and print-ready formatting.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>PDF · Print</span></div>
+      </a>
+<a class="card" id="quote-generator" href="custom-quote-generator.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M6 4h12v16H6z"/><path d="M9 11h6"/><path d="M9 15h4"/></svg></div>
+          <div><h3 class="card-title">Quote Generator</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Generate consistent looking quotes for any projects or estimates for events coming up.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>PDF · Print</span></div>
+      </a>
+<a class="card" id="bulletin-maker" href="church-bulletin-generator.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5"/><path d="M9 13h8"/><path d="M9 17h8"/></svg></div>
+          <div><h3 class="card-title">Bulletin Maker</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Create a bulletin, with plenty of customization, and easy export import for saving.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>PDF · Print</span></div>
+      </a>
+<div class="card placeholder" style="cursor:default; opacity:.72; box-shadow:none;">
+          <div class="card-header"><div class="icon-box muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+            <div><h3 class="card-title muted-title">More tools on the way</h3><div class="badges"><span class="badge badge-soon">Coming Soon</span></div></div></div>
+          <p class="card-desc">New resources for conference churches and ministry leaders are in development. Check back for updates.</p>
+          <div class="card-footer"><span class="muted-link">In Development</span><span>Roadmap</span></div>
+        </div>
+      </div>
+    </section>
+<section class="section-wrapper" id="event-tools">
+      <div class="section-header"><h2>Event Tools</h2></div>
+      <div class="grid">
+        <a class="card" id="name-tag-avery-18660" href="name-tag-maker-Avery18660.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M7 9.2h10"/><path d="M7 13h7"/><path d="M7 16.8h5"/></svg></div>
+          <div><h3 class="card-title">Name Tag (Avery 18660)</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Easily Print out name tag stickers on an Avery 18660 (3x10) Sheet</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Print</span></div>
+      </a>
+<a class="card" id="name-tag-avery-8395" href="name-tag-generator-8395.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M7 9.2h10"/><path d="M7 13h7"/><path d="M7 16.8h5"/></svg></div>
+          <div><h3 class="card-title">Name Tag (Avery 8395)</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Easily Print out name tag stickers on an Avery 8395 (2x4) Sheet</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Print</span></div>
+      </a>
+<a class="card" id="name-tag-avery-5392" href="avery-5392.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M7 9.2h10"/><path d="M7 13h7"/><path d="M7 16.8h5"/></svg></div>
+          <div><h3 class="card-title">Name Tag (Avery 5392)</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Easily Print out name tags with graphics on front or back with Avery 5392 (2x3 Sheet).</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Print</span></div>
+      </a>
+<a class="card" id="schedule-maker" href="schedule-maker.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2.8v3"/><path d="M16 2.8v3"/><path d="M3 9h18"/><path d="M7 13h4"/><path d="M13 13h4"/><path d="M7 17h10"/></svg></div>
+          <div><h3 class="card-title">Schedule Maker</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Upload a CSV to make a printable 3x5 Schedule Card</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Print</span></div>
+      </a>
+<a class="card" id="schedule-maker-avery-5392" href="schedule-avery-5392.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2.8v3"/><path d="M16 2.8v3"/><path d="M3 9h18"/><path d="M7 13h4"/><path d="M13 13h4"/><path d="M7 17h10"/></svg></div>
+          <div><h3 class="card-title">Schedule Maker (Avery 5392)</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Upload a CSV to make a schedule that will work with the Avery 5392 Name Tag.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Print</span></div>
+      </a>
+<a class="card" id="calendar-builder" href="calendar-builder.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2.8v3"/><path d="M16 2.8v3"/><path d="M3 9h18"/><path d="M7 13h2"/><path d="M11 13h2"/><path d="M15 13h2"/><path d="M7 17h2"/><path d="M11 17h2"/></svg></div>
+          <div><h3 class="card-title">Calendar Generator</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Build a customized calendar for church events, ministry schedules, and conference planning.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · Planning</span></div>
+      </a>
+<div class="card placeholder" style="cursor:default; opacity:.72; box-shadow:none;">
+          <div class="card-header"><div class="icon-box muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+            <div><h3 class="card-title muted-title">More tools on the way</h3><div class="badges"><span class="badge badge-soon">Coming Soon</span></div></div></div>
+          <p class="card-desc">New resources for conference churches and ministry leaders are in development. Check back for updates.</p>
+          <div class="card-footer"><span class="muted-link">In Development</span><span>Roadmap</span></div>
+        </div>
+      </div>
+    </section>
+<section class="section-wrapper" id="audio-video-and-technology">
+      <div class="section-header"><h2>Audio/Video and Technology</h2></div>
+      <div class="grid">
+        <a class="card" id="church-av-quote-request" href="church-av-quote-request.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M6 4h12v16H6z"/><path d="M9 11h6"/><path d="M9 15h4"/></svg></div>
+          <div><h3 class="card-title">Church AV Quote Request</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Build and submit church audio/video quote requests with consistent options for ministry planning using recommended equipment.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>AV · Technology</span></div>
+      </a>
+<a class="card" id="church-network-wifi-estimator" href="church-wifi-coverage.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5C7.3 3.6 16.7 3.6 22 8.5"/><path d="M5.5 12c3.2-3 9.8-3 13 0"/><path d="M9 15.5c1.6-1.6 4.4-1.6 6 0"/><circle cx="12" cy="19" r="1.1" fill="currentColor" stroke="none"/></svg></div>
+          <div><h3 class="card-title">Church Network &amp; WiFi Estimator</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Estimate a church’s router, access points, and PoE switch size, choose UniFi or TP-Link, and continue into a prefilled network quote request.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Network · Planning</span></div>
+      </a>
+<a class="card" id="church-networking-internet-quote-request" href="church-network-quote-request.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="7" height="5.5" rx="1"/><rect x="14.5" y="4" width="7" height="5.5" rx="1"/><rect x="8.5" y="14.5" width="7" height="5.5" rx="1"/><path d="M6 9.5v2.5h12V9.5"/><path d="M12 12v2.5"/></svg></div>
+          <div><h3 class="card-title">Church Networking/Internet Quote Request</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Build and submit Networking quote requests with default recommendations and customization.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>AV · Technology</span></div>
+      </a>
+<a class="card" id="livestream-equipment-checklist" href="livestream-equipment-checklist.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.3"/><rect x="13" y="3" width="8" height="8" rx="1.3"/><rect x="3" y="13" width="8" height="8" rx="1.3"/><path d="M15 14h6"/><path d="M15 18h6"/></svg></div>
+          <div><h3 class="card-title">Livestream Equipment Checklist</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Make sure you have the equipment needed to get your livestream up and running.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>AV · Technology</span></div>
+      </a>
+<a class="card" id="livestream-checklist" href="livestream-checklist.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11"/><path d="M9 12h11"/><path d="M9 19h11"/><path d="M3.8 5.4l1.3 1.3 2.4-2.4"/><path d="M3.8 12.4l1.3 1.3 2.4-2.4"/><path d="M3.8 19.4l1.3 1.3 2.4-2.4"/></svg></div>
+          <div><h3 class="card-title">Livestream Checklist</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Create a repeatable pre-service, equipment, and troubleshooting checklist for church livestream setups.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>AV · Technology</span></div>
+      </a>
+<a class="card" id="security-camera-quote-generator" href="security-camera-quote-generator.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11l4 4v6H4z"/><circle cx="10" cy="12" r="2.5"/><path d="M19 13h2"/><path d="M7 17v3"/><path d="M4 20h6"/></svg></div>
+          <div><h3 class="card-title">Security Camera Quote Request</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Build a security camera system quote with organized equipment, installation, and project details.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Security · Technology</span></div>
+      </a>
+<div class="card placeholder" style="cursor:default; opacity:.72; box-shadow:none;">
+          <div class="card-header"><div class="icon-box muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+            <div><h3 class="card-title muted-title">More tools on the way</h3><div class="badges"><span class="badge badge-soon">Coming Soon</span></div></div></div>
+          <p class="card-desc">New resources for conference churches and ministry leaders are in development. Check back for updates.</p>
+          <div class="card-footer"><span class="muted-link">In Development</span><span>Roadmap</span></div>
+        </div>
+      </div>
+    </section>
+<section class="section-wrapper" id="special-tools">
+      <div class="section-header"><h2>Special Tools</h2></div>
+      <div class="grid">
+        <a class="card" id="email-newsletter-builder" href="imconnected.html">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+          <div><h3 class="card-title">Email Newsletter Builder</h3><div class="badges"><span class="badge badge-live">Live</span></div></div></div>
+        <p class="card-desc">Design and assemble Email Newsletters with organized story blocks and consistent formatting.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Newsletter</span></div>
+      </a>
+<a class="card" id="camp-meeting-scanner" href="https://cm26-imsda.wp1.host" target="_blank" rel="noopener">
+        <div class="card-header"><div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="2.5" height="2.5" rx="0.4"/><line x1="18.5" y1="14" x2="21" y2="14"/><line x1="14" y1="18.5" x2="17" y2="18.5"/><line x1="20" y1="18" x2="20" y2="21"/></svg></div>
+          <div><h3 class="card-title">Camp Meeting Scanner</h3><div class="badges"><span class="badge badge-live">Live</span><span class="badge badge-pwa">PWA</span></div></div></div>
+        <p class="card-desc">QR scanning system for Camp Meeting with offline support and payments.</p>
+        <div class="card-footer"><span>Launch Tool &rarr;</span><span>Events · PWA</span></div>
+      </a>
+<div class="card placeholder" style="cursor:default; opacity:.72; box-shadow:none;">
+          <div class="card-header"><div class="icon-box muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+            <div><h3 class="card-title muted-title">More tools on the way</h3><div class="badges"><span class="badge badge-soon">Coming Soon</span></div></div></div>
+          <p class="card-desc">New resources for conference churches and ministry leaders are in development. Check back for updates.</p>
+          <div class="card-footer"><span class="muted-link">In Development</span><span>Roadmap</span></div>
+        </div>
+      </div>
+    </section>
+    <aside class="support-note" aria-labelledby="support-note-title">
+      <h2 id="support-note-title">Tool Support &amp; Requests</h2>
+      <p>If you experience an issue with one of the tools or would like to request a new one, please use the <a href="https://imsda.org/support-portal/">IMSDA Support Portal</a>.</p>
+      <p>Please note that requested tools are not guaranteed to be created, but we will review each request and determine whether it is something we can provide.</p>
+    </aside>
+    <footer><p>&copy; 2026 Iowa-Missouri Conference of Seventh-day Adventists · <a href="https://imsda.org">Return to imsda.org</a></p></footer>
+  </main>
+<script>
+  function toSlug(text) { return (text || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); }
+  function initToolNavigationAndSearch() {
+    const controlsNav = document.getElementById('sectionNav');
+    const searchInput = document.getElementById('toolSearch');
+    const noToolsFound = document.getElementById('noToolsFound');
+    const sectionToggle = document.querySelector('.section-nav-toggle');
+    const sections = Array.from(document.querySelectorAll('.section-wrapper'));
+    const sectionData = sections.map((section, idx) => {
+      const header = section.querySelector('.section-header h2'); const grid = section.querySelector('.grid');
+      const title = header ? header.textContent.trim() : `Section ${idx + 1}`; const sectionId = section.id || `${toSlug(title) || `section-${idx + 1}`}`; section.id = sectionId;
+      const cards = Array.from(grid ? grid.querySelectorAll('.card') : []);
+      cards.forEach((card) => {
+        const titleEl = card.querySelector('.card-title, h3'); const descEl = card.querySelector('.card-desc, p'); const keywords = (card.getAttribute('data-keywords') || '').trim();
+        card.dataset.search = [title, titleEl ? titleEl.textContent : '', descEl ? descEl.textContent : '', keywords].join(' ').toLowerCase();
+      });
+      return { section, title, sectionId, cards };
+    });
+    controlsNav.innerHTML = sectionData.map(({ title, sectionId, cards }) => {
+      const tools = cards.map((card) => {
+        const cardTitle = (card.querySelector('.card-title, h3')?.textContent || 'Untitled Tool').trim();
+        const href = card.getAttribute('href');
+        if (href) return `<li><a href="${href}">${cardTitle}</a></li>`;
+        return `<li><a href="#${sectionId}">${cardTitle}</a></li>`;
+      }).join('');
+      return `<li class="section-nav-item"><a class="section-nav-link" href="#${sectionId}">${title}</a><ul class="section-dropdown">${tools}</ul></li>`;
+    }).join('');
+    const applySearch = () => {
+      const q = (searchInput.value || '').trim().toLowerCase(); let visibleCardCount = 0;
+      sectionData.forEach(({ section, cards }) => {
+        let sectionHasVisible = false;
+        cards.forEach((card) => {
+          const matches = !q || (card.dataset.search || '').includes(q);
+          card.classList.toggle('is-hidden', !matches);
+          if (matches) { visibleCardCount += 1; sectionHasVisible = true; }
+        });
+        section.classList.toggle('is-hidden', !!q && !sectionHasVisible);
+      });
+      noToolsFound.style.display = (q && visibleCardCount === 0) ? 'block' : 'none';
+    };
+    searchInput.addEventListener('input', applySearch);
+    sectionToggle?.addEventListener('click', () => { const isOpen = controlsNav.classList.toggle('is-open'); sectionToggle.setAttribute('aria-expanded', String(isOpen)); });
+  }
+  initToolNavigationAndSearch();
+</script>
+</body>
+</html>

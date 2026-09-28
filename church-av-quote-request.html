@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    (none)
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AV Quote Request Generator</title>
+  <style>
+    :root{
+      --bg:#f4f7f9;
+      --surface:#ffffff;
+      --surface-soft:#eef6f7;
+      --text:#183042;
+      --muted:#5f7385;
+      --primary:#087E8B;
+      --primary-dark:#0B3954;
+      --border:#d9e5ec;
+      --shadow:0 18px 40px rgba(11,57,84,.08);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:'Manrope',sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(8,126,139,.08), transparent 32%),
+        linear-gradient(180deg, #f9fbfc, var(--bg));
+      color:var(--text);
+      min-height:100vh;
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:1.4rem 1rem 2rem}
+    .hero,.panel{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+    .hero{padding:1.3rem 1.35rem;margin-bottom:1rem}
+    .eyebrow{font-size:.74rem;letter-spacing:1.8px;text-transform:uppercase;color:var(--primary);font-weight:800}
+    h1{margin:.35rem 0 .55rem;font:800 clamp(1.8rem,4vw,2.6rem)/1.05 'Syne',sans-serif;color:var(--primary-dark)}
+    .hero p{margin:0;color:var(--muted);max-width:72ch;line-height:1.6}
+    .layout{display:grid;grid-template-columns:1.05fr .95fr;gap:1rem}
+    .panel{padding:1rem}
+    h2{margin:.1rem 0 .85rem;font:700 1.02rem/1.2 'Syne',sans-serif;color:var(--primary-dark)}
+    .group{margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px dashed var(--border)}
+    .group:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+    .field{display:flex;flex-direction:column;gap:.35rem}
+    label{font-size:.84rem;font-weight:700;color:#274457}
+    input,select,textarea{
+      width:100%;
+      border:1px solid #c8d7e1;
+      border-radius:12px;
+      padding:.72rem .78rem;
+      font:inherit;
+      color:var(--text);
+      background:#fff;
+    }
+    input[type="checkbox"]{width:auto}
+    input[type="radio"]{width:auto}
+    textarea{resize:vertical;min-height:90px}
+    .tool-section{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:.8rem;
+      background:linear-gradient(180deg,#fff,#fbfdfe);
+      margin-bottom:.75rem;
+    }
+    .tool-head{display:flex;gap:.6rem;align-items:flex-start;margin-bottom:.6rem}
+    .tool-head label{font-size:.92rem;color:var(--primary-dark)}
+    .tool-content{display:none;padding-top:.2rem}
+    .tool-section.active .tool-content{display:block}
+    .recommendation{
+      margin:.35rem 0 .65rem;
+      border-left:3px solid #6cb9c0;
+      background:#eff8fa;
+      border-radius:8px;
+      padding:.5rem .65rem;
+      font-size:.82rem;
+      color:#31566a;
+    }
+    .muted{color:var(--muted);font-size:.82rem}
+    .chip-list{margin-top:.35rem;padding-left:1.1rem;color:#3f6173;font-size:.84rem}
+    .stack{display:flex;flex-direction:column;gap:.55rem}
+    .line-item{
+      border:1px solid #d8e6ee;
+      border-radius:12px;
+      padding:.65rem;
+      background:#fcfeff;
+    }
+    .line-item-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:.45rem;
+      gap:.5rem;
+    }
+    .line-title{font-size:.8rem;font-weight:800;color:#31566a;letter-spacing:.3px;text-transform:uppercase}
+    .mini-btn{
+      border:1px solid #cfe0ea;
+      border-radius:999px;
+      background:#fff;
+      color:#2b4f64;
+      padding:.35rem .65rem;
+      font:700 .76rem 'Manrope',sans-serif;
+      cursor:pointer;
+    }
+    .line-cost{
+      margin-top:.4rem;
+      font-size:.8rem;
+      color:#3b6074;
+      display:flex;
+      justify-content:space-between;
+      gap:.5rem;
+      flex-wrap:wrap;
+    }
+    .radio-row{display:flex;gap:1rem;flex-wrap:wrap;margin:.35rem 0 .65rem}
+    .radio-item{display:inline-flex;align-items:center;gap:.35rem;font-size:.84rem;color:#2d5166}
+    #soundboardSection .soundboard-size-group{
+      display:flex;
+      flex-direction:column;
+      gap:.65rem;
+      margin-top:.35rem;
+    }
+    #soundboardSection .soundboard-size-group .soundboard-size-option{
+      display:inline-flex;
+      align-items:center;
+      gap:.55rem;
+      width:fit-content;
+      max-width:100%;
+      font-size:.84rem;
+      font-weight:600;
+      color:#2d5166;
+      line-height:1.2;
+      position:static;
+      padding:0;
+      margin:0;
+      border:0;
+      background:transparent;
+      box-shadow:none;
+      justify-content:flex-start;
+      min-height:0;
+    }
+    #soundboardSection .soundboard-size-group .soundboard-size-option input[type="radio"]{
+      margin:0;
+      padding:0;
+      width:auto;
+      min-width:0;
+      height:auto;
+      position:static;
+      inset:auto;
+      transform:none;
+      flex:0 0 auto;
+      border:0;
+      border-radius:0;
+      background:transparent;
+      box-shadow:none;
+      appearance:auto;
+    }
+    #soundboardSection .soundboard-size-group .soundboard-size-option span{
+      display:inline;
+      position:static;
+      width:auto;
+      max-width:none;
+      white-space:normal;
+      word-break:normal;
+    }
+    .field-note{margin-top:.35rem;font-size:.76rem;color:#557184}
+    .actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1rem}
+    button,.mailto,.back{
+      border:1px solid transparent;
+      border-radius:999px;
+      padding:.72rem 1rem;
+      font:700 .92rem 'Manrope',sans-serif;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+    }
+    button{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+    .mailto{background:#eaf5f6;color:var(--primary-dark);border-color:#c6dfe3}
+    .back{color:var(--primary-dark);background:#f4f8fa;border-color:#d5e2ea}
+    .results-shell{
+      background:linear-gradient(160deg,#f9fcfd,#eef7f8);
+      border:1px solid #d6e6ea;
+      border-radius:18px;
+      padding:1rem;
+    }
+    .quote-sheet{
+      background:#fff;
+      border:1px solid #dbe6ec;
+      border-radius:16px;
+      padding:1.1rem;
+    }
+    .sheet-top{
+      display:flex;
+      justify-content:space-between;
+      gap:1rem;
+      padding-bottom:.9rem;
+      margin-bottom:.9rem;
+      border-bottom:1px solid #e5edf2;
+    }
+    .sheet-title{font:800 1.28rem/1.1 'Syne',sans-serif;color:var(--primary-dark)}
+    .sheet-sub{font-size:.83rem;color:var(--muted);margin-top:.3rem}
+    .meta-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem;margin-bottom:1rem}
+    .meta-item{padding:.8rem;border:1px solid #e1ebf1;border-radius:14px;background:#fbfdfe}
+    .meta-item strong{display:block;font-size:.73rem;letter-spacing:1px;text-transform:uppercase;color:var(--primary);margin-bottom:.3rem}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:.72rem;border-bottom:1px solid #e4edf2;vertical-align:top;text-align:left}
+    th{font-size:.72rem;letter-spacing:1.1px;text-transform:uppercase;color:#5c7283}
+    .empty{padding:1rem;border:1px dashed #c7d9e0;border-radius:14px;color:var(--muted);background:#fbfdfe}
+    .total-box{margin-top:.9rem;padding:.8rem;border-radius:12px;background:#edf8f8;border:1px solid #cfe7ea;font-weight:800;color:var(--primary-dark)}
+    .notes{margin-top:1rem;padding:1rem;border-radius:14px;background:#f8fbfc;border:1px solid #e2edf2;color:#436073;line-height:1.6}
+    .info-note{margin:.85rem 0 1rem;padding:.85rem 1rem;border-radius:12px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;font-size:.92rem;line-height:1.45;font-weight:600}
+    .footer-note{margin-top:1rem;font-size:.82rem;color:var(--muted)}
+    @media (max-width:980px){
+      .layout,.grid,.meta-list{grid-template-columns:1fr}
+      .sheet-top{flex-direction:column}
+    }
+    @media print{
+      body{background:#fff}
+      .hero,.panel,.results-shell,.quote-sheet{box-shadow:none}
+      .hero,.panel,.results-shell{border:0;background:#fff;padding:0}
+      .layout{display:block}
+      .panel:first-of-type,.actions,.back{display:none!important}
+      .quote-sheet{border:1px solid #bbb;border-radius:0}
+      body::after{
+        content:'Iowa-Missouri Conference of Seventh-day Adventists · tools.imsda.org';
+        display:block;
+        text-align:center;
+        margin-top:1rem;
+        font:600 11px 'Manrope',sans-serif;
+        color:#555;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">IMSDA Church Consulting</div>
+      <h1>AV Quote Request Generator</h1>
+      <p>Build a structured AV quote request for your church, print it for board review, or open a prefilled email draft to send to the conference office.</p>
+    </section>
+
+    <section class="layout">
+      <article class="panel">
+        <div class="info-note" id="pricingNoteTop"></div>
+        <div class="group">
+          <h2>Church Details</h2>
+          <div class="grid">
+            <div class="field"><label for="churchName">Church name</label><input id="churchName" type="text" placeholder="Example SDA Church" /></div>
+            <div class="field"><label for="cityState">City / State</label><input id="cityState" type="text" placeholder="Springfield, Missouri" /></div>
+            <div class="field"><label for="contactName">Primary contact name</label><input id="contactName" type="text" placeholder="Jane Smith" /></div>
+            <div class="field"><label for="contactEmail">Primary contact email</label><input id="contactEmail" type="email" placeholder="jane@example.org" /></div>
+            <div class="field"><label for="roomSize">Room size (sq ft)</label><input id="roomSize" type="number" min="500" step="100" value="6000" /></div>
+            <div class="field"><label for="stageSize">Stage size (sq ft)</label><input id="stageSize" type="number" min="100" step="50" value="900" /></div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h2>AV Scope Selection</h2>
+
+          <section class="tool-section" id="micSection">
+            <div class="tool-head">
+              <input id="includeMics" type="checkbox" />
+              <label for="includeMics">Microphones</label>
+            </div>
+            <div class="tool-content">
+              <div class="recommendation" id="micRecommendation"></div>
+              <div class="stack" id="micLineItems"></div>
+              <div style="margin-top:.55rem;">
+                <button id="addMicLineBtn" type="button" class="mini-btn">+ Add Microphone Line</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="tool-section" id="soundboardSection">
+            <div class="tool-head">
+              <input id="includeSoundboard" type="checkbox" />
+              <label for="includeSoundboard">Sound board</label>
+            </div>
+            <div class="tool-content">
+              <div class="recommendation" id="soundboardRecommendation"></div>
+              <div class="field">
+                <label>Sound board size</label>
+                <div class="soundboard-size-group" id="soundboardSizeGroup">
+                  <label class="soundboard-size-option">
+                    <input type="radio" name="soundboardSize" value="fullSize" checked>
+                    <span>Full Size Board</span>
+                  </label>
+                  <label class="soundboard-size-option">
+                    <input type="radio" name="soundboardSize" value="compact">
+                    <span>Compact Board</span>
+                  </label>
+                  <label class="soundboard-size-option">
+                    <input type="radio" name="soundboardSize" value="portable">
+                    <span>Small Setup / Portable</span>
+                  </label>
+                </div>
+              </div>
+              <div class="field"><label for="soundboardOption">Sound board model</label><select id="soundboardOption"></select></div>
+              <div class="line-cost">
+                <span id="soundboardUnitCost"></span>
+                <span id="soundboardLineTotal"></span>
+              </div>
+              <div class="field" style="margin-top:.4rem;">
+                <label style="display:flex;align-items:center;gap:.5rem;">
+                  <input id="includeStageboxes" type="checkbox" />
+                  <span>Include Stage Boxes</span>
+                </label>
+              </div>
+              <div id="stageboxFields" style="display:none;">
+                <div class="field"><label for="stageboxOption">Stage box model</label><select id="stageboxOption"></select></div>
+                <div class="field"><label for="stageboxQty">Quantity</label><input id="stageboxQty" type="number" min="1" step="1" value="1" /></div>
+                <div class="line-cost">
+                  <span id="stageboxUnitCost"></span>
+                  <span id="stageboxLineTotal"></span>
+                </div>
+                <div class="field-note" id="stageboxCompatibilityNote" style="display:none;"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="tool-section" id="speakersSection">
+            <div class="tool-head">
+              <input id="includeSpeakers" type="checkbox" />
+              <label for="includeSpeakers">Speakers</label>
+            </div>
+            <div class="tool-content">
+              <div id="speakerFields">
+                <div class="field"><label for="speakerOption">Speaker model</label><select id="speakerOption"></select></div>
+                <div class="field"><label for="speakerQty">Quantity</label><input id="speakerQty" type="number" min="0" step="1" value="2" /></div>
+                <div class="line-cost">
+                  <span id="speakerUnitCost"></span>
+                  <span id="speakerLineTotal"></span>
+                </div>
+                <div class="field" style="margin-top:.4rem;">
+                  <label style="display:flex;align-items:center;gap:.5rem;">
+                    <input id="includeStageMonitors" type="checkbox" />
+                    <span>Stage Monitors</span>
+                  </label>
+                </div>
+                <div id="stageMonitorFields" style="display:none;">
+                  <div class="field"><label for="stageMonitorOption">Stage monitor model</label><select id="stageMonitorOption"></select></div>
+                  <div class="field"><label for="stageMonitorQty">Quantity</label><input id="stageMonitorQty" type="number" min="1" step="1" value="1" /></div>
+                  <div class="line-cost">
+                    <span id="stageMonitorUnitCost"></span>
+                    <span id="stageMonitorLineTotal"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="tool-section" id="livestreamSection">
+            <div class="tool-head">
+              <input id="includeLivestream" type="checkbox" />
+              <label for="includeLivestream">Live Stream</label>
+            </div>
+            <div class="tool-content">
+              <div class="grid">
+                <div class="field"><label for="livestreamCameraOption">Camera model</label><select id="livestreamCameraOption"></select></div>
+                <div class="field"><label for="livestreamCameraQty">Camera quantity</label><input id="livestreamCameraQty" type="number" min="0" step="1" value="1" /></div>
+                <div class="field"><label for="atemOption">ATEM switcher</label><select id="atemOption"></select></div>
+                <div class="field"><label for="monitorOption">Monitor</label><select id="monitorOption"></select></div>
+              </div>
+              <div class="field-note">Slides can use up to 2 video inputs depending on configuration.</div>
+              <div class="field-note">If you want a 32-inch monitor or larger, a small TV would probably be cheaper.</div>
+              <div class="recommendation">Included in Live Stream package:</div>
+              <ul class="chip-list" id="livestreamIncludedItems"></ul>
+            </div>
+          </section>
+
+          <section class="tool-section" id="displaySection">
+            <div class="tool-head">
+              <input id="includeDisplay" type="checkbox" />
+              <label for="includeDisplay">Projector or TVs</label>
+            </div>
+            <div class="tool-content">
+              <div class="recommendation" id="displayRecommendation"></div>
+              <div class="field-note" id="displayPriceNote"></div>
+              <div class="grid">
+                <div class="field">
+                  <label for="displayMode">Display system</label>
+                  <select id="displayMode">
+                    <option value="projector">Projector</option>
+                    <option value="tv">TVs</option>
+                  </select>
+                </div>
+                <div class="field"><label for="displayOption">Selected display option</label><select id="displayOption"></select></div>
+                <div class="field"><label for="displayQty">Quantity</label><input id="displayQty" type="number" min="1" step="1" value="1" /></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="tool-section" id="lightingSection">
+            <div class="tool-head">
+              <input id="includeLighting" type="checkbox" />
+              <label for="includeLighting">Stage lighting</label>
+            </div>
+            <div class="tool-content">
+              <div class="recommendation" id="lightingRecommendation"></div>
+              <div class="stack">
+                <div class="line-item">
+                  <div class="line-item-head">
+                    <span class="line-title">Ambient Lights</span>
+                    <label class="radio-item" for="includeAmbientLights"><input id="includeAmbientLights" type="checkbox" checked /> Include</label>
+                  </div>
+                  <div class="grid" id="ambientLightingFields">
+                    <div class="field"><label for="ambientOption">Ambient lighting option</label><select id="ambientOption"></select></div>
+                    <div class="field"><label for="ambientQty">Ambient quantity</label><input id="ambientQty" type="number" min="0" step="1" /></div>
+                  </div>
+                </div>
+
+                <div class="line-item">
+                  <div class="line-item-head">
+                    <span class="line-title">Stage Lights</span>
+                    <label class="radio-item" for="includeStageLights"><input id="includeStageLights" type="checkbox" checked /> Include</label>
+                  </div>
+                  <div class="grid" id="stageLightingFields">
+                    <div class="field"><label for="stageLightOption">Stage lights option</label><select id="stageLightOption"></select></div>
+                    <div class="field"><label for="stageLightQty">Stage lights quantity</label><input id="stageLightQty" type="number" min="0" step="1" /></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="group">
+          <h2>Budget + Timing</h2>
+          <div class="grid">
+            <div class="field">
+              <label for="budgetRange">Budget range</label>
+              <select id="budgetRange">
+                <option>Under $5K</option>
+                <option selected>$5K-$15K</option>
+                <option>$15K-$30K</option>
+                <option>$30K-$50K</option>
+                <option>$50K+</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="timeline">Timeline</label>
+              <select id="timeline">
+                <option>ASAP</option>
+                <option selected>Within 3 months</option>
+                <option>Within 6 months</option>
+                <option>Planning for next year</option>
+              </select>
+            </div>
+          </div>
+          <div class="field" style="margin-top:.75rem;">
+            <label for="notes">Additional notes</label>
+            <textarea id="notes" placeholder="Project history, building constraints, volunteer capacity, donor timing, or anything the conference should know."></textarea>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Live Quote Request</h2>
+        <div class="results-shell">
+          <div class="quote-sheet" id="quoteSheet">
+            <div class="sheet-top">
+              <div>
+                <div class="sheet-title">AV Quote Request</div>
+                <div class="sheet-sub">Iowa-Missouri Conference of Seventh-day Adventists</div>
+              </div>
+              <div class="sheet-sub" id="generatedDate"></div>
+            </div>
+            <div class="info-note" id="pricingNoteSummary"></div>
+
+            <div class="meta-list">
+              <div class="meta-item"><strong>Church</strong><span id="outChurch">Not provided</span></div>
+              <div class="meta-item"><strong>Contact</strong><span id="outContact">Not provided</span></div>
+              <div class="meta-item"><strong>Facility Profile</strong><span id="outFacility">6,000 sq ft room · 900 sq ft stage</span></div>
+              <div class="meta-item"><strong>Budget + Timeline</strong><span id="outBudget">Budget: $5K-$15K · Timeline: Within 3 months</span></div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Section</th>
+                  <th>Selection</th>
+                  <th>Details</th>
+                  <th>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody id="requestRows"></tbody>
+            </table>
+
+            <div class="total-box" id="totalOutput">Estimated Total: $0</div>
+            <div class="notes" id="outNotes">No additional notes provided.</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="printBtn" type="button">Print / Save as PDF</button>
+          <a class="mailto" id="mailtoLink" href="#">Email to Conference Office</a>
+        </div>
+        <p class="footer-note">The email draft uses <code>technology@imsda.org</code> and includes a plain-text summary from the current form.</p>
+      </article>
+    </section>
+
+    
+  </main>
+
+  <script>
+    /*
+      PRICE SOURCE NOTE:
+      These MSRP/current retail values are starter estimates and should be reviewed and updated periodically.
+      Update pricing in the catalog object only.
+
+      Catalog maintenance map:
+      - Edit MSRP values in PRODUCT_CATALOG (msrp).
+      - Edit default quantities in PRODUCT_CATALOG (defaultQty).
+      - Edit product notes in PRODUCT_CATALOG (note).
+      - Edit compatibility rules in COMPATIBILITY_RULES.
+    */
+
+    const PRODUCT_CATALOG = [
+      // Microphones
+      { id: 'mic-wireless-shure-slxd-plus-single', category: 'microphone', system: 'microphone', group: 'wireless', channelsIncluded: 1, name: 'Shure SLXD+ Single', shortDescription: 'Wireless handheld system', msrp: 789, defaultQty: 0, note: 'Shure wireless option.' },
+      { id: 'mic-wireless-shure-slxd-plus-dual', category: 'microphone', system: 'microphone', group: 'wireless', channelsIncluded: 2, name: 'Shure SLXD+ Dual', shortDescription: 'Dual-channel wireless system', msrp: 1649, defaultQty: 0, note: 'Dual unit may be more cost-effective than two singles.' },
+      { id: 'mic-wireless-shure-slxd-dual', category: 'microphone', system: 'microphone', group: 'wireless', channelsIncluded: 2, name: 'Shure SLXD Dual: Previous Gen', shortDescription: 'Previous generation dual wireless system', msrp: 1299, defaultQty: 0, note: 'Previous generation Shure dual option.' },
+      { id: 'mic-wireless-sennheiser-ew-d-835-s', category: 'microphone', system: 'microphone', group: 'wireless', channelsIncluded: 1, name: 'Sennheiser EW-D 835-S', shortDescription: 'Digital wireless handheld system', msrp: 749, defaultQty: 0, note: 'Sennheiser wireless option.' },
+      { id: 'mic-wireless-phenyx-ptu-5200', category: 'microphone', system: 'microphone', group: 'wireless', channelsIncluded: 4, name: 'Phenyx Pro PTU-5200', shortDescription: '4-channel wireless package', msrp: 260, defaultQty: 0, note: 'Phenyx value package.' },
+      { id: 'mic-wireless-phenyx-ptu-2u', category: 'microphone', system: 'microphone', group: 'wireless', channelsIncluded: 2, name: 'Phenyx Pro PTU-2U', shortDescription: '2-channel wireless package', msrp: 340, defaultQty: 0, note: 'Phenyx dual package option.' },
+      { id: 'mic-podium-mx418dc', category: 'microphone', system: 'microphone', group: 'podium', name: 'Shure MX418D/C', shortDescription: 'Podium gooseneck microphone', msrp: 375, defaultQty: 0, note: '' },
+      { id: 'mic-instrument-sm57', category: 'microphone', system: 'microphone', group: 'instrument', name: 'Shure SM57', shortDescription: 'Instrument/vocal dynamic microphone', msrp: 109, defaultQty: 0, note: '' },
+      { id: 'mic-shotgun-rode-ntg2', category: 'microphone', system: 'microphone', group: 'shotgun', name: 'RODE NTG2 Shotgun', shortDescription: 'Shotgun microphone for targeted pickup', msrp: 269, defaultQty: 0, note: '' },
+
+      // Antenna combiners
+      { id: 'combiner-shure-ua844', category: 'antenna-combiner', system: 'microphone', brand: 'shure', name: 'Shure UA844+SWB', shortDescription: 'Antenna distribution for compatible Shure wireless', msrp: 899, defaultQty: 0, note: 'Use when wireless channel count is higher or rack placement requires distribution.' },
+      { id: 'combiner-sennheiser-asa214', category: 'antenna-combiner', system: 'microphone', brand: 'sennheiser', name: 'Sennheiser ASA 214', shortDescription: 'Antenna distribution for compatible Sennheiser wireless', msrp: 599, defaultQty: 0, note: '' },
+      { id: 'combiner-phenyx-antenna', category: 'antenna-combiner', system: 'microphone', brand: 'phenyx', name: 'Phenyx Pro Antenna Distribution System', shortDescription: 'Antenna distribution for compatible Phenyx wireless', msrp: 199, defaultQty: 0, note: '' },
+
+      // Soundboards
+      { id: 'board-behringer-wing', category: 'soundboard', system: 'audio', group: 'full', family: 'behringer_wing', name: 'Behringer WING', shortDescription: 'Full-size digital mixing console', msrp: 3499, defaultQty: 1, note: '', recommended: true },
+      { id: 'board-yamaha-tf5', category: 'soundboard', system: 'audio', group: 'full', family: 'yamaha_tf', name: 'Yamaha TF5', shortDescription: 'Full-size digital mixing console', msrp: 3599, defaultQty: 0, note: '', recommended: false },
+      { id: 'board-allen-heath-qu7', category: 'soundboard', system: 'audio', group: 'full', family: 'allen_heath_qu', name: 'Allen & Heath Qu7', shortDescription: 'Full-size digital mixing console', msrp: 3999, defaultQty: 0, note: '', recommended: false },
+      { id: 'board-behringer-wing-compact', category: 'soundboard', system: 'audio', group: 'compact', family: 'behringer_wing', name: 'Behringer WING Compact', shortDescription: 'Compact digital mixing console', msrp: 2799, defaultQty: 1, note: '', recommended: true },
+      { id: 'board-allen-heath-qu5', category: 'soundboard', system: 'audio', group: 'compact', family: 'allen_heath_qu', name: 'Allen & Heath Qu5', shortDescription: 'Compact digital mixing console', msrp: 1999, defaultQty: 0, note: '', recommended: false },
+      { id: 'board-yamaha-tf1', category: 'soundboard', system: 'audio', group: 'compact', family: 'yamaha_tf', name: 'Yamaha TF1', shortDescription: 'Compact digital mixing console', msrp: 2499, defaultQty: 0, note: '', recommended: false },
+      { id: 'board-allen-heath-cq12t', category: 'soundboard', system: 'audio', group: 'portable', family: 'portable', name: 'Allen & Heath CQ-12T', shortDescription: 'Small setup/portable digital mixer', msrp: 799.99, defaultQty: 1, note: '', recommended: true },
+
+      // Stage boxes
+      { id: 'stagebox-ah-ab168', category: 'stagebox', system: 'audio', family: 'allen_heath_qu', name: 'Allen & Heath AB168', shortDescription: 'Digital stage box for A&H Qu family', msrp: 1299, defaultQty: 1, note: '' },
+      { id: 'stagebox-ah-ar2412', category: 'stagebox', system: 'audio', family: 'allen_heath_qu', name: 'Allen & Heath AR2412', shortDescription: 'High-channel stage box for A&H Qu family', msrp: 1699, defaultQty: 1, note: '' },
+      { id: 'stagebox-ah-ar84', category: 'stagebox', system: 'audio', family: 'allen_heath_qu', name: 'Allen & Heath AR84', shortDescription: 'Compact stage box for A&H Qu family', msrp: 999, defaultQty: 1, note: '' },
+      { id: 'stagebox-behringer-sd16', category: 'stagebox', system: 'audio', family: 'behringer_wing', name: 'Behringer SD8', shortDescription: 'Stage box for Behringer WING family', msrp: 409, defaultQty: 1, note: '' },
+      { id: 'stagebox-behringer-s16', category: 'stagebox', system: 'audio', family: 'behringer_wing', name: 'Behringer SD16', shortDescription: 'Stage box for Behringer WING family', msrp: 509, defaultQty: 1, note: '' },
+      { id: 'stagebox-behringer-s32', category: 'stagebox', system: 'audio', family: 'behringer_wing', name: 'Behringer S32', shortDescription: 'Large stage box for Behringer WING family', msrp: 539, defaultQty: 1, note: '' },
+      { id: 'stagebox-yamaha-tio1608-d2', category: 'stagebox', system: 'audio', family: 'yamaha_tf', name: 'Yamaha Tio1608-D2', shortDescription: 'Yamaha TF-compatible stage box', msrp: 1924, defaultQty: 1, note: 'Yamaha TF stage box systems require the optional NY64-D Dante card.' },
+      { id: 'stagebox-soundtools-catbox8', category: 'stagebox', system: 'audio', family: 'universal', name: 'Sound Tools Cat Box 8', shortDescription: 'Universal analog-over-CAT stage box', msrp: 200, defaultQty: 2, note: 'You must have 2 of these, one for each side of the CAT cable.' },
+
+      // Speakers and stage monitors
+      { id: 'speaker-qsc-k12-2', category: 'speaker', system: 'audio', name: 'QSC K12.2', shortDescription: '12-inch powered speaker', msrp: 899.99, defaultQty: 2, note: '' },
+      { id: 'speaker-jbl-eon712', category: 'speaker', system: 'audio', name: 'JBL EON712', shortDescription: '12-inch powered speaker', msrp: 569, defaultQty: 2, note: '' },
+      { id: 'speaker-jbl-eon715', category: 'speaker', system: 'audio', name: 'JBL EON715', shortDescription: '15-inch powered speaker', msrp: 569, defaultQty: 2, note: '' },
+      { id: 'speaker-qsc-la108', category: 'speaker', system: 'audio', name: 'QSC LA108 (1300W Active 8" Line Array)', shortDescription: 'Line array loudspeaker', msrp: 2599.99, defaultQty: 2, note: '' },
+      { id: 'stage-monitor-qsc-cp8', category: 'stage-monitor', system: 'audio', name: 'QSC CP8', shortDescription: 'Compact stage monitor', msrp: 550, defaultQty: 1, note: '' },
+      { id: 'stage-monitor-qsc-k10-2', category: 'stage-monitor', system: 'audio', name: 'QSC K10.2', shortDescription: '10-inch stage monitor', msrp: 800, defaultQty: 1, note: '' },
+      { id: 'stage-monitor-jbl-eon710', category: 'stage-monitor', system: 'audio', name: 'JBL EON 710', shortDescription: '10-inch stage monitor', msrp: 470, defaultQty: 1, note: '' },
+      { id: 'stage-monitor-jbl-eon-one', category: 'stage-monitor', system: 'audio', name: 'JBL EON One', shortDescription: 'Portable stage monitor option', msrp: 699, defaultQty: 1, note: '' },
+
+      // Livestream package
+      { id: 'live-camera-canon-cr-n300', category: 'livestream-camera', system: 'livestream', name: 'Canon CR-N300', shortDescription: 'PTZ livestream camera', msrp: 2999, defaultQty: 1, note: '' },
+      { id: 'live-camera-canon-cr-n500', category: 'livestream-camera', system: 'livestream', name: 'Canon CR-N500', shortDescription: 'Higher-tier PTZ livestream camera', msrp: 5999, defaultQty: 1, note: '' },
+      { id: 'live-camera-ptzoptics-move-se-20x', category: 'livestream-camera', system: 'livestream', name: 'PTZOptics Move SE 20x', shortDescription: 'PTZ livestream camera', msrp: 1349, defaultQty: 1, note: '' },
+      { id: 'live-camera-canon-vixia-hf-g70', category: 'livestream-camera', system: 'livestream', name: 'Canon VIXIA HF G70', shortDescription: 'Handheld livestream camera', msrp: 1399, defaultQty: 1, note: '' },
+      { id: 'live-atem-mini-pro', category: 'livestream-atem', system: 'livestream', name: 'ATEM Mini Pro: 4 Video Inputs', shortDescription: 'Video switcher', msrp: 325, defaultQty: 1, note: '' },
+      { id: 'live-atem-mini-extreme', category: 'livestream-atem', system: 'livestream', name: 'ATEM Mini Extreme: 8 Video Inputs', shortDescription: 'Video switcher', msrp: 1095, defaultQty: 1, note: '' },
+      { id: 'live-monitor-24', category: 'livestream-monitor', system: 'livestream', name: '24" Production Monitor', shortDescription: 'Production confidence monitor', msrp: 110, defaultQty: 1, note: '' },
+      { id: 'live-monitor-27', category: 'livestream-monitor', system: 'livestream', name: '27" Production Monitor', shortDescription: 'Production confidence monitor', msrp: 130, defaultQty: 1, note: '' },
+      { id: 'live-monitor-32', category: 'livestream-monitor', system: 'livestream', name: '32" Production Monitor', shortDescription: 'Production confidence monitor', msrp: 150, defaultQty: 1, note: 'If you want a 32-inch monitor or larger, a small TV would probably be cheaper.' },
+      { id: 'live-inc-cables', category: 'livestream-included', system: 'livestream', name: 'HDMI/SDI cables', shortDescription: 'Included livestream package accessory', msrp: 160, defaultQty: 1, note: '' },
+      { id: 'live-inc-adapters', category: 'livestream-included', system: 'livestream', name: 'adapters', shortDescription: 'Included livestream package accessory', msrp: 85, defaultQty: 1, note: '' },
+      { id: 'live-inc-cable-management', category: 'livestream-included', system: 'livestream', name: 'cable management', shortDescription: 'Included livestream package accessory', msrp: 65, defaultQty: 1, note: '' },
+
+      // Displays
+      { id: 'display-projector-epson-l890e', category: 'display', system: 'projector', name: 'Epson PowerLite L890E', shortDescription: 'Highest brightness (8K lumens) for the price and true 4K', msrp: 5811, defaultQty: 1, note: '' },
+      { id: 'display-projector-viewsonic-ls740hd', category: 'display', system: 'projector', name: 'ViewSonic LS740HD', shortDescription: 'Best projector for the price point, 5K lumens and Full HD', msrp: 1099.99, defaultQty: 1, note: '' },
+      { id: 'display-tv-insignia-f50', category: 'display', system: 'tv', name: 'Insignia Class f50 Series', shortDescription: 'Based on MSRP 100" TV', msrp: 1999.99, defaultQty: 2, note: '' },
+      { id: 'display-tv-hisense-qd7', category: 'display', system: 'tv', name: 'Hisense Class QD7', shortDescription: 'Based on MSRP 100" TV', msrp: 1999.99, defaultQty: 2, note: '' },
+
+      // Lighting
+      { id: 'light-ambient-corepar-q60', category: 'lighting-ambient', system: 'lighting', name: 'CHAUVET DJ COREpar Q60 ILS', shortDescription: 'Ambient wash fixture', msrp: 269.99, defaultQty: 0, note: '' },
+      { id: 'light-stage-eve-p140', category: 'lighting-stage', system: 'lighting', name: 'CHAUVET DJ EVE P-140 VW', shortDescription: 'Stage key/front fixture', msrp: 539.99, defaultQty: 0, note: '' }
+    ];
+
+    const TOOL_CONFIG = {
+      micTypeLabels: { wireless: 'Wireless', podium: 'Podium Mic', instrument: 'Instrument', shotgun: 'Shotgun' },
+      recommendedWirelessQty: 6,
+      recommendedWirelessBreakdown: [
+        { label: 'Singing', qty: 4 },
+        { label: 'Mobile', qty: 1 },
+        { label: 'Speaker', qty: 1 }
+      ],
+      soundboardRecommendation: 'Recommended full-size board: Behringer WING. Recommended compact board: Behringer WING Compact. Recommended portable board: Allen & Heath CQ-12T.',
+      displayRules: [
+        { maxRoomSqFt: 3500, recommendedMode: 'tv' },
+        { maxRoomSqFt: 1000000, recommendedMode: 'projector' }
+      ],
+      lightingRecommendationRules: {
+        ambient: [ { maxStageSqFt: 500, quantity: 4 }, { maxStageSqFt: 1000, quantity: 6 }, { maxStageSqFt: 999999, quantity: 8 } ],
+        stage: [ { maxStageSqFt: 500, quantity: 6 }, { maxStageSqFt: 1000, quantity: 8 }, { maxStageSqFt: 999999, quantity: 12 } ]
+      }
+    };
+
+    const COMPATIBILITY_RULES = {
+      antennaByMicModel: {
+        'mic-wireless-shure-slxd-plus-single': ['combiner-shure-ua844'],
+        'mic-wireless-shure-slxd-plus-dual': ['combiner-shure-ua844'],
+        'mic-wireless-sennheiser-ew-d-835-s': ['combiner-sennheiser-asa214'],
+        'mic-wireless-phenyx-ptu-5200': ['combiner-phenyx-antenna']
+      },
+      stageboxFamilyByBoard: {
+        'board-allen-heath-qu5': 'allen_heath_qu',
+        'board-allen-heath-qu7': 'allen_heath_qu',
+        'board-behringer-wing': 'behringer_wing',
+        'board-behringer-wing-compact': 'behringer_wing',
+        'board-yamaha-tf1': 'yamaha_tf',
+        'board-yamaha-tf5': 'yamaha_tf'
+      },
+      defaultStageboxByBoard: {
+        'board-behringer-wing': 'stagebox-behringer-sd16',
+        'board-behringer-wing-compact': 'stagebox-behringer-sd16',
+        'board-yamaha-tf1': 'stagebox-yamaha-tio1608-d2',
+        'board-yamaha-tf5': 'stagebox-yamaha-tio1608-d2',
+        'board-allen-heath-qu5': 'stagebox-ah-ab168',
+        'board-allen-heath-qu7': 'stagebox-ah-ab168',
+        'board-allen-heath-cq12t': 'stagebox-soundtools-catbox8'
+      }
+    };
+
+    const MSRP_NOTE = 'This quote tool is based on MSRP/Common pricing as of 4/8/2026. Prices are subject to change and this is an estimate, not an exact cost. Please reach out to check whether better pricing is available through the Conference Office. Our Discount typically ranges 10-20%';
+    const $ = (id) => document.getElementById(id);
+
+    const quantityState = Object.fromEntries(PRODUCT_CATALOG.map((p) => [p.id, p.defaultQty || 0]));
+    const selectionState = {
+      soundboardGroup: 'full',
+      soundboardId: '',
+      stageboxId: '',
+      displayMode: 'projector',
+      displayId: '',
+      speakerId: '',
+      stageMonitorId: '',
+      livestreamCameraId: '',
+      livestreamAtemId: '',
+      livestreamMonitorId: '',
+      ambientId: '',
+      stageLightId: ''
+    };
+
+    function currency(num) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num || 0);
+    }
+    function value(id) { return $(id).value.trim(); }
+    function asNumber(id, fallback = 0) {
+      const parsed = Number($(id).value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+    function productsBy(category, predicate = () => true) {
+      return PRODUCT_CATALOG.filter((p) => p.category === category && predicate(p));
+    }
+    function findProduct(id) {
+      return PRODUCT_CATALOG.find((p) => p.id === id) || null;
+    }
+    function fillSelect(selectId, products, selectedId) {
+      $(selectId).innerHTML = products.map((p) => `<option value="${p.id}">${p.name} (${currency(p.msrp)})</option>`).join('');
+      if (!products.length) return;
+      const exists = products.some((p) => p.id === selectedId);
+      $(selectId).value = exists ? selectedId : products[0].id;
+    }
+    function lineTotal(productId, qty) {
+      const p = findProduct(productId);
+      return p ? p.msrp * qty : 0;
+    }
+    function ruleQuantity(rules, size) {
+      return (rules.find((rule) => size <= rule.maxStageSqFt) || rules[rules.length - 1]).quantity;
+    }
+
+    function initCatalogDrivenUI() {
+      selectionState.speakerId = productsBy('speaker')[0]?.id || '';
+      selectionState.stageMonitorId = productsBy('stage-monitor')[0]?.id || '';
+      selectionState.livestreamCameraId = productsBy('livestream-camera')[0]?.id || '';
+      selectionState.livestreamAtemId = productsBy('livestream-atem')[0]?.id || '';
+      selectionState.livestreamMonitorId = productsBy('livestream-monitor')[0]?.id || '';
+      selectionState.ambientId = productsBy('lighting-ambient')[0]?.id || '';
+      selectionState.stageLightId = productsBy('lighting-stage')[0]?.id || '';
+
+      window.micLines = [{ typeKey: 'wireless', modelId: 'mic-wireless-shure-slxd-plus-single', qty: TOOL_CONFIG.recommendedWirelessQty, includeAntennaCombiner: false, antennaCombinerId: '', antennaQty: 1 }];
+
+      fillSelect('livestreamCameraOption', productsBy('livestream-camera'), selectionState.livestreamCameraId);
+      fillSelect('atemOption', productsBy('livestream-atem'), selectionState.livestreamAtemId);
+      fillSelect('monitorOption', productsBy('livestream-monitor'), selectionState.livestreamMonitorId);
+      fillSelect('ambientOption', productsBy('lighting-ambient'), selectionState.ambientId);
+      fillSelect('stageLightOption', productsBy('lighting-stage'), selectionState.stageLightId);
+      fillSelect('speakerOption', productsBy('speaker'), selectionState.speakerId);
+      fillSelect('stageMonitorOption', productsBy('stage-monitor'), selectionState.stageMonitorId);
+
+      renderMicRecommendation();
+      renderMicLines();
+      renderSoundboardState();
+      renderDisplayOptions();
+      renderLivestreamIncluded();
+      updateOutput();
+    }
+
+    function renderLivestreamIncluded() {
+      $('livestreamIncludedItems').innerHTML = productsBy('livestream-included')
+        .map((item) => `<li>${item.name} (${currency(item.msrp)})</li>`).join('');
+    }
+
+    function renderMicRecommendation() {
+      const breakdown = TOOL_CONFIG.recommendedWirelessBreakdown.map((item) => `${item.qty} for ${item.label.toLowerCase()}`).join(', ');
+      $('micRecommendation').textContent = `Recommended wireless setup: ${TOOL_CONFIG.recommendedWirelessQty} wireless mics total (${breakdown}).`;
+    }
+
+    function getMicModelsForType(typeKey) {
+      return productsBy('microphone', (p) => p.group === typeKey);
+    }
+
+    function getCompatibleAntennaCombiners(micModelId) {
+      const combinerIds = COMPATIBILITY_RULES.antennaByMicModel[micModelId] || [];
+      return combinerIds.map(findProduct).filter(Boolean);
+    }
+
+    function ensureMicLineCompatibility(line) {
+      const models = getMicModelsForType(line.typeKey);
+      if (!models.some((p) => p.id === line.modelId)) line.modelId = models[0]?.id || '';
+      if (line.typeKey !== 'wireless') {
+        line.includeAntennaCombiner = false;
+        line.antennaCombinerId = '';
+      } else {
+        const compatible = getCompatibleAntennaCombiners(line.modelId);
+        if (!compatible.some((c) => c.id === line.antennaCombinerId)) {
+          line.antennaCombinerId = compatible[0]?.id || '';
+        }
+      }
+      line.qty = Math.max(0, Number(line.qty) || 0);
+      line.antennaQty = Math.max(1, Number(line.antennaQty) || 1);
+    }
+
+    function renderMicLines() {
+      const typeOptions = Object.entries(TOOL_CONFIG.micTypeLabels);
+      $('micLineItems').innerHTML = window.micLines.map((line, index) => {
+        ensureMicLineCompatibility(line);
+        const models = getMicModelsForType(line.typeKey);
+        const model = findProduct(line.modelId);
+        const compatibleCombiners = getCompatibleAntennaCombiners(line.modelId);
+        const combiner = findProduct(line.antennaCombinerId);
+        return `
+          <div class="line-item" data-line-index="${index}">
+            <div class="line-item-head">
+              <span class="line-title">Line ${index + 1}</span>
+              ${window.micLines.length > 1 ? `<button type="button" class="mini-btn mic-remove-btn" data-remove-index="${index}">Remove</button>` : ''}
+            </div>
+            <div class="grid">
+              <div class="field">
+                <label>Microphone type</label>
+                <select class="mic-type-select" data-line-index="${index}">
+                  ${typeOptions.map(([id, label]) => `<option value="${id}" ${line.typeKey === id ? 'selected' : ''}>${label}</option>`).join('')}
+                </select>
+              </div>
+              <div class="field">
+                <label>Model</label>
+                <select class="mic-model-select" data-line-index="${index}">
+                  ${models.map((item) => `<option value="${item.id}" ${line.modelId === item.id ? 'selected' : ''}>${item.name} (${currency(item.msrp)}${item.channelsIncluded ? ` · ${item.channelsIncluded} channels` : ''})</option>`).join('')}
+                </select>
+                ${line.typeKey === 'wireless' ? `<div class="field-note">Dual unit may be more cost-effective than two singles.</div><div class="field-note">Antenna combiner recommended when using more than 6 wireless microphones or enclosed rack installs.</div>` : ''}
+              </div>
+              <div class="field">
+                <label>Quantity</label>
+                <input class="mic-qty-input" data-line-index="${index}" type="number" min="0" step="1" value="${line.qty}" />
+              </div>
+            </div>
+            ${line.typeKey === 'wireless' ? `
+              <div class="field" style="margin-top:.4rem;">
+                <label style="display:flex;align-items:center;gap:.5rem;">
+                  <input class="mic-antenna-toggle" data-line-index="${index}" type="checkbox" ${line.includeAntennaCombiner ? 'checked' : ''} />
+                  <span>Include Antenna Combiner</span>
+                </label>
+              </div>
+              ${line.includeAntennaCombiner ? `
+                <div class="grid">
+                  <div class="field">
+                    <label>Antenna Combiner</label>
+                    <select class="mic-antenna-select" data-line-index="${index}">
+                      ${compatibleCombiners.map((item) => `<option value="${item.id}" ${item.id === line.antennaCombinerId ? 'selected' : ''}>${item.name} (${currency(item.msrp)})</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label>Antenna Quantity</label>
+                    <input class="mic-antenna-qty-input" data-line-index="${index}" type="number" min="1" step="1" value="${line.antennaQty}" />
+                  </div>
+                </div>
+              ` : ''}
+            ` : ''}
+            <div class="line-cost">
+              <span>Unit Cost: ${currency(model?.msrp || 0)}</span>
+              <span>Line Total: ${currency((model?.msrp || 0) * line.qty + (line.includeAntennaCombiner && combiner ? combiner.msrp * line.antennaQty : 0))}</span>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function getSelectedSoundboardGroup() {
+      const checked = document.querySelector('input[name="soundboardSize"]:checked');
+      return checked?.value === 'compact' ? 'compact' : (checked?.value === 'portable' ? 'portable' : 'full');
+    }
+    function soundboardsForGroup(group) {
+      return productsBy('soundboard', (p) => p.group === group);
+    }
+    function renderSoundboardOptions() {
+      const group = getSelectedSoundboardGroup();
+      const options = soundboardsForGroup(group);
+      const defaultId = options.find((o) => o.recommended)?.id || options[0]?.id || '';
+      const selected = options.some((o) => o.id === selectionState.soundboardId) ? selectionState.soundboardId : defaultId;
+      fillSelect('soundboardOption', options, selected);
+      selectionState.soundboardId = $('soundboardOption').value;
+    }
+    function renderStageboxOptions() {
+      const boardId = selectionState.soundboardId;
+      const family = COMPATIBILITY_RULES.stageboxFamilyByBoard[boardId] || '';
+      const options = productsBy('stagebox', (p) => p.family === family || p.family === 'universal');
+      const configuredDefault = COMPATIBILITY_RULES.defaultStageboxByBoard[boardId];
+      const selected = options.some((o) => o.id === selectionState.stageboxId)
+        ? selectionState.stageboxId
+        : (options.some((o) => o.id === configuredDefault) ? configuredDefault : (options[0]?.id || ''));
+      fillSelect('stageboxOption', options, selected);
+      selectionState.stageboxId = $('stageboxOption').value;
+    }
+
+    function renderSoundboardState() {
+      $('soundboardRecommendation').textContent = TOOL_CONFIG.soundboardRecommendation;
+      renderSoundboardOptions();
+      renderStageboxOptions();
+      updateSoundboardPricing();
+      updateStageboxPricing();
+    }
+
+    function renderDisplayOptions() {
+      const mode = $('displayMode').value || 'projector';
+      selectionState.displayMode = mode;
+      const options = productsBy('display', (p) => p.system === mode);
+      fillSelect('displayOption', options, selectionState.displayId);
+      selectionState.displayId = $('displayOption').value;
+      if (!Number.isFinite(Number($('displayQty').value)) || Number($('displayQty').value) < 1) {
+        $('displayQty').value = String(mode === 'tv' ? 2 : 1);
+      }
+      updateDisplayPricing();
+    }
+
+    function getSelectedDisplayOption() {
+      return findProduct($('displayOption').value);
+    }
+
+    function getDisplayQuantity() {
+      const mode = $('displayMode').value || 'projector';
+      const fallback = mode === 'tv' ? 2 : 1;
+      const parsed = Number($('displayQty').value);
+      const qty = Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : fallback;
+      $('displayQty').value = String(qty);
+      return qty;
+    }
+
+    function getDisplaySubtotal() {
+      const display = getSelectedDisplayOption();
+      return (display?.msrp || 0) * getDisplayQuantity();
+    }
+
+    function updateDisplayPricing() {
+      const roomSize = asNumber('roomSize', 6000);
+      const rule = TOOL_CONFIG.displayRules.find((r) => roomSize <= r.maxRoomSqFt) || TOOL_CONFIG.displayRules[TOOL_CONFIG.displayRules.length - 1];
+      const pick = getSelectedDisplayOption();
+      const mode = $('displayMode').value || 'projector';
+      const qty = getDisplayQuantity();
+      const subtotal = getDisplaySubtotal();
+      const modeText = mode === 'projector'
+        ? 'Projectors – Best for larger than 100-inch screens or for large spaces.'
+        : 'TVs – Best for everything if a 100-inch works.';
+      $('displayRecommendation').textContent = `${modeText} Recommended for this room size (${roomSize} sq ft): ${rule.recommendedMode === 'projector' ? 'Projector' : 'TVs'}.`;
+      $('displayPriceNote').textContent = `Qty: ${qty}, Unit: ${currency(pick?.msrp || 0)}, Line Total: ${currency(subtotal)}`;
+    }
+
+    function syncLightingTypeState() {
+      [
+        { includeId: 'includeAmbientLights', fieldsId: 'ambientLightingFields', qtyId: 'ambientQty' },
+        { includeId: 'includeStageLights', fieldsId: 'stageLightingFields', qtyId: 'stageLightQty' }
+      ].forEach((item) => {
+        const enabled = $(item.includeId).checked;
+        $(item.fieldsId).style.display = enabled ? '' : 'none';
+        $(item.qtyId).disabled = !enabled;
+      });
+    }
+
+    function applyRecommendations() {
+      const stageSize = asNumber('stageSize', 900);
+      const bits = [];
+      if ($('includeAmbientLights').checked) {
+        const qty = ruleQuantity(TOOL_CONFIG.lightingRecommendationRules.ambient, stageSize);
+        bits.push(`Ambient ${qty}`);
+        if (!asNumber('ambientQty', 0)) $('ambientQty').value = qty;
+      }
+      if ($('includeStageLights').checked) {
+        const qty = ruleQuantity(TOOL_CONFIG.lightingRecommendationRules.stage, stageSize);
+        bits.push(`Stage Lights ${qty}`);
+        if (!asNumber('stageLightQty', 0)) $('stageLightQty').value = qty;
+      }
+      $('lightingRecommendation').textContent = bits.length
+        ? `Recommended quantities for ${stageSize} sq ft stage: ${bits.join(', ')}.`
+        : 'Select at least one lighting type to view recommendations.';
+    }
+
+    function updateSoundboardPricing() {
+      const soundboard = findProduct($('soundboardOption').value);
+      $('soundboardUnitCost').textContent = `Unit Cost: ${currency(soundboard?.msrp || 0)}`;
+      $('soundboardLineTotal').textContent = `Line Total: ${currency(soundboard?.msrp || 0)}`;
+    }
+
+    function updateSpeakerPricing() {
+      const enabled = $('includeSpeakers').checked;
+      $('speakerFields').style.display = enabled ? '' : 'none';
+      const speaker = findProduct($('speakerOption').value);
+      const qty = Math.max(0, asNumber('speakerQty', 2));
+      $('speakerQty').value = String(qty);
+      $('speakerUnitCost').textContent = `Unit Cost: ${currency(speaker?.msrp || 0)}`;
+      $('speakerLineTotal').textContent = `Line Total: ${currency(enabled ? (speaker?.msrp || 0) * qty : 0)}`;
+
+      const stageMonitorsEnabled = enabled && $('includeStageMonitors').checked;
+      $('stageMonitorFields').style.display = stageMonitorsEnabled ? '' : 'none';
+      const stageMonitor = findProduct($('stageMonitorOption').value);
+      const stageMonitorQty = Math.max(1, asNumber('stageMonitorQty', 1));
+      $('stageMonitorQty').value = String(stageMonitorQty);
+      $('stageMonitorUnitCost').textContent = `Unit Cost: ${currency(stageMonitor?.msrp || 0)}`;
+      $('stageMonitorLineTotal').textContent = `Line Total: ${currency(stageMonitorsEnabled ? (stageMonitor?.msrp || 0) * stageMonitorQty : 0)}`;
+    }
+
+    function updateStageboxPricing() {
+      const enabled = $('includeSoundboard').checked && $('includeStageboxes').checked;
+      $('stageboxFields').style.display = enabled ? '' : 'none';
+      const stagebox = findProduct($('stageboxOption').value);
+      const qty = stagebox?.id === 'stagebox-soundtools-catbox8' ? 2 : Math.max(1, asNumber('stageboxQty', 1));
+      $('stageboxQty').value = String(qty);
+      $('stageboxUnitCost').textContent = `Unit Cost: ${currency(stagebox?.msrp || 0)}`;
+      $('stageboxLineTotal').textContent = `Line Total: ${currency(enabled ? (stagebox?.msrp || 0) * qty : 0)}`;
+      $('stageboxCompatibilityNote').style.display = enabled && stagebox?.note ? '' : 'none';
+      $('stageboxCompatibilityNote').textContent = stagebox?.note || '';
+    }
+
+    function getIncludedSections() {
+      return {
+        includeMics: $('includeMics').checked,
+        includeSoundboard: $('includeSoundboard').checked,
+        includeSpeakers: $('includeSpeakers').checked,
+        includeLivestream: $('includeLivestream').checked,
+        includeDisplay: $('includeDisplay').checked,
+        includeLighting: $('includeLighting').checked
+      };
+    }
+
+    function calculateQuote(included) {
+      const rows = [];
+      let total = 0;
+
+      if (included.includeMics) {
+        window.micLines.forEach((line) => {
+          ensureMicLineCompatibility(line);
+          const mic = findProduct(line.modelId);
+          const micSubtotal = (mic?.msrp || 0) * line.qty;
+          if (line.qty > 0) {
+            rows.push({ section: 'Microphones', selection: `${TOOL_CONFIG.micTypeLabels[line.typeKey]} · ${mic?.name || ''}`, details: `Qty: ${line.qty}, Unit: ${currency(mic?.msrp || 0)}, Line Total: ${currency(micSubtotal)}`, subtotal: micSubtotal });
+            total += micSubtotal;
+          }
+          if (line.includeAntennaCombiner) {
+            const combiner = findProduct(line.antennaCombinerId);
+            const combinerSubtotal = (combiner?.msrp || 0) * line.antennaQty;
+            if (combiner && line.antennaQty > 0) {
+              rows.push({ section: 'Antenna Combiner', selection: combiner.name, details: `Qty: ${line.antennaQty}, Unit: ${currency(combiner.msrp)}, Line Total: ${currency(combinerSubtotal)}`, subtotal: combinerSubtotal });
+              total += combinerSubtotal;
+            }
+          }
+        });
+      }
+
+      if (included.includeSoundboard) {
+        const board = findProduct($('soundboardOption').value);
+        if (board) {
+          rows.push({ section: 'Sound Board', selection: board.name, details: `Qty: 1, Unit: ${currency(board.msrp)}, Line Total: ${currency(board.msrp)}`, subtotal: board.msrp });
+          total += board.msrp;
+        }
+        if ($('includeStageboxes').checked) {
+          const stagebox = findProduct($('stageboxOption').value);
+          const qty = stagebox?.id === 'stagebox-soundtools-catbox8' ? 2 : Math.max(1, asNumber('stageboxQty', 1));
+          const subtotal = (stagebox?.msrp || 0) * qty;
+          if (stagebox) {
+            rows.push({ section: 'Stage Boxes', selection: stagebox.name, details: `Qty: ${qty}, Unit: ${currency(stagebox.msrp)}, Line Total: ${currency(subtotal)}${stagebox.note ? ` · ${stagebox.note}` : ''}`, subtotal });
+            total += subtotal;
+          }
+        }
+      }
+
+      if (included.includeSpeakers) {
+        const speaker = findProduct($('speakerOption').value);
+        const qty = Math.max(0, asNumber('speakerQty', 2));
+        const subtotal = (speaker?.msrp || 0) * qty;
+        if (speaker && qty > 0) {
+          rows.push({ section: 'Speakers', selection: speaker.name, details: `Qty: ${qty}, Unit: ${currency(speaker.msrp)}, Line Total: ${currency(subtotal)}`, subtotal });
+          total += subtotal;
+        }
+        if ($('includeStageMonitors').checked) {
+          const monitor = findProduct($('stageMonitorOption').value);
+          const monitorQty = Math.max(1, asNumber('stageMonitorQty', 1));
+          const monitorSubtotal = (monitor?.msrp || 0) * monitorQty;
+          if (monitor) {
+            rows.push({ section: 'Stage Monitors', selection: monitor.name, details: `Qty: ${monitorQty}, Unit: ${currency(monitor.msrp)}, Line Total: ${currency(monitorSubtotal)}`, subtotal: monitorSubtotal });
+            total += monitorSubtotal;
+          }
+        }
+      }
+
+      if (included.includeLivestream) {
+        const camera = findProduct($('livestreamCameraOption').value);
+        const cameraQty = Math.max(0, asNumber('livestreamCameraQty', 1));
+        const atem = findProduct($('atemOption').value);
+        const monitor = findProduct($('monitorOption').value);
+        const includedMisc = productsBy('livestream-included');
+        const subtotal = (camera?.msrp || 0) * cameraQty + (atem?.msrp || 0) + (monitor?.msrp || 0) + includedMisc.reduce((sum, item) => sum + item.msrp, 0);
+        rows.push({ section: 'Live Stream', selection: `Camera: ${camera?.name || ''} (Qty: ${cameraQty}); ATEM: ${atem?.name || ''}; Monitor: ${monitor?.name || ''}`, details: `Includes: ${includedMisc.map((item) => item.name).join(', ')}`, subtotal });
+        total += subtotal;
+      }
+
+      if (included.includeDisplay) {
+        const display = getSelectedDisplayOption();
+        if (display) {
+          const qty = getDisplayQuantity();
+          const subtotal = getDisplaySubtotal();
+          rows.push({
+            section: 'Display',
+            selection: `${$('displayMode').value === 'projector' ? 'Projector' : 'TVs'}: ${display.name} – ${display.shortDescription}`,
+            details: `Qty: ${qty}, Unit: ${currency(display.msrp)}, Line Total: ${currency(subtotal)}`,
+            subtotal
+          });
+          total += subtotal;
+        }
+      }
+
+      if (included.includeLighting) {
+        const ambientIncluded = $('includeAmbientLights').checked;
+        const stageIncluded = $('includeStageLights').checked;
+        const ambient = findProduct($('ambientOption').value);
+        const stage = findProduct($('stageLightOption').value);
+        const ambientQty = ambientIncluded ? Math.max(0, asNumber('ambientQty', 0)) : 0;
+        const stageQty = stageIncluded ? Math.max(0, asNumber('stageLightQty', 0)) : 0;
+        const subtotal = (ambient?.msrp || 0) * ambientQty + (stage?.msrp || 0) * stageQty;
+        if (ambientIncluded || stageIncluded) {
+          const fixtures = [];
+          if (ambientIncluded) fixtures.push(`Ambient Lights: ${ambient?.name || ''} (Qty: ${ambientQty})`);
+          if (stageIncluded) fixtures.push(`Stage Lights: ${stage?.name || ''} (Qty: ${stageQty})`);
+          rows.push({ section: 'Stage Lighting', selection: fixtures.join('; '), details: fixtures.join(' | '), subtotal });
+          total += subtotal;
+        }
+      }
+
+      return { rows, total };
+    }
+
+    function renderSummary(quote) {
+      $('requestRows').innerHTML = quote.rows.length ? quote.rows.map((row) => `
+        <tr><td>${row.section}</td><td>${row.selection}</td><td>${row.details}</td><td>${currency(row.subtotal)}</td></tr>
+      `).join('') : `<tr><td colspan="4" class="empty">No sections selected yet.</td></tr>`;
+      $('totalOutput').textContent = `Estimated Total: ${currency(quote.total)}`;
+    }
+
+    function updateOutput() {
+      applyRecommendations();
+      syncLightingTypeState();
+      updateSoundboardPricing();
+      updateStageboxPricing();
+      updateSpeakerPricing();
+      updateDisplayPricing();
+
+      toggleSection('micSection', $('includeMics').checked);
+      toggleSection('soundboardSection', $('includeSoundboard').checked);
+      toggleSection('speakersSection', $('includeSpeakers').checked);
+      toggleSection('livestreamSection', $('includeLivestream').checked);
+      toggleSection('displaySection', $('includeDisplay').checked);
+      toggleSection('lightingSection', $('includeLighting').checked);
+
+      $('generatedDate').textContent = `Generated ${new Date().toLocaleDateString()}`;
+      $('pricingNoteTop').textContent = MSRP_NOTE;
+      $('pricingNoteSummary').textContent = MSRP_NOTE;
+
+      const churchName = value('churchName') || 'Not provided';
+      const cityState = value('cityState') || 'Not provided';
+      const contactName = value('contactName') || 'Not provided';
+      const contactEmail = value('contactEmail') || 'Not provided';
+      const roomSize = value('roomSize') || 'Not provided';
+      const stageSize = value('stageSize') || 'Not provided';
+
+      $('outChurch').textContent = `${churchName} · ${cityState}`;
+      $('outContact').textContent = `${contactName} · ${contactEmail}`;
+      $('outFacility').textContent = `${roomSize} sq ft room · ${stageSize} sq ft stage`;
+      $('outBudget').textContent = `Budget: ${value('budgetRange')} · Timeline: ${value('timeline')}`;
+      $('outNotes').textContent = value('notes') || 'No additional notes provided.';
+
+      const included = getIncludedSections();
+      const quote = calculateQuote(included);
+      renderSummary(quote);
+
+      const bodyLines = [
+        'AV Quote Request', MSRP_NOTE,
+        `Church: ${churchName}`,
+        `City/State: ${cityState}`,
+        `Contact: ${contactName}`,
+        `Email: ${contactEmail}`,
+        `Room Size: ${roomSize} sq ft`,
+        `Stage Size: ${stageSize} sq ft`,
+        `Budget Range: ${value('budgetRange')}`,
+        `Timeline: ${value('timeline')}`,
+        '', 'Section Summary:'
+      ];
+      quote.rows.forEach((row) => {
+        bodyLines.push(`- ${row.section}: ${row.selection}`);
+        bodyLines.push(`  Details: ${row.details}`);
+        bodyLines.push(`  Subtotal: ${currency(row.subtotal)}`);
+      });
+      bodyLines.push('', `Final Total: ${currency(quote.total)}`, '', 'Additional Notes:', value('notes') || 'None provided.');
+      $('mailtoLink').href = `mailto:technology@imsda.org?subject=${encodeURIComponent(`AV Quote Request — ${churchName === 'Not provided' ? 'Church Request' : churchName}`)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+    }
+
+    function toggleSection(sectionId, checked) {
+      $(sectionId).classList.toggle('active', checked);
+    }
+
+    document.querySelectorAll('input, select, textarea').forEach((node) => {
+      node.addEventListener('input', () => {
+        if (node.id === 'soundboardOption') selectionState.soundboardId = value('soundboardOption');
+        if (node.id === 'displayMode') renderDisplayOptions();
+        if (node.id === 'displayOption') selectionState.displayId = value('displayOption');
+        if (node.id === 'speakerOption') selectionState.speakerId = value('speakerOption');
+        if (node.id === 'stageMonitorOption') selectionState.stageMonitorId = value('stageMonitorOption');
+        if (node.id === 'livestreamCameraOption') selectionState.livestreamCameraId = value('livestreamCameraOption');
+        if (node.id === 'atemOption') selectionState.livestreamAtemId = value('atemOption');
+        if (node.id === 'monitorOption') selectionState.livestreamMonitorId = value('monitorOption');
+        if (node.id === 'ambientOption') selectionState.ambientId = value('ambientOption');
+        if (node.id === 'stageLightOption') selectionState.stageLightId = value('stageLightOption');
+        if (node.id === 'soundboardOption') {
+          renderStageboxOptions();
+          selectionState.stageboxId = value('stageboxOption');
+        }
+        if (node.id === 'stageboxOption') selectionState.stageboxId = value('stageboxOption');
+        updateOutput();
+      });
+      node.addEventListener('change', () => {
+        if (node.id === 'displayMode') renderDisplayOptions();
+        if (node.id === 'soundboardOption') {
+          renderStageboxOptions();
+          selectionState.stageboxId = value('stageboxOption');
+        }
+        updateOutput();
+      });
+    });
+
+    $('soundboardSizeGroup').addEventListener('change', (event) => {
+      if (event.target.name !== 'soundboardSize') return;
+      selectionState.soundboardGroup = getSelectedSoundboardGroup();
+      selectionState.soundboardId = '';
+      renderSoundboardState();
+      updateOutput();
+    });
+
+    $('includeStageboxes').addEventListener('change', updateOutput);
+    $('includeSpeakers').addEventListener('change', updateOutput);
+    $('includeStageMonitors').addEventListener('change', updateOutput);
+
+    $('addMicLineBtn').addEventListener('click', () => {
+      window.micLines.push({ typeKey: 'wireless', modelId: 'mic-wireless-shure-slxd-plus-single', qty: 0, includeAntennaCombiner: false, antennaCombinerId: '', antennaQty: 1 });
+      renderMicLines();
+      updateOutput();
+    });
+
+    $('micLineItems').addEventListener('input', (event) => {
+      const index = Number(event.target.dataset.lineIndex);
+      const line = window.micLines[index];
+      if (!line) return;
+      if (event.target.classList.contains('mic-type-select')) {
+        line.typeKey = event.target.value;
+        line.modelId = getMicModelsForType(line.typeKey)[0]?.id || '';
+        line.includeAntennaCombiner = false;
+        line.antennaCombinerId = '';
+      } else if (event.target.classList.contains('mic-model-select')) {
+        line.modelId = event.target.value;
+      } else if (event.target.classList.contains('mic-qty-input')) {
+        line.qty = Math.max(0, Number(event.target.value) || 0);
+      } else if (event.target.classList.contains('mic-antenna-toggle')) {
+        line.includeAntennaCombiner = event.target.checked;
+      } else if (event.target.classList.contains('mic-antenna-select')) {
+        line.antennaCombinerId = event.target.value;
+      } else if (event.target.classList.contains('mic-antenna-qty-input')) {
+        line.antennaQty = Math.max(1, Number(event.target.value) || 1);
+      }
+      ensureMicLineCompatibility(line);
+      renderMicLines();
+      updateOutput();
+    });
+
+    $('micLineItems').addEventListener('click', (event) => {
+      if (!event.target.classList.contains('mic-remove-btn')) return;
+      const removeIndex = Number(event.target.dataset.removeIndex);
+      window.micLines.splice(removeIndex, 1);
+      if (!window.micLines.length) {
+        window.micLines.push({ typeKey: 'wireless', modelId: 'mic-wireless-shure-slxd-plus-single', qty: 0, includeAntennaCombiner: false, antennaCombinerId: '', antennaQty: 1 });
+      }
+      renderMicLines();
+      updateOutput();
+    });
+
+    $('printBtn').addEventListener('click', () => window.print());
+
+    initCatalogDrivenUI();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    - Google Fonts - optional, falls back to system fonts
+    - IMSDA logo hosted on imsda.org: https://imsda.org/wp-content/uploads/2023/11/IMSDA-Logo-black.png
+    - pdf-lib - required for PDF export: https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendar Builder | IMSDA Tools</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg: #ffffff; --surface: #ffffff; --text-main: #1a2b3c; --text-muted: #5e7185;
+      --primary: #087E8B; --primary-dark: #0B3954; --border: #e2e8f0;
+      --shadow-sm: 0 2px 8px rgba(11, 57, 84, 0.04); --shadow-md: 0 12px 24px rgba(11, 57, 84, 0.08);
+      --radius: 16px; --letter-w: 8.5in; --letter-h: 11in; --letter-landscape-w: 11in; --letter-landscape-h: 8.5in;
+    }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0; font-family: 'Manrope', sans-serif; color: var(--text-main); background: var(--bg);
+      line-height: 1.5;
+    }
+    .app { max-width: 1440px; margin: 0 auto; padding: 1.25rem; }
+    .topbar, .panel, .page-shell { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem; margin-bottom:1rem; }
+    .brand { display:flex; align-items:center; gap:.85rem; color:var(--primary-dark); text-decoration:none; }
+    .brand img { height:40px; width:auto; }
+    .brand h1 { font-family:'Syne',sans-serif; font-size:clamp(1.25rem,2vw,1.8rem); margin:0; line-height:1.1; }
+    .brand span { display:block; color:var(--text-muted); font-size:.72rem; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; }
+    .actions, .button-row { display:flex; flex-wrap:wrap; gap:.55rem; align-items:center; }
+    .btn, .back { border:1px solid #cbd5e1; border-radius:999px; background:#fff; color:var(--primary-dark); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:.35rem; font:inherit; font-size:.84rem; font-weight:800; padding:.58rem .9rem; text-decoration:none; transition:.15s ease; }
+    .btn:hover, .back:hover { transform:translateY(-1px); background:#f8fbfc; }
+    .btn.primary { color:#fff; border-color:transparent; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); }
+    .btn.warn { color:#9f1239; border-color:#fecdd3; background:#fff1f2; }
+    .layout { display:grid; grid-template-columns:minmax(320px, 430px) minmax(0,1fr); gap:1rem; align-items:start; }
+    .controls { padding:1rem; position:sticky; top:1rem; max-height:calc(100vh - 2rem); overflow:auto; }
+    .preview-wrap { padding:1rem; }
+    h2, h3 { color:var(--primary-dark); font-family:'Syne',sans-serif; }
+    h2 { font-size:1rem; margin:1.2rem 0 .65rem; letter-spacing:.9px; text-transform:uppercase; border-bottom:1px dashed #d4e0e8; padding-bottom:.35rem; }
+    h3 { margin:.15rem 0 .5rem; }
+    .field { margin-bottom:.7rem; }
+    label { display:block; font-size:.78rem; font-weight:800; color:#334155; margin-bottom:.25rem; }
+    input, select, textarea { width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:.55rem .65rem; font:inherit; background:#fff; color:#172033; }
+    textarea { min-height:76px; resize:vertical; }
+    input:focus, select:focus, textarea:focus { outline:3px solid rgba(8,126,139,.18); border-color:var(--primary); }
+    .two { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }
+    .three { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.55rem; }
+    .inline-check { display:flex; align-items:center; gap:.45rem; margin:.35rem 0; }
+    .inline-check input { width:auto; }
+    .header-panel { border:1px solid #dbe5ec; border-radius:14px; background:#fbfdff; margin:.7rem 0; overflow:hidden; }
+    .header-panel summary { cursor:pointer; padding:.75rem .85rem; font-family:'Syne',sans-serif; font-weight:800; color:var(--primary-dark); }
+    .header-panel[open] summary { border-bottom:1px solid #e2e8f0; }
+    .header-controls { padding:.85rem; }
+    .header-controls [disabled] { opacity:.58; cursor:not-allowed; }
+    .hint, .error-list { color:var(--text-muted); font-size:.78rem; }
+    .error-list { color:#991b1b; background:#fff1f2; border:1px solid #fecdd3; border-radius:10px; padding:.55rem; display:none; }
+    .event-list { display:grid; gap:.5rem; margin-top:.6rem; }
+    .page-list { display:grid; gap:.5rem; margin:.6rem 0; }
+    .additional-page-card { border:1px solid #dbe5ec; border-radius:12px; background:#fbfdff; padding:.6rem; }
+    .additional-page-card.active { border-color:var(--primary); box-shadow:0 0 0 3px rgba(8,126,139,.12); }
+    .additional-page-card strong { display:block; color:#102f45; }
+    .editor-box { min-height:120px; border:1px solid #cbd5e1; border-radius:10px; padding:.65rem; background:#fff; }
+    .editor-box:focus { outline:3px solid rgba(8,126,139,.18); border-color:var(--primary); }
+    .additional-print-page { padding:var(--ap-margin,.5in); background:var(--ap-bg,#fff); color:var(--ap-color,#1a2b3c); font-family:var(--ap-font,'Manrope',sans-serif); font-size:var(--ap-size,11pt); display:flex; flex-direction:column; }
+    .additional-print-page.landscape { width:min(100%, var(--letter-landscape-w)); aspect-ratio:11/8.5; }
+    .additional-print-page .ap-title { margin:0 0 .18in; font-family:'Syne',sans-serif; color:inherit; font-size:var(--ap-title-size,18pt); line-height:1.18; }
+    .additional-print-page.compact .ap-title { margin-bottom:.055in; }
+    .additional-print-page .ap-body { flex:1; overflow:hidden; }
+    .additional-print-page .ap-overflow-warning { border:1px solid #f59e0b; background:#fffbeb; color:#92400e; border-radius:8px; padding:.08in; font-weight:800; }
+    .additional-print-page table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:inherit; }
+    .additional-print-page th, .additional-print-page td { padding:var(--ap-cell-pad,.06in); vertical-align:top; overflow-wrap:anywhere; }
+    .additional-print-page.bordered th, .additional-print-page.bordered td { border:1px solid var(--ap-border,#94a3b8); }
+    .additional-print-page.striped tbody tr:nth-child(even) { background:var(--ap-alt,#f8fafc); }
+    .additional-print-page th { background:var(--ap-header,#0B3954); color:#fff; text-align:left; }
+    .additional-print-page .page-number { text-align:center; color:#64748b; font-size:.8em; margin-top:.12in; }
+    .additional-print-page.compact .page-number { margin-top:.045in; font-size:.72em; }
+    .half-additional-panel .additional-print-page { width:100%; height:100%; max-height:100%; aspect-ratio:auto; border:0; box-shadow:none; break-after:auto; page-break-after:auto; contain:layout paint; overflow:hidden; }
+    .half-additional-panel .additional-print-page.landscape { width:100%; height:100%; aspect-ratio:auto; }
+    .half-additional-blank { display:grid; place-items:center; height:100%; color:#94a3b8; font-size:.12in; background:#fff; }
+    .image-page-frame { width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .image-page-frame img { max-width:100%; max-height:100%; }
+    .image-fit-cover img { width:100%; height:100%; object-fit:cover; } .image-fit-fill img { width:100%; height:100%; object-fit:contain; } .image-fit-stretch img { width:100%; height:100%; object-fit:fill; } .image-fit-center img { width:auto; height:auto; }
+    .event-card { border:1px solid #dbe5ec; background:#fbfdff; border-radius:12px; padding:.55rem; }
+    .event-card strong { display:block; color:#102f45; }
+    .event-card small { color:var(--text-muted); }
+    .event-type-list { display:grid; gap:.5rem; margin:.55rem 0; }
+    .event-type-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto auto; align-items:end; gap:.45rem; border:1px solid #dbe5ec; background:#fbfdff; border-radius:12px; padding:.55rem; }
+    .event-type-row input[type=color] { width:3.1rem; height:2.35rem; padding:.2rem; }
+    .month-theme-grid { display:grid; gap:.45rem; max-height:250px; overflow:auto; padding-right:.25rem; }
+    .month-theme-row { display:grid; grid-template-columns:1fr 130px; gap:.5rem; align-items:center; font-size:.84rem; }
+    .preview-toolbar { display:flex; justify-content:space-between; gap:.75rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem; }
+    .pages { display:grid; gap:1.2rem; justify-items:center; }
+    #printPages { display:none; }
+    .half-publication-page { display:block; }
+    .half-publication-page > .half-panel:not(.half-additional-blank) { height:100%; }
+    .half-publication-page > .half-additional-blank { display:none; }
+    .output-actions { display:flex; flex-wrap:wrap; gap:.75rem; align-items:flex-start; }
+    .output-action { display:grid; gap:.25rem; max-width:260px; }
+    .print-page { width:min(100%, var(--letter-w)); aspect-ratio:8.5/11; background:#fff; position:relative; overflow:hidden; box-shadow:var(--shadow-md); border:1px solid #d6e0e8; break-after:page; page-break-after:always; contain:layout paint; }
+    .cover-page { display:grid; place-items:center; background:#fff; overflow:hidden; }
+    .cover-page .art { position:absolute; inset:0; width:100%; height:100%; overflow:hidden; }
+    .art img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; max-width:none; max-height:none; }
+    .cover-page img { width:100%; height:100%; object-fit:cover; display:block; }
+    .cover-art-fit-fit img { object-fit:contain; }
+    .cover-art-fit-cover img { object-fit:cover; }
+    .cover-art-fit-stretch img { object-fit:fill; }
+    .cover-art-fit-center img { width:100%; height:100%; max-width:none; max-height:none; object-fit:contain; }
+    .cover-art-fit-center { display:grid; place-items:center; }
+    .half-panel { position:relative; width:100%; height:100%; min-height:0; max-height:100%; overflow:hidden; background:#fff; }
+    .half-cover-page, .half-page-month, .half-page-additional { display:grid; grid-template-rows:50% 50%; padding:0; background:#fff; overflow:hidden; break-after:page; page-break-after:always; }
+    .half-cover-panel, .half-additional-panel, .front-cover-panel, .back-cover-panel { position:relative; width:100%; height:100%; min-height:0; max-height:100%; overflow:hidden; background:#fff; }
+    .half-cover-panel .art, .half-panel .art { position:absolute; inset:0; width:100%; height:100%; overflow:hidden; }
+    .half-cover-panel + .half-cover-panel, .half-panel + .half-panel { border-top:1px dashed #d6e0e8; }
+    .print-imposed-rotated { transform:rotate(180deg); transform-origin:center; }
+    .half-additional-panel + .half-additional-panel, .half-additional-panel + .half-additional-blank { border-top:0; }
+    .empty-art { width:100%; height:100%; display:grid; place-items:center; padding:1rem; color:#64748b; text-align:center; background:linear-gradient(135deg,#eef7f8,#f8fafc); overflow:hidden; }
+    .art.has-title .empty-art { align-items:end; padding-bottom:12%; }
+    .half-cover-panel .art.has-title .empty-art { padding-top:1.1in; padding-bottom:.35in; }
+    .floating-title { position:absolute; left:var(--title-x,50%); top:var(--title-y,10%); transform:translate(-50%,-50%); z-index:5; max-width:calc(100% - .32in); padding:.25em .55em; border-radius:0; background:transparent; color:#0B3954; font-family:'Syne',sans-serif; font-weight:800; font-size:clamp(20px,4vw,38px); text-shadow:none; cursor:grab; user-select:none; box-shadow:none; overflow:hidden; text-overflow:ellipsis; }
+    .header-title { color:var(--header-color,#0B3954); font-family:var(--header-font,'Syne',sans-serif); font-size:var(--header-size,.32in); font-style:var(--header-font-style,normal); font-weight:var(--header-font-weight,800); line-height:var(--header-line-height,1.12); text-align:center; text-shadow:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .floating-title.header-title { background:transparent; box-shadow:none; padding:0; }
+    .header-title.has-bg { width:min(var(--header-bg-width,auto), calc(100% - .24in)); min-height:var(--header-bg-height,auto); display:inline-flex; align-items:center; justify-content:center; padding:var(--header-pad-y,.11in) var(--header-pad-x,.28in); background:var(--header-bg,#fff); box-shadow:0 8px 18px rgba(0,0,0,.08); }
+    .header-title.shape-pill { border-radius:999px; }
+    .header-title.shape-rounded { border-radius:12px; }
+    .header-title.shape-square { border-radius:0; }
+    .cover-title { font-size:var(--header-size,.52in); }
+    .pages.full-mode .print-page { width:min(100%, var(--letter-landscape-w)); aspect-ratio:11/8.5; }
+    .calendar-only { display:flex; background:var(--cal-bg,#fff); overflow:hidden; }
+    .calendar-page { width:100%; height:100%; min-height:0; padding:.42in; display:flex; flex-direction:column; gap:.10in; background:#fff; overflow:hidden; }
+    .month-head { display:flex; justify-content:flex-start; align-items:flex-end; gap:.18in; min-height:.38in; max-width:100%; overflow:hidden; border-bottom:1px solid #cfd8df; padding-bottom:.06in; }
+    .calendar-notice { flex:1; min-width:1.8in; color:#536371; font-size:.085in; line-height:1.2; padding-bottom:.035in; text-align:left; }
+    .calendar-header-title { position:relative; left:calc((var(--title-x,0) - 0) * 1%); top:calc((var(--title-y,0) - 0) * .02in); max-width:100%; text-align:left; }
+    .calendar-grid { flex:1; min-height:0; display:flex; flex-direction:column; border:.012in solid var(--theme-main,#0B3954); border-radius:0; overflow:hidden; background:#fff; }
+    .weekday-row { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); flex:0 0 auto; }
+    .week-row { position:relative; flex:1 1 0; min-height:0; }
+    .week-event-layer { position:absolute; left:0; right:0; top:var(--day-number-area,.22in); bottom:.045in; display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); grid-template-rows:1fr; pointer-events:none; z-index:4; overflow:hidden; }
+    .week-days { height:100%; min-height:0; display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); }
+    .weekday { background:#fff; color:#102f45; padding:.07in .035in; text-align:center; font-size:var(--weekday-font-size,.11in); font-weight:800; text-transform:uppercase; border-right:1px solid #d7dee6; border-bottom:1px solid #cfd8df; letter-spacing:.025em; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .day { --day-pad:.045in; --day-number-area:.22in; --event-lane-step:.20in; --single-event-height:.16in; --single-event-gap:.035in; min-height:0; border-top:1px solid #dce5eb; border-right:1px solid #e3eaf0; padding:var(--day-pad); padding-top:calc(var(--day-number-area) + (var(--bar-lanes,0) * var(--event-lane-step))); position:relative; background:#fff; font-size:var(--event-font-size,.088in); overflow:hidden; }
+    .day.weekend { background:var(--weekend-bg,#fafafa); }
+    .day.other { color:#94a3b8; background:#f8fafc; }
+    .day-number { position:absolute; top:.045in; left:.045in; z-index:3; font-size:var(--day-number-font-size,.13in); line-height:1; font-weight:900; color:#19384f; margin-bottom:.03in; }
+    .week-num { position:absolute; right:.04in; top:.04in; z-index:3; color:#94a3b8; font-size:.075in; }
+    .more-events { color:#475569; font-size:calc(var(--event-font-size,.088in) * .86); font-weight:800; line-height:1.1; margin-top:.018in; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+    .event-bar { align-self:start; height:var(--single-event-height,.16in); min-width:0; margin:.035in .018in 0; border-radius:2px; background:var(--event-color,#087E8B); color:var(--event-text,#fff); display:flex; align-items:center; justify-content:center; padding:0 .04in; font-size:var(--event-font-size,.088in); font-weight:800; line-height:1.05; text-align:center; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; z-index:5; pointer-events:auto; box-shadow:inset 0 0 0 1px rgba(255,255,255,.26); }
+    .event-bar.single-day { width:calc(100% - .036in); justify-content:flex-start; margin-left:.018in; margin-right:.018in; }
+    .event-bar.continues-left { border-top-left-radius:0; border-bottom-left-radius:0; margin-left:0; }
+    .event-bar.continues-right { border-top-right-radius:0; border-bottom-right-radius:0; margin-right:0; }
+    .notes { min-height:.45in; border:1px dashed var(--theme-main,#0B3954); border-radius:12px; padding:.08in; color:#475569; font-size:.1in; background:rgba(255,255,255,.72); }
+    .personality-page { overflow:hidden; }
+    .personality-page .art { position:relative; width:100%; height:100%; overflow:hidden; }
+    .half-page-month .personality-panel, .half-page-month .calendar-panel { height:100%; min-height:0; overflow:hidden; }
+    .half-page-month .calendar-panel { display:flex; }
+    .half-page-month .calendar-page { flex:1 1 auto; width:100%; height:100%; max-height:100%; padding:.22in; min-height:0; gap:.08in; overflow:hidden; }
+    .half-page-month .month-head { min-height:.26in; flex:0 0 auto; gap:.08in; }
+    .half-page-month .calendar-notice { font-size:.055in; min-width:1in; padding-bottom:.02in; }
+    .half-page-month .calendar-grid { flex:1 1 0; min-height:0; }
+    .half-page-month .notes { flex:0 0 .28in; min-height:0; max-height:.28in; overflow:hidden; font-size:.07in; padding:.035in; border-radius:6px; }
+    .half-page-month .mini-next { flex:0 0 auto; margin-top:0; font-size:calc(var(--next-label-font-size,.085in) * .8); line-height:1; overflow:hidden; }
+    .half-page-month .calendar-header-title.header-title { font-size:calc(var(--header-size,.32in) * .72); }
+    .half-page-month .calendar-header-title.header-title.has-bg { --header-pad-y:.06in; --header-pad-x:.16in; }
+    .half-page-month .weekday { font-size:calc(var(--weekday-font-size,.11in) * .74); padding:.035in .025in; overflow:hidden; }
+    .half-page-month .day { --day-pad:.025in; --day-number-area:.16in; --event-lane-step:.135in; --single-event-height:.105in; --single-event-gap:.028in; min-height:0; padding:var(--day-pad); padding-top:calc(var(--day-number-area) + (var(--bar-lanes,0) * var(--event-lane-step))); font-size:calc(var(--event-font-size,.088in) * .78); }
+    .half-page-month .day-number { top:.025in; left:.025in; }
+    .half-page-month .more-events { font-size:calc(var(--event-font-size,.088in) * .62); }
+    .half-page-month .event-bar { height:var(--single-event-height,.105in); font-size:calc(var(--event-font-size,.088in) * .62); margin:.028in .01in 0; }
+    .half-page-month .event-bar.single-day { width:calc(100% - .02in); margin-left:.01in; margin-right:.01in; }
+    .mini-next { margin-top:.04in; font-size:var(--next-label-font-size,.085in); color:#64748b; }
+    .range-field { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.65rem; align-items:center; }
+    .range-field input[type=range] { padding:0; accent-color:var(--primary); }
+    .range-value { min-width:3.7rem; border:1px solid #dbe5ec; border-radius:999px; padding:.28rem .5rem; background:#fff; color:var(--primary-dark); font-size:.78rem; font-weight:900; text-align:center; }
+    @media (max-width: 980px) { .layout { grid-template-columns:1fr; } .controls { position:static; max-height:none; } .topbar { align-items:flex-start; } }
+    @media print {
+      @page { size: letter; margin: 0; }
+      body { background:#fff; }
+      .topbar, .controls, .preview-toolbar, #pages { display:none !important; }
+      #printPages { display:block !important; }
+      .app, .preview-wrap { max-width:none; padding:0; margin:0; }
+      .layout { display:block; }
+      .page-shell { border:0; box-shadow:none; padding:0; }
+      .pages { display:block; }
+      .print-page { width:8.5in; height:11in; aspect-ratio:auto; border:0; box-shadow:none; margin:0; }
+      body.layout-full .print-page { width:11in; height:8.5in; }
+      .additional-print-page { width:8.5in !important; height:11in !important; }
+      .additional-print-page.landscape { width:11in !important; height:8.5in !important; }
+      .half-page-additional .additional-print-page, .half-page-additional .additional-print-page.landscape { width:100% !important; height:100% !important; }
+      .print-imposed-rotated { transform:rotate(180deg); transform-origin:center; }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <a class="brand" href="index.html">
+        <img src="https://imsda.org/wp-content/uploads/2023/11/IMSDA-Logo-black.png" alt="IMSDA Logo" onerror="this.style.display='none';" />
+        <div><h1>Calendar Builder</h1><span>IMSDA Tools</span></div>
+      </a>
+      <div class="actions"><button class="btn primary" id="downloadPublicationPdfBtn">Download Publication PDF</button><button class="btn" id="downloadPrintReadyPdfBtn">Download Print-Ready PDF</button><button class="btn" id="printBtn">Print Current Preview</button></div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel controls">
+        <h2>Calendar Setup</h2>
+        <div class="two"><div class="field"><label for="startMonth">Starting Month</label><select id="startMonth"></select></div><div class="field"><label for="startYear">Starting Year</label><select id="startYear"></select></div></div>
+        <div class="field"><label for="layoutMode">Layout Mode</label><select id="layoutMode"><option value="full">Option 1 — Full page calendar + reverse personality page</option><option value="half">Option 2 — Half page image over calendar</option></select></div>
+        <div class="three"><label><input id="holidaysToggle" type="checkbox" checked /> Holidays</label><label><input id="weekendsToggle" type="checkbox" checked /> Weekend shading</label><label><input id="weekNumbersToggle" type="checkbox" /> Week numbers</label></div>
+        <h2>Calendar Font Sizes</h2>
+        <div class="field"><label for="dayNumberFontSize">Day/date number font size</label><div class="range-field"><input id="dayNumberFontSize" type="range" min="0.10" max="0.28" step="0.01" /><span class="range-value" data-font-size-value="dayNumberFontSize">0.16 in</span></div></div><div class="field"><label for="weekdayFontSize">Weekday header font size</label><div class="range-field"><input id="weekdayFontSize" type="range" min="0.08" max="0.22" step="0.01" /><span class="range-value" data-font-size-value="weekdayFontSize">0.12 in</span></div></div><div class="field"><label for="eventFontSize">Event font size</label><div class="range-field"><input id="eventFontSize" type="range" min="0.07" max="0.18" step="0.01" /><span class="range-value" data-font-size-value="eventFontSize">0.10 in</span></div></div>
+        <div class="field"><label for="firstDay">First Day of Week</label><select id="firstDay"><option value="0">Sunday</option><option value="1">Monday</option></select></div>
+        <h2>Calendar Notice</h2>
+        <label class="inline-check"><input id="calendarNoticeToggle" type="checkbox" checked /> Show calendar notice text</label>
+        <div class="field"><label for="calendarNoticeText">Notice Text</label><input id="calendarNoticeText" type="text" /></div>
+
+        <h2>Header Customization</h2>
+        <div id="headerPanels"></div>
+
+        <h2>Cover Artwork</h2>
+        <div class="field"><label for="frontCoverImage">Front Cover Image</label><input id="frontCoverImage" type="file" accept="image/*" /></div>
+        <div class="field"><label for="frontCoverFit">Front Cover Image Fit</label><select id="frontCoverFit"><option value="cover">Fill/Cover</option><option value="fit">Fit</option><option value="stretch">Stretch</option><option value="center">Center</option></select></div>
+        <div class="field"><label for="frontCoverTitleText">Front Cover Title</label><input id="frontCoverTitleText" type="text" /></div>
+        <div class="field"><label for="backCoverImage">Back Cover Image</label><input id="backCoverImage" type="file" accept="image/*" /></div>
+        <div class="field"><label for="backCoverFit">Back Cover Image Fit</label><select id="backCoverFit"><option value="cover">Fill/Cover</option><option value="fit">Fit</option><option value="stretch">Stretch</option><option value="center">Center</option></select></div>
+        <div class="field"><label for="backCoverTitleText">Back Cover Title</label><input id="backCoverTitleText" type="text" /></div>
+
+        <h2>Month Artwork</h2>
+        <div class="field"><label for="globalMonthImage">Global Default Image</label><input id="globalMonthImage" type="file" accept="image/*" /><p class="hint">Used when a month-specific image is not uploaded.</p></div>
+        <div class="field"><label for="monthImages">Month-Specific Artwork</label><input id="monthImages" type="file" accept="image/*" multiple /><p class="hint">Tip: Name files by month for automatic assignment, such as January.jpg, Feb 2026.png, or August-cover.jpeg. Files without month names will be assigned to remaining months in upload order.</p><p class="hint" id="monthImagesNote" aria-live="polite"></p></div>
+
+        <h2>Month Themes & Notes</h2>
+        <div id="themeRows" class="month-theme-grid"></div>
+
+        <h2>Additional Pages</h2>
+        <p class="hint">Add custom pages after the calendar. Each page keeps its own type, content, and print settings.</p>
+        <div class="button-row"><button class="btn primary" id="addAdditionalPage">Add Page</button></div>
+        <div id="additionalPageList" class="page-list"></div>
+        <div id="additionalPageEditor"></div>
+
+        <h2>Events</h2>
+        <div class="button-row"><button class="btn" id="downloadTemplate">Download CSV Template</button><label class="btn" for="csvFile">Import CSV</label><input id="csvFile" type="file" accept=".csv,text/csv" hidden /></div>
+        <p class="hint">CSV templates use YYYY-MM-DD as the recommended clean format, but imports also accept common date formats such as 8/17/2026, Aug 17 2026, and 17 Aug 2026.</p>
+        <div id="csvErrors" class="error-list"></div>
+        <div class="two"><div class="field"><label for="eventStartDate">Start Date*</label><input id="eventStartDate" type="date" /></div><div class="field"><label for="eventEndDate">End Date</label><input id="eventEndDate" type="date" /></div></div>
+        <div class="field"><label for="eventTime">Time</label><input id="eventTime" type="text" placeholder="8:00 AM" /></div>
+        <div class="field"><label for="eventName">Event Name*</label><input id="eventName" type="text" /></div>
+        <div class="two"><div class="field"><label for="eventLocation">Location</label><input id="eventLocation" type="text" /></div><div class="field"><label for="eventType">Event Type</label><input id="eventType" type="text" placeholder="School, Church, Conference…" /></div></div>
+        <div class="field"><label for="eventColor">Color Override</label><input id="eventColor" type="text" placeholder="Optional: blue or #087E8B" /></div>
+        <div class="button-row"><button class="btn primary" id="saveEvent">Add Event</button><button class="btn" id="clearEvent">Clear</button></div>
+        <div class="field"><label for="eventSearch">Search Events</label><input id="eventSearch" type="search" placeholder="Search name, date, location…" /></div>
+        <div id="eventList" class="event-list"></div>
+
+        <h2>Event Types</h2>
+        <p class="hint">Detected from imported CSV and manual events. Type colors apply unless an event has its own Color override.</p>
+        <div class="field"><label for="defaultEventColor">Default Event Color</label><input id="defaultEventColor" type="color" value="#D32F2F" /><p class="hint">Used for events with no Event Type color and no Color override.</p></div>
+        <div id="eventTypeList" class="event-type-list"></div>
+        <div class="button-row"><button class="btn" id="addEventType">Add Event Type</button></div>
+
+        <h2>Project</h2>
+        <div class="button-row"><button class="btn" id="saveJson">Save JSON</button><label class="btn" for="loadJson">Load JSON</label><input id="loadJson" type="file" accept="application/json,.json" hidden /><button class="btn warn" id="resetProject">Reset</button></div>
+      </aside>
+
+      <section class="panel preview-wrap">
+        <div class="preview-toolbar"><div><h2 style="margin:0;border:0;padding:0;">Live Preview</h2><p class="hint">Preview stays in normal readable order for editing. PDF export is the source of truth for final output; browser print is secondary/debug only.</p></div><div class="output-actions"><div class="output-action"><button class="btn primary" id="downloadPublicationPdfBtn2">Download Publication PDF</button><p class="hint">Normal reading order for a printer or publication service.</p></div><div class="output-action"><button class="btn" id="downloadPrintReadyPdfBtn2">Download Print-Ready PDF</button><p class="hint">Two calendar panels per letter-size sheet in straightforward printing order.</p></div><div class="output-action"><button class="btn" id="printBtn2">Print Current Preview</button><p class="hint">Secondary/debug browser print of the current preview.</p></div></div></div>
+        <div id="pages" class="pages"></div>
+        <div id="printPages" class="pages" aria-hidden="true"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- PDF-lib is loaded client-side only; CDN fallback keeps this static tool backend-free when no package pipeline is available. -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script>
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const weekdayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const themes = {
+      Classic: ['#0B3954','#e7eef3','#ffffff'], Blue: ['#1d4ed8','#dbeafe','#f8fbff'], Green: ['#15803d','#dcfce7','#fbfff9'], Purple: ['#7e22ce','#f3e8ff','#fdfaff'], Red: ['#b91c1c','#fee2e2','#fffafa'], Gold: ['#b7791f','#fef3c7','#fffdf5'], Neutral: ['#475569','#f1f5f9','#ffffff'], Seasonal: ['#0f766e','#ffedd5','#fffaf2']
+    };
+    const namedColors = { red:'#dc2626', green:'#16a34a', blue:'#2563eb', gold:'#d97706', orange:'#ea580c', purple:'#9333ea' };
+    const eventTypePalette = ['#7C1842','#E04886','#00A7D8','#F59D2A','#72A85A','#8D6BA5','#D62F35','#244A9B','#A96CB1','#47A447','#F0C400','#6B7280'];
+    const holidays = { '01-01':'New Year’s Day', '07-04':'Independence Day', '12-25':'Christmas Day', '11-11':'Veterans Day', '06-19':'Juneteenth' };
+    const defaultHeader = (overrides={}) => ({ show:true, showBackground:false, font:'Syne', style:'bold', size:0.32, color:'#0B3954', backgroundColor:'#ffffff', shape:'none', x:0, y:0, ...overrides });
+    const defaultCalendarNotice = 'All events subject to change. For the most current information visit imsda.org/events.';
+    const defaultHeaders = () => ({ calendar:defaultHeader({size:0.34, x:0, y:0, style:'regular', color:'#087E8B'}), personality:defaultHeader({size:0.32, x:50, y:12}), frontCover:defaultHeader({size:0.52, x:50, y:50}), backCover:defaultHeader({size:0.42, x:50, y:50}) });
+    const headerLabels = { calendar:'Calendar Month Title', personality:'Personality Header', frontCover:'Front Cover Header', backCover:'Back Cover Header' };
+    const defaultPageSettings = () => ({ title:'Untitled Page', showTitle:true, font:'Manrope', fontSize:11, fontStyle:'regular', fontColor:'#1a2b3c', orientation:'portrait', backgroundColor:'#ffffff', margins:.5, pageNumber:true });
+    const defaultAdditionalPage = (type='richText') => ({ id:crypto.randomUUID(), name:'New Page', type, settings:defaultPageSettings(), content:{ text:'', rows:[['Column 1','Column 2'],['','']], csvRows:[], image:'', imageFit:'fill', headerRow:true, headerColor:'#0B3954', alternateRows:true, fontSize:10, cellPadding:.06, titleFontSize:18, compactMode:false, borders:true, autoFit:true, wrapText:true, repeatHeader:true, alignment:'left', columns:2, rowCount:2 } });
+    const defaultState = () => ({ startMonth: 7, startYear: new Date().getFullYear(), layoutMode:'full', firstDay:0, showHolidays:true, shadeWeekends:true, showWeekNumbers:false, fontSizes:{dayNumber:.16, weekday:.12, event:.105, nextLabel:.085}, headers:defaultHeaders(), frontCoverImage:'', backCoverImage:'', frontCoverFit:'cover', backCoverFit:'cover', globalMonthImage:'', monthImages:[], frontCoverText:'2026–2027', backCoverText:'', events:[], eventTypes:{}, defaultEventColor:'#D32F2F', additionalPages:[], themes:{}, notes:{}, showCalendarNotice:true, calendarNoticeText:defaultCalendarNotice });
+    let state = defaultState(); let editingEventId = null; let selectedAdditionalPageId = null;
+    const headerAccordionState = Object.fromEntries(Object.keys(headerLabels).map(type => [type, true]));
+    const $ = id => document.getElementById(id);
+    function ym(monthOffset=0){ const d = new Date(state.startYear, state.startMonth + monthOffset, 1); return { year:d.getFullYear(), month:d.getMonth(), key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` }; }
+    function schoolYearText(){ const end = new Date(state.startYear, state.startMonth + 11, 1).getFullYear(); return state.startYear === end ? String(state.startYear) : `${state.startYear}–${end}`; }
+    function initOptions(){ monthNames.forEach((m,i)=>$('startMonth').add(new Option(m,i))); for(let y=2024;y<=2035;y++) $('startYear').add(new Option(y,y)); }
+    function fontFamilyValue(font){ return font === 'Syne' ? "'Syne',sans-serif" : font === 'Manrope' ? "'Manrope',sans-serif" : font; }
+    function fontParts(style){ return { regular:['400','normal'], bold:['800','normal'], italic:['400','italic'], boldItalic:['800','italic'] }[style] || ['800','normal']; }
+    function shapeClass(h){ return h.showBackground && h.shape !== 'none' ? `has-bg shape-${h.shape}` : ''; }
+    function headerSizeRange(type){ return type === 'calendar' ? { min:0.16, max:0.56, step:0.01 } : { min:0.18, max:1.1, step:0.01 }; }
+    function headerTextSamples(type){
+      if(type === 'frontCover') return [state.frontCoverText || schoolYearText(), schoolYearText()];
+      if(type === 'backCover') return [state.backCoverText || ''];
+      return Array.from({length:12},(_,i)=>{ const m=ym(i); return `${monthNames[m.month]} ${m.year}`; });
+    }
+    function headerBackgroundSize(type='calendar', h=state.headers?.calendar || defaultHeaders().calendar){
+      const fontSize=Number(h.size)||0.32, lineHeight=1.12, padX=Math.max(0.16, fontSize*.86), padY=Math.max(0.07, fontSize*.34);
+      const maxChars=Math.max(...headerTextSamples(type).map(t=>String(t).length), 8);
+      const maxLines=Math.max(...headerTextSamples(type).map(t=>String(t).split(/\s*\n\s*/).length), 1);
+      return { width:Math.max(1.35, (maxChars*fontSize*.62)+(padX*2)), height:Math.max(0.34, (maxLines*fontSize*lineHeight)+(padY*2)), padX, padY, lineHeight };
+    }
+    function headerStyleVars(type, h, bgSize){ const [weight, fontStyle]=fontParts(h.style); const bg = bgSize || headerBackgroundSize(type, h); return `--title-x:${h.x}%;--title-y:${h.y}%;--header-font:${fontFamilyValue(h.font)};--header-size:${h.size}in;--header-color:${h.color};--header-bg:${h.backgroundColor};--header-font-weight:${weight};--header-font-style:${fontStyle};--header-bg-width:${bg.width}in;--header-bg-height:${bg.height}in;--header-pad-x:${bg.padX}in;--header-pad-y:${bg.padY}in;--header-line-height:${bg.lineHeight};--calendar-head-space:${bg.height + .08}in`; }
+    function migrateAdditionalPages(){ state.additionalPages=(state.additionalPages||[]).map(p=>({...defaultAdditionalPage(p.type||'richText'), ...p, settings:{...defaultPageSettings(), ...(p.settings||{})}, content:{...defaultAdditionalPage(p.type||'richText').content, ...(p.content||{})}})); if(!selectedAdditionalPageId && state.additionalPages[0]) selectedAdditionalPageId=state.additionalPages[0].id; }
+    function migrateHeaders(){ migrateAdditionalPages(); if(state.showCalendarNotice === undefined) state.showCalendarNotice=true; state.calendarNoticeText=state.calendarNoticeText || defaultCalendarNotice; const defaults=defaultHeaders(); state.headers={...defaults, ...(state.headers||{})}; if(state.calendarHeader){ state.headers.calendar={...state.headers.calendar, show:state.calendarHeader.show ?? state.calendarHeader.showTitle ?? true, showBackground:state.calendarHeader.showBackground ?? true, font:state.calendarHeader.font || state.headers.calendar.font, style:state.calendarHeader.style === 'italic' ? 'boldItalic' : 'bold', size:state.calendarHeader.size || state.headers.calendar.size, shape:state.calendarHeader.shape === 'square' ? 'rounded' : (state.calendarHeader.shape || state.headers.calendar.shape)}; delete state.calendarHeader; } if(state.monthTitle){ state.headers.personality={...state.headers.personality, x:state.monthTitle.x ?? 50, y:state.monthTitle.y ?? 12}; delete state.monthTitle; } if(state.coverTitle){ state.headers.cover={...state.headers.cover, x:state.coverTitle.x ?? 50, y:state.coverTitle.y ?? 50}; delete state.coverTitle; } if(state.headers.cover){ state.headers.frontCover={...state.headers.frontCover, ...state.headers.cover}; delete state.headers.cover; } if(state.coverImage && !state.frontCoverImage){ state.frontCoverImage=state.coverImage; delete state.coverImage; } if(state.coverText && !state.frontCoverText){ state.frontCoverText=state.coverText; delete state.coverText; } state.frontCoverFit=state.frontCoverFit||'cover'; state.backCoverFit=state.backCoverFit||'cover'; state.eventTypes=state.eventTypes||{}; state.defaultEventColor=colorValue(state.defaultEventColor || '#D32F2F'); state.events=(state.events||[]).map(e=>({...e, eventType:e.eventType||e.type||'', startDate:e.startDate||e.date, endDate:e.endDate||e.date||e.startDate})); syncDetectedEventTypes(); Object.keys(defaults).forEach(k=>state.headers[k]={...defaults[k], ...(state.headers[k]||{})}); }
+    function readHeaderAccordionState(){ document.querySelectorAll('#headerPanels .header-panel').forEach(panel=>{ const type=panel.dataset.headerType; if(type) headerAccordionState[type]=panel.open; }); }
+    function renderHeaderPanels(){ readHeaderAccordionState(); const panels=Object.keys(headerLabels).map(type=>{ const h=state.headers[type]; return `<details class="header-panel" data-header-type="${type}" ${headerAccordionState[type]?'open':''}><summary>${headerLabels[type]}</summary><div class="header-controls" data-header-panel="${type}">
+          <label class="inline-check"><input data-header="${type}" data-prop="show" type="checkbox" ${h.show?'checked':''} /> Show Header</label>
+          <label class="inline-check"><input data-header="${type}" data-prop="showBackground" type="checkbox" ${h.showBackground?'checked':''} ${!h.show?'disabled':''} /> Show Background</label>
+          <div class="two"><div class="field"><label>Font Family</label><select data-header="${type}" data-prop="font">${['Syne','Manrope','Georgia','Arial'].map(f=>`<option value="${f}" ${h.font===f?'selected':''}>${f}</option>`).join('')}</select></div><div class="field"><label>Font Style</label><select data-header="${type}" data-prop="style">${[['regular','Regular'],['bold','Bold'],['italic','Italic'],['boldItalic','Bold Italic']].map(([v,l])=>`<option value="${v}" ${h.style===v?'selected':''}>${l}</option>`).join('')}</select></div></div>
+          <div class="two"><div class="field"><label>Font Size</label><div class="range-field"><input data-header="${type}" data-prop="size" type="range" min="${headerSizeRange(type).min}" max="${headerSizeRange(type).max}" step="${headerSizeRange(type).step}" value="${h.size}" /><span class="range-value">${Number(h.size).toFixed(2)} in</span></div></div><div class="field"><label>Font Color</label><input data-header="${type}" data-prop="color" type="color" value="${h.color}" /></div></div>
+          <div class="two"><div class="field"><label>Background Color</label><input data-header="${type}" data-prop="backgroundColor" type="color" value="${h.backgroundColor}" ${!h.show || !h.showBackground?'disabled':''} /></div><div class="field"><label>Background Shape</label><select data-header="${type}" data-prop="shape" ${!h.show || !h.showBackground?'disabled':''}><option value="pill" ${h.shape==='pill'?'selected':''}>Rounded Pill</option><option value="rounded" ${h.shape==='rounded'?'selected':''}>Rounded Rectangle</option><option value="square" ${h.shape==='square'?'selected':''}>Square / Rectangle</option><option value="none" ${h.shape==='none'?'selected':''}>None</option></select></div></div>
+          <div class="two"><div class="field"><label>X Position (%)</label><input data-header="${type}" data-prop="x" type="number" min="0" max="100" value="${h.x}" /></div><div class="field"><label>Y Position (%)</label><input data-header="${type}" data-prop="y" type="number" min="0" max="100" value="${h.y}" /></div></div>
+          <div class="button-row"><button class="btn" data-reset-header="${type}">Reset Position</button><button class="btn" data-nudge="${type}" data-dx="0" data-dy="-2">↑</button><button class="btn" data-nudge="${type}" data-dx="-2" data-dy="0">←</button><button class="btn" data-nudge="${type}" data-dx="2" data-dy="0">→</button><button class="btn" data-nudge="${type}" data-dx="0" data-dy="2">↓</button></div>
+        </div></details>`; }).join(''); $('headerPanels').innerHTML=panels; document.querySelectorAll('#headerPanels .header-panel').forEach(panel=>{ panel.addEventListener('toggle', ()=>{ const type=panel.dataset.headerType; if(type) headerAccordionState[type]=panel.open; }); }); }
+    function ensureHeaderPanels(){ if(!$('headerPanels').children.length) renderHeaderPanels(); }
+    function setHeaderControlValue(control, value){ if(!control) return; if(control.type === 'checkbox') control.checked=!!value; else control.value=value; }
+    function syncHeaderPanelControls(types=Object.keys(headerLabels)){ ensureHeaderPanels(); types.forEach(type=>{ const h=state.headers[type]; if(!h) return; document.querySelectorAll(`[data-header="${type}"]`).forEach(control=>{ setHeaderControlValue(control, h[control.dataset.prop]); if(control.dataset.prop === 'showBackground') control.disabled=!h.show; if(['backgroundColor','shape'].includes(control.dataset.prop)) control.disabled=!h.show || !h.showBackground; if(control.dataset.prop === 'size'){ const value=control.closest('.range-field')?.querySelector('.range-value'); if(value) value.textContent=`${Number(h.size).toFixed(2)} in`; } }); }); }
+
+    function syncControls(){ migrateHeaders(); state.fontSizes={...defaultState().fontSizes, ...(state.fontSizes||{})}; state.defaultEventColor=colorValue(state.defaultEventColor || '#D32F2F'); $('dayNumberFontSize').value=state.fontSizes.dayNumber; $('weekdayFontSize').value=state.fontSizes.weekday; $('eventFontSize').value=state.fontSizes.event; updateFontSizeReadouts(); $('startMonth').value=state.startMonth; $('startYear').value=state.startYear; $('layoutMode').value=state.layoutMode; $('firstDay').value=state.firstDay; $('calendarNoticeToggle').checked=state.showCalendarNotice !== false; $('calendarNoticeText').value=state.calendarNoticeText || defaultCalendarNotice; $('holidaysToggle').checked=state.showHolidays; $('weekendsToggle').checked=state.shadeWeekends; $('weekNumbersToggle').checked=state.showWeekNumbers; $('frontCoverFit').value=state.frontCoverFit || 'cover'; $('backCoverFit').value=state.backCoverFit || 'cover'; $('frontCoverTitleText').value=state.frontCoverText || schoolYearText(); $('backCoverTitleText').value=state.backCoverText || ''; if($('defaultEventColor')) $('defaultEventColor').value=state.defaultEventColor; syncHeaderPanelControls(); }
+    function collectControls(){ state.fontSizes={...defaultState().fontSizes, dayNumber:+$('dayNumberFontSize').value||.16, weekday:+$('weekdayFontSize').value||.12, event:+$('eventFontSize').value||.105, nextLabel:.085}; state.startMonth=+$('startMonth').value; state.startYear=+$('startYear').value; state.layoutMode=$('layoutMode').value; state.firstDay=+$('firstDay').value; state.showCalendarNotice=$('calendarNoticeToggle').checked; state.calendarNoticeText=$('calendarNoticeText').value || defaultCalendarNotice; state.showHolidays=$('holidaysToggle').checked; state.shadeWeekends=$('weekendsToggle').checked; state.showWeekNumbers=$('weekNumbersToggle').checked; state.frontCoverFit=$('frontCoverFit').value || 'cover'; state.backCoverFit=$('backCoverFit').value || 'cover'; state.frontCoverText=$('frontCoverTitleText').value || schoolYearText(); state.backCoverText=$('backCoverTitleText').value || ''; updateFontSizeReadouts(); saveAuto(); render(); }
+    function renderThemeRows(){ $('themeRows').innerHTML = Array.from({length:12},(_,i)=>{ const m=ym(i); const theme=state.themes[m.key] || 'Classic'; const note=state.notes[m.key] || ''; return `<div class="month-theme-row"><strong>${monthNames[m.month]} ${m.year}</strong><select data-theme-key="${m.key}">${Object.keys(themes).map(t=>`<option ${t===theme?'selected':''}>${t}</option>`).join('')}</select></div><textarea data-note-key="${m.key}" placeholder="Notes for ${monthNames[m.month]}">${escapeAttr(note)}</textarea>`; }).join(''); document.querySelectorAll('[data-theme-key]').forEach(s=>s.onchange=()=>{state.themes[s.dataset.themeKey]=s.value; saveAuto(); render();}); document.querySelectorAll('[data-note-key]').forEach(t=>t.oninput=()=>{state.notes[t.dataset.noteKey]=t.value; saveAuto(); render();}); }
+    function escapeHtml(s=''){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function escapeAttr(s=''){ return escapeHtml(s).replace(/'/g,'&#39;'); }
+    function colorValue(c){ if(!c) return '#087E8B'; c=String(c).trim().toLowerCase(); return namedColors[c] || (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c) ? c : '#087E8B'); }
+    function cleanEventType(type){ return String(type||'').trim(); }
+    function eventTypeColor(type){ return state.eventTypes?.[cleanEventType(type)] || ''; }
+    function eventColor(e){ return colorValue(e.color || eventTypeColor(e.eventType) || state.defaultEventColor || '#D32F2F'); }
+    function automaticEventTypeColor(type){
+      const names=[...new Set(state.events.map(e=>cleanEventType(e.eventType)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+      const index=Math.max(0,names.indexOf(cleanEventType(type)));
+      return eventTypePalette[index % eventTypePalette.length];
+    }
+    function syncDetectedEventTypes(){ state.eventTypes=state.eventTypes||{}; state.events.forEach(e=>{ const type=cleanEventType(e.eventType); if(type && !state.eventTypes[type]) state.eventTypes[type]=automaticEventTypeColor(type); }); }
+    function textColorFor(bg){ let hex=colorValue(bg).replace('#',''); if(hex.length===3) hex=hex.split('').map(ch=>ch+ch).join(''); const [r,g,b]=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)); return (.2126*r+.7152*g+.0722*b) > .48 ? '#102f45' : '#ffffff'; }
+    function isIsoDate(value){ if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))) return false; const d=parseIsoDate(value); return dateIso(d)===value; }
+    function normalizedDateFromParts(y,m,d){ const date=new Date(y, m-1, d); return date.getFullYear()===y && date.getMonth()===m-1 && date.getDate()===d ? dateIso(date) : ''; }
+    function parseCsvYear(value){ const year=+value; return String(value).length===2 ? 2000+year : year; }
+    function parseCsvDate(value){
+      const text=String(value||'').trim().replace(/\s+/g,' ');
+      if(!text) return '';
+      let match=text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if(match) return normalizedDateFromParts(+match[1], +match[2], +match[3]);
+      match=text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2}|\d{4})$/);
+      if(match) return normalizedDateFromParts(parseCsvYear(match[3]), +match[1], +match[2]);
+      const monthLookup=Object.fromEntries(monthNames.flatMap((name,i)=>[[name.toLowerCase(), i+1], [name.slice(0,3).toLowerCase(), i+1]]));
+      match=text.match(/^([A-Za-z]+)\.? (\d{1,2}),? (\d{2}|\d{4})$/);
+      if(match && monthLookup[match[1].toLowerCase()]) return normalizedDateFromParts(parseCsvYear(match[3]), monthLookup[match[1].toLowerCase()], +match[2]);
+      match=text.match(/^(\d{1,2}) ([A-Za-z]+)\.? (\d{2}|\d{4})$/);
+      if(match && monthLookup[match[2].toLowerCase()]) return normalizedDateFromParts(parseCsvYear(match[3]), monthLookup[match[2].toLowerCase()], +match[1]);
+      return '';
+    }
+    function normalizeEvent(e){ const start=e.startDate||e.date; const end=e.endDate||start; if(!isIsoDate(start) || !isIsoDate(end)) return {...e, startDate:'', endDate:''}; return {...e, startDate:start, endDate:end}; }
+    function eventsForDate(date){ return state.events.map(normalizeEvent).filter(e=>e.startDate===date && e.endDate===e.startDate).sort((a,b)=>(a.time||'').localeCompare(b.time||'')); }
+    function updateFontSizeReadouts(){ [['dayNumberFontSize', state.fontSizes.dayNumber], ['weekdayFontSize', state.fontSizes.weekday], ['eventFontSize', state.fontSizes.event]].forEach(([id,value])=>{ const out=document.querySelector(`[data-font-size-value="${id}"]`); if(out) out.textContent=`${Number(value).toFixed(2)} in`; }); }
+    function calendarEventMetrics(weekRows, monthKey){
+      const half=state.layoutMode==='half';
+      const pageHeight=half ? 5.5 : 8.5;
+      const pagePadding=half ? .44 : .84;
+      const gapTotal=half ? .16 : .20;
+      const headerHeight=state.headers?.calendar?.show ? (half ? .34 : .54) : 0;
+      const weekdayHeight=half ? .15 : .26;
+      const footerHeight=(half ? .08 : .12) + (state.notes?.[monthKey] ? (half ? .28 : .55) : 0);
+      const gridHeight=Math.max(1, pageHeight - pagePadding - gapTotal - headerHeight - footerHeight);
+      const rowHeight=Math.max(.32, (gridHeight - weekdayHeight) / weekRows);
+      const metrics=half
+        ? { dayArea:.16, laneStep:.135, singleStep:.133, moreStep:.07, bottomPad:.04 }
+        : { dayArea:.22, laneStep:.20, singleStep:.195, moreStep:.09, bottomPad:.06 };
+      metrics.rowHeight=rowHeight;
+      metrics.maxMultiLanes=Math.max(0, Math.floor((rowHeight - metrics.dayArea - metrics.bottomPad) / metrics.laneStep));
+      return metrics;
+    }
+    function eventBlockHtml(e, className=''){
+      const color=eventColor(e);
+      const detail=[e.time, e.name, e.location].filter(Boolean).join(e.time ? ' · ' : '');
+      return `<div class="event-bar ${className}" style="--event-color:${color};--event-text:${textColorFor(color)}" title="${escapeAttr(detail || e.name)}">${escapeHtml(detail || e.name)}</div>`;
+    }
+    function parseIsoDate(value){ const [y,m,d]=String(value||'').split('-').map(Number); return new Date(y, (m||1)-1, d||1); }
+    function dateIso(date){ return iso(date.getFullYear(), date.getMonth(), date.getDate()); }
+    function addDays(date, n){ const d=new Date(date); d.setDate(d.getDate()+n); return d; }
+    function iso(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+    function weekNumber(date){ const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())); d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7)); const y0=new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil((((d-y0)/86400000)+1)/7); }
+    function longestMonthLabelWidth(){ return Math.max(...monthNames.map(name=>`${name} 0000`.length)); }
+    function buildCalendar(m){
+      migrateHeaders();
+      const [main,soft,bg]=themes[state.themes[m.key]||'Classic'];
+      const calendarLayout=buildMonthCalendarLayout(m.month, m.year);
+      const { cells, weekRows } = calendarLayout;
+      const weekdays=Array.from({length:7},(_,i)=>weekdayNames[(i+state.firstDay)%7]);
+      const ch=state.headers.calendar;
+      const bgSize=headerBackgroundSize('calendar', ch);
+      const metrics=calendarEventMetrics(weekRows, m.key);
+      const calendarVars = `--theme-main:${main};--theme-soft:${soft};--cal-bg:${bg};--weekend-bg:${state.shadeWeekends?soft:'#fff'};--week-rows:${weekRows}`;
+      const headerHtml = ch.show ? `<div class="month-head"><div class="header-title calendar-header-title ${shapeClass(ch)}" style="${headerStyleVars('calendar', ch, bgSize)}" data-drag="calendar">${monthNames[m.month].toUpperCase()} ${m.year}</div>${state.showCalendarNotice !== false ? `<div class="calendar-notice">${escapeHtml(state.calendarNoticeText || defaultCalendarNotice)}</div>` : ''}</div>` : '';
+      const layout=calendarLayout;
+      const dayCellHtml = (c,idx)=>{
+        const dayIso=iso(c.date.getFullYear(),c.date.getMonth(),c.date.getDate());
+        const laneCount=layout.lanesByDate[dayIso] || 0;
+        const more=layout.moreByDate[dayIso] || 0;
+        const weekend=[0,6].includes(c.date.getDay());
+        return `<div class="day ${c.other?'other':''} ${weekend?'weekend':''}" style="--bar-lanes:${laneCount}"><div class="day-number">${c.other?'':c.d}</div>${!c.other&&state.showWeekNumbers&&c.date.getDay()===state.firstDay?`<div class="week-num">W${weekNumber(c.date)}</div>`:''}${more?`<div class="more-events">+${more} more</div>`:''}</div>`;
+      };
+      const weekRowsHtml = Array.from({length:weekRows},(_,row)=>`<div class="week-row" style="--day-number-area:${metrics.dayArea}in"><div class="week-event-layer">${(layout.barsByWeek[row]||[]).join('')}</div><div class="week-days">${cells.slice(row*7,row*7+7).map((c,i)=>dayCellHtml(c,row*7+i)).join('')}</div></div>`).join('');
+      return `<div class="calendar-page" style="${calendarVars}">${headerHtml}<div class="calendar-grid"><div class="weekday-row">${weekdays.map(w=>`<div class="weekday">${w}</div>`).join('')}</div>${weekRowsHtml}</div>${state.notes[m.key]?`<div class="notes"><strong>Notes:</strong> ${escapeHtml(state.notes[m.key])}</div>`:''}<div class="mini-next">Next: ${monthNames[ym((m.month-state.startMonth+12)%12+1).month]}</div></div>`;
+    }
+    function buildMonthGridData(month, year){
+      const first=new Date(year,month,1);
+      const days=new Date(year,month+1,0).getDate();
+      const lead=(first.getDay()-state.firstDay+7)%7;
+      const weekRows=Math.max(5, Math.ceil((lead+days)/7));
+      const cells=[];
+      const prevDays=new Date(year,month,0).getDate();
+      for(let i=lead-1;i>=0;i--) cells.push({d:prevDays-i, other:true, date:new Date(year,month,-i)});
+      for(let d=1;d<=days;d++) cells.push({d, other:false, date:new Date(year,month,d)});
+      while(cells.length<weekRows*7){ const d=cells.length-lead-days+1; cells.push({d, other:true, date:new Date(year,month+1,d)}); }
+      return { cells, weekRows };
+    }
+    function buildMonthCalendarLayout(month, year){
+      const m={month, year, key:`${year}-${String(month+1).padStart(2,'0')}`};
+      const { cells, weekRows } = buildMonthGridData(month, year);
+      const dayPositions=Object.fromEntries(cells.map((cell,idx)=>[dateIso(cell.date), { cell, index:idx, row:Math.floor(idx/7), col:(idx%7)+1, iso:dateIso(cell.date) }]));
+      const metrics=calendarEventMetrics(weekRows, m.key);
+      const monthStart=new Date(year,month,1), monthEnd=new Date(year,month,new Date(year,month+1,0).getDate());
+      const maxLanes=metrics.maxMultiLanes, lanes=Array.from({length:weekRows},()=>[]), lanesByDate={}, moreByDate={}, barsByWeek=Array.from({length:weekRows},()=>[]), segments=[], singleDayBars=[];
+      const previousEventLanes=new Map();
+      const eventSegments=[];
+      state.events.map(normalizeEvent).filter(e=>e.startDate && e.endDate).forEach((e,eventIndex)=>{
+        let visibleStart=parseIsoDate(e.startDate), visibleEnd=parseIsoDate(e.endDate);
+        if(visibleEnd < monthStart || visibleStart > monthEnd) return;
+        if(visibleStart < monthStart) visibleStart = monthStart;
+        if(visibleEnd > monthEnd) visibleEnd = monthEnd;
+        eventSegments.push(...segmentsForVisibleRange(e, visibleStart, visibleEnd, eventIndex));
+      });
+      if(state.showHolidays){
+        cells.forEach((c,idx)=>{
+          if(c.other) return;
+          const dayIso=dateIso(c.date), name=holidays[dayIso.slice(5)];
+          if(name) eventSegments.push(...segmentsForVisibleRange({ id:`holiday-${dayIso}`, startDate:dayIso, endDate:dayIso, name, color:'gold' }, c.date, c.date, state.events.length + idx));
+        });
+      }
+      eventSegments.sort((a,b)=>a.row-b.row || a.col-b.col || (b.endCol-b.col)-(a.endCol-a.col) || a.eventIndex-b.eventIndex).forEach(seg=>{
+        const weekLanes=lanes[seg.row];
+        const preferredLane=seg.continuesLeft ? previousEventLanes.get(seg.e.id || seg.eventIndex) : undefined;
+        const laneIsOpen=lane=>lane < weekLanes.length && !weekLanes[lane].some(range=>rangesOverlap(seg, range));
+        let lane=(Number.isInteger(preferredLane) && laneIsOpen(preferredLane))
+          ? preferredLane
+          : weekLanes.findIndex(ranges=>!ranges.some(range=>rangesOverlap(seg, range)));
+        if(lane < 0) lane=weekLanes.length;
+        if(lane >= maxLanes){
+          for(let d=parseIsoDate(seg.chunkStart); d<=parseIsoDate(seg.chunkEnd); d=addDays(d,1)) moreByDate[dateIso(d)]=(moreByDate[dateIso(d)]||0)+1;
+          return;
+        }
+        if(!weekLanes[lane]) weekLanes[lane]=[];
+        weekLanes[lane].push({ startCol:seg.col, endCol:seg.endCol });
+        previousEventLanes.set(seg.e.id || seg.eventIndex, lane);
+        for(let d=parseIsoDate(seg.chunkStart); d<=parseIsoDate(seg.chunkEnd); d=addDays(d,1)){
+          lanesByDate[dateIso(d)]=Math.max(lanesByDate[dateIso(d)]||0, lane+1);
+        }
+        const color=eventColor(seg.e);
+        const label=[seg.e.time, seg.e.name, seg.e.location].filter(Boolean).join(seg.e.time ? ' · ' : '');
+        const placedSegment={...seg, lane, color, label:label || seg.e.name, textColor:textColorFor(color), isSingleDay:seg.endCol-seg.col===1};
+        segments.push(placedSegment);
+        if(placedSegment.isSingleDay) singleDayBars.push(placedSegment);
+        barsByWeek[seg.row].push(`<div class="event-bar ${placedSegment.isSingleDay?'single-day':''} ${seg.continuesLeft?'continues-left':''} ${seg.continuesRight?'continues-right':''}" style="--event-color:${color};--event-text:${textColorFor(color)};grid-column:${seg.col}/${seg.endCol};transform:translateY(${lane*metrics.laneStep}in);" title="${escapeAttr(label || seg.e.name)}">${escapeHtml(label || seg.e.name)}</div>`);
+      });
+      return { cells, weekRows, dayPositions, eventBarSegments:segments, eventLanes:lanes, singleDayBars, barsByWeek, lanesByDate, moreByDate, segments, metrics };
+
+      function rangesOverlap(a, b){ return a.col < b.endCol && a.endCol > b.startCol; }
+
+      function segmentsForVisibleRange(e, visibleStart, visibleEnd, eventIndex){
+        const segments=[];
+        let cursor=new Date(visibleStart);
+        while(cursor <= visibleEnd){
+          const idx=cells.findIndex(c=>dateIso(c.date)===dateIso(cursor));
+          if(idx < 0) break;
+          const row=Math.floor(idx/7), col=(idx%7)+1;
+          const weekEnd=addDays(cursor, 6-(idx%7));
+          const chunkEnd=weekEnd < visibleEnd ? weekEnd : visibleEnd;
+          const endIdx=cells.findIndex(c=>dateIso(c.date)===dateIso(chunkEnd));
+          const endCol=endIdx >= 0 ? (endIdx%7)+2 : 8;
+          segments.push({e,eventIndex,row,col,endCol,chunkStart:dateIso(cursor),chunkEnd:dateIso(chunkEnd),continuesLeft:dateIso(cursor)!==e.startDate,continuesRight:dateIso(chunkEnd)!==e.endDate});
+          cursor=addDays(chunkEnd, 1);
+        }
+        return segments;
+      }
+    }
+    function getMonthEventSegments(month, year){ return buildMonthCalendarLayout(month, year); }
+    function artFor(i){ return state.monthImages[i] || state.globalMonthImage || ''; }
+    function artHtml(src, hasTitle=false){ return isImageDataUrl(src) ? `<img src="${escapeAttr(src)}" alt="Uploaded artwork" />` : `<div class="empty-art">${hasTitle ? 'Upload artwork for this panel.' : 'Upload artwork to fill this personality section.'}</div>`; }
+    function coverArtHtml(src, fit='cover', hasTitle=false){ const safeFit=['fit','cover','stretch','center'].includes(fit) ? fit : 'cover'; return `<div class="art cover-art-fit-${safeFit} ${hasTitle?'has-title':''}">${isImageDataUrl(src) ? `<img src="${escapeAttr(src)}" alt="Uploaded cover artwork" />` : '<div class="empty-art">Upload cover artwork for this panel.</div>'}</div>`; }
+    function monthTitle(m){ const h=state.headers?.personality || defaultHeaders().personality; if(!h.show) return ''; return `<div class="floating-title header-title month-floating ${shapeClass(h)}" style="${headerStyleVars('personality', h)}" data-drag="personality">${monthNames[m.month]} ${m.year}</div>`; }
+    function coverTitleHtml(kind){ const h=state.headers[kind]; const text=kind==='frontCover' ? (state.frontCoverText || schoolYearText()) : (state.backCoverText || 'Back Cover'); return h.show && text ? `<div class="floating-title header-title cover-title ${shapeClass(h)}" style="${headerStyleVars(kind, h)}" data-drag="${kind}">${escapeHtml(text)}</div>` : ''; }
+    function coverPanel(kind){ const image=kind==='frontCover' ? state.frontCoverImage : state.backCoverImage; const fit=kind==='frontCover' ? state.frontCoverFit : state.backCoverFit; const title=coverTitleHtml(kind); return `${coverArtHtml(image, fit, !!title)}${title}`; }
+    function calendarFontVars(){ const f={...defaultState().fontSizes, ...(state.fontSizes||{})}; return `--day-number-font-size:${f.dayNumber}in;--weekday-font-size:${f.weekday}in;--event-font-size:${f.event}in;--next-label-font-size:${f.nextLabel||.085}in;`; }
+    function coverPage(kind){ return `<section class="print-page cover-page" style="${calendarFontVars()}" data-cover-panel="${kind}">${coverPanel(kind)}</section>`; }
+    function halfPanelPage(content, cls='', attrs=''){ return `<section class="print-page half-page-month ${cls}" style="${calendarFontVars()}" ${attrs}>${content}</section>`; }
+    function blankHalfPanel(){ return '<div class="half-panel half-additional-panel half-additional-blank" aria-label="Blank filler panel"></div>'; }
+    function halfCoverPage(){ return halfPanelPage(`<div class="half-panel half-cover-panel front-cover-panel" data-cover-panel="frontCover">${coverPanel('frontCover')}</div><div class="half-panel half-cover-panel back-cover-panel" data-cover-panel="backCover">${coverPanel('backCover')}</div>`, 'half-cover-page'); }
+    function monthPanels(i){ const m=ym(i), title=monthTitle(m); return { personality:`<div class="half-panel personality-panel"><div class="art ${title?'has-title':''}">${artHtml(artFor(i), !!title)}</div>${title}</div>`, calendar:`<div class="half-panel calendar-panel">${buildCalendar(m)}</div>`, fullPersonality:`<section class="print-page personality-page" style="${calendarFontVars()}"><div class="art ${title?'has-title':''}">${artHtml(artFor(i), !!title)}</div>${title}</section>`, fullCalendar:`<section class="print-page calendar-only" style="${calendarFontVars()}">${buildCalendar(m)}</section>` }; }
+    function additionalPanelList(){ return paginateAdditionalPages(true).map((chunk,i)=>additionalHalfPanelHtml(chunk,i)); }
+    function buildPreviewPages(){ const months=Array.from({length:12},(_,i)=>{ const panels=monthPanels(i); return state.layoutMode==='half' ? halfPanelPage(panels.personality + panels.calendar) : panels.fullPersonality + panels.fullCalendar; }).join(''); return (state.layoutMode==='half'?halfCoverPage():coverPage('frontCover')) + months + renderAdditionalPrintPages() + (state.layoutMode==='half'?'':coverPage('backCover')); }
+    function buildPublicationHtml(){ const chunks=paginateAdditionalPages(state.layoutMode==='half'); const additional= state.layoutMode==='half' ? chunks.map((chunk,i)=>halfPanelPage(additionalHalfPanelHtml(chunk,i)+blankHalfPanel(), 'half-publication-page')).join('') : chunks.map((chunk,i)=>additionalPrintPageHtml(chunk,i)).join(''); const months=Array.from({length:12},(_,i)=>{ const panels=monthPanels(i); return state.layoutMode==='half' ? halfPanelPage(panels.personality+blankHalfPanel(), 'half-publication-page') + halfPanelPage(panels.calendar+blankHalfPanel(), 'half-publication-page') : panels.fullPersonality + panels.fullCalendar; }).join(''); return coverPage('frontCover') + months + additional + coverPage('backCover'); }
+    function imposeHalfSheetPanels(panels){
+      const imposed=[];
+      const logical=[...panels];
+      while(logical.length % 4) logical.splice(Math.ceil(logical.length / 2), 0, {type:'blank'});
+      for(let left=0, right=logical.length-1; left<right; left+=2, right-=2){
+        imposed.push({type:'sheet',side:'front',panels:[{...logical[left], rotate180:left===0}, logical[right]]});
+        imposed.push({type:'sheet',side:'back',panels:[logical[left+1], logical[right-1]]});
+      }
+      return imposed;
+    }
+    function imposeHalfSheetHtmlPanels(panels){
+      return imposeHalfSheetPanels(panels.map(html=>({type:'html',html}))).map(sheet=>halfPanelPage(sheet.panels.map(panel=>{ const html=panel.html || blankHalfPanel(); return panel.rotate180 ? html.replace('half-panel ', 'half-panel print-imposed-rotated ') : html; }).join(''), `half-imposed-sheet half-imposed-${sheet.side}`)).join('');
+    }
+    function pairHalfSheetPanels(panels){
+      const logical=[...panels];
+      if(logical.length % 2) logical.push({type:'blank'});
+      return Array.from({length:logical.length/2},(_,i)=>({type:'sheet',side:'direct',panels:[logical[i*2],logical[i*2+1]]}));
+    }
+    function pairHalfSheetHtmlPanels(panels){
+      return pairHalfSheetPanels(panels.map(html=>({type:'html',html}))).map(sheet=>halfPanelPage(sheet.panels.map(panel=>panel.html || blankHalfPanel()).join(''), 'half-direct-print-sheet')).join('');
+    }
+    function buildPrintPages(){ if(state.layoutMode!=='half') return buildPublicationHtml(); const panels=[`<div class="half-panel half-cover-panel front-cover-panel" data-cover-panel="frontCover">${coverPanel('frontCover')}</div>`]; for(let i=0;i<12;i++){ const mp=monthPanels(i); panels.push(mp.personality, mp.calendar); } panels.push(...additionalPanelList()); panels.push(`<div class="half-panel half-cover-panel back-cover-panel" data-cover-panel="backCover">${coverPanel('backCover')}</div>`); return pairHalfSheetHtmlPanels(panels); }
+    function setOutputMode(mode='print'){ document.body.dataset.outputMode=mode; const printPages=$('printPages'); if(printPages) printPages.innerHTML = mode==='publication' ? buildPublicationHtml() : buildPrintPages(); }
+    function render(){ migrateHeaders(); renderThemeRows(); syncHeaderPanelControls(); document.body.classList.toggle('layout-full', state.layoutMode==='full'); const pageClass=`pages ${state.layoutMode === 'full' ? 'full-mode' : 'half-mode'}`; $('pages').className = pageClass; $('pages').innerHTML=buildPreviewPages(); $('printPages').className=pageClass; setOutputMode('print'); attachDraggers(); renderEvents(); renderEventTypes(); renderAdditionalPageManager(); }
+    function renderEvents(){ const q=($('eventSearch').value||'').toLowerCase(); $('eventList').innerHTML=state.events.map(normalizeEvent).filter(e=>[e.startDate,e.endDate,e.time,e.name,e.location,e.eventType,e.color].join(' ').toLowerCase().includes(q)).sort((a,b)=>a.startDate.localeCompare(b.startDate)).map(e=>`<div class="event-card"><strong>${escapeHtml(e.name)}</strong><small>${e.startDate}${e.endDate&&e.endDate!==e.startDate?' → '+e.endDate:''}${e.time?' · '+escapeHtml(e.time):''}${e.location?' · '+escapeHtml(e.location):''}${e.eventType?' · '+escapeHtml(e.eventType):''}${e.color?' · Override: '+escapeHtml(e.color):''}</small><div class="button-row"><button class="btn" data-edit="${e.id}">Edit</button><button class="btn warn" data-del="${e.id}">Delete</button></div></div>`).join('') || '<p class="hint">No events yet.</p>'; document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editEvent(b.dataset.edit)); document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{state.events=state.events.filter(e=>e.id!==b.dataset.del); syncDetectedEventTypes(); saveAuto(); render();}); }
+    function renderEventTypes(){ syncDetectedEventTypes(); const entries=Object.entries(state.eventTypes).sort((a,b)=>a[0].localeCompare(b[0])); $('eventTypeList').innerHTML=entries.map(([type,color])=>`<div class="event-type-row"><div class="field"><label>Event Type</label><input data-event-type-name="${escapeAttr(type)}" value="${escapeAttr(type)}"></div><div class="field"><label>Color</label><input data-event-type-color="${escapeAttr(type)}" type="color" value="${colorValue(color)}"></div><button class="btn" data-event-type-clear="${escapeAttr(type)}">Auto Color</button><button class="btn warn" data-event-type-delete="${escapeAttr(type)}">Delete</button></div>`).join('') || '<p class="hint">No event types yet. Add one manually or import events with Event Type values.</p>'; }
+
+    function additionalPageById(){ return state.additionalPages.find(p=>p.id===selectedAdditionalPageId) || state.additionalPages[0]; }
+    function renderAdditionalPageManager(){ const list=$('additionalPageList'), editor=$('additionalPageEditor'); if(!list || !editor) return; const selected=additionalPageById(); if(selected) selectedAdditionalPageId=selected.id; list.innerHTML=state.additionalPages.map((p,i)=>`<div class="additional-page-card ${p.id===selectedAdditionalPageId?'active':''}"><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(pageTypeLabel(p.type))} · ${escapeHtml(p.settings.orientation)}</small><div class="button-row"><button class="btn" data-page-select="${p.id}">Edit</button><button class="btn" data-page-dup="${p.id}">Duplicate</button><button class="btn" data-page-up="${p.id}" ${i===0?'disabled':''}>↑</button><button class="btn" data-page-down="${p.id}" ${i===state.additionalPages.length-1?'disabled':''}>↓</button><button class="btn warn" data-page-del="${p.id}">Delete</button></div></div>`).join('') || '<p class="hint">No additional pages yet. Click Add Page to start a sunset schedule, directory, map, notes page, or blank insert.</p>'; editor.innerHTML=selected ? additionalPageEditorHtml(selected) : ''; }
+    function pageTypeLabel(type){ return ({csvTable:'CSV Table', manualTable:'Manual Table', richText:'Rich Text Page', image:'Image Page', blank:'Blank Page'})[type] || type; }
+    function additionalPageEditorHtml(p){ const s=p.settings, c=p.content; const types=[['csvTable','CSV Table'],['manualTable','Manual Table'],['richText','Rich Text Page'],['image','Image Page'],['blank','Blank Page']]; return `<div class="header-panel" style="padding:.85rem;"><h3>${escapeHtml(p.name)}</h3><div class="field"><label>Page Name</label><input data-ap="name" value="${escapeAttr(p.name)}"></div><div class="two"><div class="field"><label>Page Type</label><select data-ap="type">${types.map(([v,l])=>`<option value="${v}" ${p.type===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="field"><label>Page Title</label><input data-ap-setting="title" value="${escapeAttr(s.title)}"></div></div><label class="inline-check"><input data-ap-setting="showTitle" type="checkbox" ${s.showTitle?'checked':''}> Show Title</label><div class="two"><div class="field"><label>Orientation</label><select data-ap-setting="orientation"><option value="portrait" ${s.orientation==='portrait'?'selected':''}>Portrait</option><option value="landscape" ${s.orientation==='landscape'?'selected':''}>Landscape</option></select></div><div class="field"><label>Margins (inches)</label><input data-ap-setting="margins" type="number" min="0" max="1.5" step=".05" value="${s.margins}"></div></div><div class="two"><div class="field"><label>Font</label><select data-ap-setting="font">${['Manrope','Syne','Georgia','Arial'].map(f=>`<option ${s.font===f?'selected':''}>${f}</option>`).join('')}</select></div><div class="field"><label>Font Size</label><input data-ap-setting="fontSize" type="number" min="7" max="28" value="${s.fontSize}"></div></div><div class="two"><div class="field"><label>Font Color</label><input data-ap-setting="fontColor" type="color" value="${s.fontColor}"></div><div class="field"><label>Background</label><input data-ap-setting="backgroundColor" type="color" value="${s.backgroundColor}"></div></div><label class="inline-check"><input data-ap-setting="pageNumber" type="checkbox" ${s.pageNumber?'checked':''}> Page Number</label>${additionalContentEditor(p)}</div>`; }
+    function additionalContentEditor(p){ const c=p.content; const tableOpts=`<div class="two"><div class="field"><label>Header Color</label><input data-ap-content="headerColor" type="color" value="${c.headerColor}"></div><div class="field"><label>Additional Page table font size (pt)</label><input data-ap-content="fontSize" type="number" min="6" max="18" step=".5" value="${c.fontSize}"></div></div><div class="two"><div class="field"><label>Cell Padding (inches)</label><input data-ap-content="cellPadding" type="number" min="0" max=".2" step=".01" value="${c.cellPadding}"></div><div class="field"><label>Additional Page title font size (pt)</label><input data-ap-content="titleFontSize" type="number" min="8" max="36" step="1" value="${c.titleFontSize||18}"></div></div><div class="two"><label class="inline-check"><input data-ap-content="compactMode" type="checkbox" ${c.compactMode?'checked':''}> Compact table mode</label><label class="inline-check"><input data-ap-content="headerRow" type="checkbox" ${c.headerRow?'checked':''}> Header Row</label><label class="inline-check"><input data-ap-content="alternateRows" type="checkbox" ${c.alternateRows?'checked':''}> Alternate Rows</label><label class="inline-check"><input data-ap-content="borders" type="checkbox" ${c.borders?'checked':''}> Borders</label><label class="inline-check"><input data-ap-content="wrapText" type="checkbox" ${c.wrapText?'checked':''}> Wrap Text</label><label class="inline-check"><input data-ap-content="autoFit" type="checkbox" ${c.autoFit?'checked':''}> Auto-fit Columns</label><label class="inline-check"><input data-ap-content="repeatHeader" type="checkbox" ${c.repeatHeader?'checked':''}> Repeat Header</label></div>`; if(p.type==='csvTable') return `<h3>CSV Table</h3><div class="field"><label>Upload CSV</label><input id="additionalCsvFile" type="file" accept=".csv,text/csv"></div>${tableOpts}`; if(p.type==='manualTable') return `<h3>Manual Table</h3><div class="two"><div class="field"><label>Columns</label><input data-ap-table-size="columns" type="number" min="1" max="12" value="${c.columns}"></div><div class="field"><label>Rows</label><input data-ap-table-size="rowCount" type="number" min="1" max="80" value="${c.rowCount}"></div></div>${tableOpts}<div class="button-row"><button class="btn" data-ap-row="add">Add Row</button></div><div style="overflow:auto;max-height:300px;"><table>${(c.rows||[]).map((r,ri)=>`<tr>${Array.from({length:c.columns||2},(_,ci)=>`<td><input data-ap-cell="${ri}:${ci}" value="${escapeAttr(r[ci]||'')}"></td>`).join('')}<td><button class="btn warn" data-ap-row-del="${ri}">×</button></td></tr>`).join('')}</table></div>`; if(p.type==='richText') return `<h3>Rich Text Page</h3><div class="button-row"><button class="btn" data-format="bold">Bold</button><button class="btn" data-format="italic">Italic</button><button class="btn" data-format="underline">Underline</button><button class="btn" data-format="insertUnorderedList">Bullets</button><button class="btn" data-format="insertOrderedList">Numbers</button><button class="btn" data-format="insertHorizontalRule">Rule</button></div><div id="richTextEditor" class="editor-box" contenteditable="true">${sanitizeRichText(c.text||'')}</div>`; if(p.type==='image') return `<h3>Image Page</h3><div class="field"><label>Upload Image</label><input id="additionalImageFile" type="file" accept="image/*"></div><div class="field"><label>Display</label><select data-ap-content="imageFit">${['fill','cover','stretch','center'].map(v=>`<option value="${v}" ${c.imageFit===v?'selected':''}>${v[0].toUpperCase()+v.slice(1)}</option>`).join('')}</select></div>`; return `<p class="hint">Blank printable page. Use it for notes, duplex printing, or future inserts.</p>`; }
+    function updateAdditionalPageInput(el){ const p=additionalPageById(); if(!p) return; const val=el.type==='checkbox'?el.checked:(el.type==='number'?+el.value:el.value); if(el.dataset.ap) p[el.dataset.ap]=val; if(el.dataset.apSetting) p.settings[el.dataset.apSetting]=val; if(el.dataset.apContent) p.content[el.dataset.apContent]=val; saveAuto(); render(); }
+    function setManualTableSize(p){ const c=p.content; c.columns=Math.max(1,+c.columns||1); c.rowCount=Math.max(1,+c.rowCount||1); while(c.rows.length<c.rowCount) c.rows.push(Array(c.columns).fill('')); c.rows=c.rows.slice(0,c.rowCount).map(r=>{ const row=[...r]; while(row.length<c.columns) row.push(''); return row.slice(0,c.columns); }); }
+    function additionalPageMetrics(p, isHalfPanel=false){
+      const s=p.settings||defaultPageSettings(), c=p.content||{};
+      const compact=!!c.compactMode;
+      const margin=Math.min(+s.margins || 0, isHalfPanel ? .35 : 1.5);
+      const pageH=isHalfPanel ? 5.5 : (s.orientation==='landscape' ? 8.5 : 11);
+      const pageW=isHalfPanel ? 8.5 : (s.orientation==='landscape' ? 11 : 8.5);
+      const scale=1;
+      const titlePt=+(c.titleFontSize || 18);
+      const titleH=s.showTitle ? Math.max(compact ? .12 : .18, (titlePt * scale / 72) * 1.18 + (compact ? .055 : .16)) : 0;
+      const pageNumH=s.pageNumber ? (compact ? .11 : .18) : 0;
+      const safePad=compact ? .025 : .06;
+      return { pageH, pageW, margin, scale, titleH, pageNumH, safePad, compact, contentW:Math.max(1, pageW - margin*2), usableH:Math.max(.25, pageH - margin*2 - titleH - pageNumH - safePad) };
+    }
+    function additionalPageContentHeightIn(p, isHalfPanel=false){ return additionalPageMetrics(p, isHalfPanel).usableH; }
+    function effectiveCellPadding(c={}){ return c.compactMode ? Math.min(+c.cellPadding || .06, .035) : (+c.cellPadding || .06); }
+    function normalizeAdditionalTableSettings(c={}, p={}){
+      const source={...(p.settings||{}), ...(p.content||{}), ...(c||{})};
+      const borders=source.borders ?? source.showBorders ?? source.tableBorders ?? source.pageBorders;
+      return {
+        ...source,
+        borders:borders !== false,
+        headerRow:source.headerRow !== false,
+        alternateRows:source.alternateRows !== false,
+        headerColor:source.headerColor || '#0B3954',
+        alternateRowColor:source.alternateRowColor || source.altRowColor || '#f8fafc',
+        borderColor:source.borderColor || source.tableBorderColor || '#94a3b8',
+        borderWidth:Number.isFinite(+source.borderWidth) ? +source.borderWidth : .5
+      };
+    }
+    function additionalTableBordersEnabled(c={}, p={}){ return normalizeAdditionalTableSettings(c, p).borders !== false; }
+    function estimateTableRowHeightIn(row=[], p, isHalfPanel=false){
+      const c=p.content||{}, m=additionalPageMetrics(p, isHalfPanel), fontPt=(+c.fontSize||10) * m.scale, pad=effectiveCellPadding(c) * m.scale;
+      const cols=Math.max(1, row.length || c.columns || 1), avgColW=Math.max(.35, m.contentW / cols);
+      const charW=Math.max(.035, fontPt / 72 * .48);
+      const charsPerLine=Math.max(4, Math.floor(avgColW / charW));
+      const lines=c.wrapText===false ? 1 : Math.max(1, ...row.map(cell=>Math.ceil(String(cell||'').length / charsPerLine)));
+      return Math.max((fontPt/72)*1.1 + pad*2, (fontPt/72)*1.22*lines + pad*2 + .01);
+    }
+    function inchPx(){ const probe=document.createElement('div'); probe.style.cssText='position:absolute;visibility:hidden;width:1in;height:1in;'; document.body.appendChild(probe); const px=probe.getBoundingClientRect().height || 96; probe.remove(); return px; }
+    function measuredTableRowHeightIn(row=[], p, isHalfPanel=false, isHeader=false){
+      if(!document?.body) return estimateTableRowHeightIn(row, p, isHalfPanel);
+      const c=p.content||{}, m=additionalPageMetrics(p, isHalfPanel), px=inchPx();
+      const wrap=c.wrapText!==false, cols=tableColumnCount(row, c);
+      const box=document.createElement('div');
+      box.style.cssText=`position:absolute;left:-10000px;top:0;visibility:hidden;width:${m.contentW*px}px;font-family:${fontFamilyValue(p.settings?.font||'Manrope')};font-size:${(+c.fontSize||10)*m.scale}pt;`;
+      const table=document.createElement('table');
+      table.style.cssText=`width:100%;border-collapse:collapse;table-layout:fixed;white-space:${wrap?'normal':'nowrap'};font-size:inherit;`;
+      const colgroup=document.createElement('colgroup');
+      tableColumnWidths(c, cols).forEach(w=>{ const col=document.createElement('col'); col.style.width=`${w}%`; colgroup.appendChild(col); });
+      table.appendChild(colgroup);
+      const tr=document.createElement('tr');
+      row.forEach(cell=>{ const el=document.createElement(isHeader?'th':'td'); el.textContent=String(cell??''); el.style.cssText=`padding:${effectiveCellPadding(c)*m.scale*px}px;vertical-align:top;overflow-wrap:anywhere;${additionalTableBordersEnabled(c, p)?`border:1px solid ${normalizeAdditionalTableSettings(c, p).borderColor};`:''}`; tr.appendChild(el); });
+      while(tr.children.length<cols){ const el=document.createElement(isHeader?'th':'td'); el.style.padding=`${effectiveCellPadding(c)*m.scale*px}px`; tr.appendChild(el); }
+      table.appendChild(tr); box.appendChild(table); document.body.appendChild(box);
+      const h=(tr.getBoundingClientRect().height || table.getBoundingClientRect().height) / px;
+      box.remove();
+      return Math.max(estimateTableRowHeightIn(row, p, isHalfPanel)*.85, h || estimateTableRowHeightIn(row, p, isHalfPanel));
+    }
+    function tableColumnCount(rowsOrRow=[], c={}){ const rows=Array.isArray(rowsOrRow?.[0]) ? rowsOrRow : [rowsOrRow]; return Math.max(1, +(c.columns||0), ...(rows||[]).map(r=>Array.isArray(r) ? r.length : 0)); }
+    function tableColumnWidths(c={}, cols=tableColumnCount([], c)){
+      const stored=Array.isArray(c._tableColumnWidths) ? c._tableColumnWidths.map(Number).filter(n=>Number.isFinite(n) && n>0) : [];
+      const source=stored.length ? stored : Array(cols).fill(100 / cols);
+      const normalized=Array.from({length:cols}, (_,i)=>source[i] || source[source.length-1] || (100 / cols));
+      const total=normalized.reduce((sum,n)=>sum+n,0) || 100;
+      return normalized.map(n=>n / total * 100);
+    }
+    function calculateTableColumnWidths(rows=[], c={}){
+      const cols=tableColumnCount(rows, c);
+      if(c.autoFit === false) return Array(cols).fill(100 / cols);
+      const weights=Array(cols).fill(0);
+      (rows||[]).forEach(row=>Array.from({length:cols},(_,i)=>String(row?.[i] ?? '')).forEach((text,i)=>{
+        const longest=Math.max(1, ...text.split(/\s+/).map(part=>part.length));
+        weights[i]=Math.max(weights[i], Math.min(36, Math.max(longest, text.length * .45)));
+      }));
+      const total=weights.reduce((sum,n)=>sum+n,0) || cols;
+      return weights.map(n=>(n || 1) / total * 100);
+    }
+    function normalizeTableRows(rows=[], cols=tableColumnCount(rows)){ return (rows||[]).map(row=>Array.from({length:cols},(_,i)=>row?.[i] ?? '')); }
+    function cloneAdditionalPage(p, overrides={}){ return {...p, settings:{...(p.settings||{})}, content:{...(p.content||{})}, ...overrides}; }
+    function continuedTitle(title, continued){ return continued ? `${String(title||'').replace(/ — continued$/,'')} — continued` : title; }
+    function paginateTableAdditionalPage(p, isHalfPanel=false){
+      const c=p.content||{}, rows=p.type==='csvTable' ? (c.csvRows||[]) : (c.rows||[]);
+      if(!rows.length) return [p];
+      const columnCount=tableColumnCount(rows, c);
+      const allRows=normalizeTableRows(rows, columnCount);
+      const columnWidths=calculateTableColumnWidths(allRows, {...c, columns:columnCount});
+      const header=c.headerRow ? allRows.slice(0,1) : [];
+      const body=c.headerRow ? allRows.slice(1) : allRows;
+      const paginationPage=cloneAdditionalPage(p, {content:{...c, columns:columnCount, _tableColumnWidths:columnWidths}});
+      const capacity=additionalPageContentHeightIn(paginationPage, isHalfPanel);
+      const chunks=[];
+      let rowIndex=0;
+      while(rowIndex<body.length || (!body.length && !chunks.length)){
+        const continued=rowIndex>0, showHeader=header.length && (!continued || c.repeatHeader !== false);
+        let used=showHeader ? measuredTableRowHeightIn(header[0], paginationPage, isHalfPanel, true) : 0;
+        const pageRows=[];
+        while(rowIndex<body.length){
+          const nextRow=body[rowIndex], h=measuredTableRowHeightIn(nextRow, paginationPage, isHalfPanel, false);
+          if(pageRows.length && used + h > capacity) break;
+          pageRows.push(nextRow);
+          used += h;
+          rowIndex++;
+          if(used >= capacity) break;
+        }
+        const chunkRows=[...(showHeader ? header : []), ...pageRows];
+        const settings={...p.settings, title:continuedTitle(p.settings?.title || p.name, continued)};
+        const content={...c, columns:columnCount, _tableColumnWidths:columnWidths, headerRow:!!showHeader, csvRows:p.type==='csvTable' ? chunkRows : c.csvRows, rows:p.type==='manualTable' ? chunkRows : c.rows};
+        chunks.push(cloneAdditionalPage(p, {settings, content, isContinued:continued}));
+        if(!body.length) break;
+      }
+      return chunks;
+    }
+    function tableRenderedBodyRowCount(chunk){
+      const c=chunk.content||{}, rows=chunk.type==='csvTable' ? (c.csvRows||[]) : (c.rows||[]);
+      return c.headerRow ? Math.max(0, rows.length-1) : rows.length;
+    }
+    function validateAdditionalTablePagination(chunks, isHalfPanel=state.layoutMode==='half', showWarning=false){
+      let ok=true;
+      (state.additionalPages||[]).filter(p=>p.type==='csvTable' || p.type==='manualTable').forEach(p=>{
+        const originalRows=p.type==='csvTable' ? (p.content?.csvRows||[]) : (p.content?.rows||[]);
+        const originalCount=p.content?.headerRow ? Math.max(0, originalRows.length-1) : originalRows.length;
+        const renderedCount=chunks.filter(chunk=>chunk.id===p.id).reduce((sum,chunk)=>sum+tableRenderedBodyRowCount(chunk),0);
+        if(originalCount!==renderedCount){
+          ok=false;
+          const message=`Additional page "${p.name}" pagination mismatch: original rows=${originalCount}, rendered rows=${renderedCount}.`;
+          console.error(`[Calendar Builder] ${message}`, {page:p, chunks:chunks.filter(chunk=>chunk.id===p.id), isHalfPanel});
+          if(showWarning) chunks.filter(chunk=>chunk.id===p.id).forEach(chunk=>chunk.paginationWarning=message);
+        }
+      });
+      return ok;
+    }
+    function richTextOverflowWarning(p, isHalfPanel=false){ const text=(p.content?.text||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim(); const fontPt=+(p.settings?.fontSize)||11; const maxChars=Math.floor(additionalPageContentHeightIn(p, isHalfPanel) / ((fontPt/72)*1.45) * (isHalfPanel ? 58 : 86)); return text.length > maxChars; }
+    function paginateAdditionalPages(isHalfPanel=state.layoutMode==='half'){
+      const chunks=(state.additionalPages||[]).flatMap(p=>{
+        if(p.type==='csvTable' || p.type==='manualTable') return paginateTableAdditionalPage(p, isHalfPanel);
+        if(p.type==='richText' && richTextOverflowWarning(p, isHalfPanel)) return [cloneAdditionalPage(p, {overflowWarning:true})];
+        return [p];
+      });
+      validateAdditionalTablePagination(chunks, isHalfPanel, true);
+      return chunks;
+    }
+    function renderAdditionalPrintPages(){ const chunks=paginateAdditionalPages(state.layoutMode==='half'); if(state.layoutMode!=='half') return chunks.map((p,i)=>additionalPrintPageHtml(p,i)).join(''); const sheets=[]; for(let i=0;i<chunks.length;i+=2){ const first=additionalHalfPanelHtml(chunks[i], i); const second=chunks[i+1] ? additionalHalfPanelHtml(chunks[i+1], i+1) : blankHalfPanel(); sheets.push(`<section class="print-page half-page-additional">${first}${second}</section>`); } return sheets.join(''); }
+    function additionalHalfPanelHtml(p,i){ return `<div class="half-panel half-additional-panel">${additionalPrintPageHtml(p,i,true)}</div>`; }
+    function additionalPrintPageHtml(p,i,isHalfPanel=false){ const s=p.settings, c=normalizeAdditionalTableSettings(p.content, p); const cls=`${isHalfPanel?'':'print-page '}additional-print-page ${s.orientation==='landscape'?'landscape':''} ${c.borders?'bordered':''} ${c.alternateRows?'striped':''} ${c.compactMode?'compact':''}`; const pad=effectiveCellPadding(c); const titleSize=+(c.titleFontSize||18); const style=`--ap-margin:${Math.min(+s.margins || 0, isHalfPanel ? .35 : 1.5)}in;--ap-bg:${s.backgroundColor};--ap-color:${s.fontColor};--ap-font:${fontFamilyValue(s.font)};--ap-size:${s.fontSize}pt;--ap-title-size:${titleSize}pt;--ap-table-size:${+c.fontSize||10}pt;--ap-header:${c.headerColor};--ap-alt:${c.alternateRowColor};--ap-border:${c.borderColor};--ap-cell-pad:${pad}in;`; const title=s.showTitle?`<h2 class="ap-title">${escapeHtml(s.title||p.name)}</h2>`:''; return `<section class="${cls}" style="${style}"${isHalfPanel?' data-half-additional-panel="true"':''}>${title}<div class="ap-body">${additionalBodyHtml(p)}</div>${s.pageNumber?`<div class="page-number">${i+1}</div>`:''}</section>`; }
+    function tableHtml(rows=[], c={}){ c=normalizeAdditionalTableSettings(c); const base=rows.length?rows:[['Column 1','Column 2'],['','']]; const cols=tableColumnCount(base, c); const safe=normalizeTableRows(base, cols); const widths=tableColumnWidths(c._tableColumnWidths ? c : {...c, _tableColumnWidths:calculateTableColumnWidths(safe, c)}, cols); const colgroup=`<colgroup>${widths.map(w=>`<col style="width:${w.toFixed(4)}%">`).join('')}</colgroup>`; const head=c.headerRow?safe.slice(0,1):[]; const body=c.headerRow?safe.slice(1):safe; return `<table style="table-layout:fixed;white-space:${c.wrapText?'normal':'nowrap'};text-align:${c.alignment||'left'};font-size:var(--ap-table-size, ${c.fontSize||10}pt);">${colgroup}${head.length?`<thead>${head.map(r=>`<tr>${r.map(x=>`<th>${escapeHtml(x)}</th>`).join('')}</tr>`).join('')}</thead>`:''}<tbody>${body.map(r=>`<tr>${r.map(x=>`<td>${escapeHtml(x)}</td>`).join('')}</tr>`).join('')}</tbody></table>`; }
+    function sanitizeRichText(html=''){ const tpl=document.createElement('template'); tpl.innerHTML=html; tpl.content.querySelectorAll('script,iframe,object,embed,style,link').forEach(n=>n.remove()); tpl.content.querySelectorAll('*').forEach(n=>Array.from(n.attributes).forEach(a=>{ if(/^on/i.test(a.name) || /javascript:/i.test(a.value)) n.removeAttribute(a.name); })); return tpl.innerHTML; }
+    function additionalBodyHtml(p){ const c=p.content; const warning=p.paginationWarning?`<div class="ap-overflow-warning">Pagination warning: ${escapeHtml(p.paginationWarning)}</div>`:''; if(p.type==='csvTable') return warning + tableHtml(c.csvRows,c); if(p.type==='manualTable') return warning + tableHtml(c.rows,c); if(p.type==='richText') return `${p.overflowWarning?'<div class="ap-overflow-warning">Overflow warning: this rich text may exceed this page/panel. Shorten the content or split it into multiple Additional Pages before printing.</div>':''}<div>${sanitizeRichText(c.text||'')}</div>`; if(p.type==='image') return isImageDataUrl(c.image)?`<div class="image-page-frame image-fit-${c.imageFit}"><img src="${escapeAttr(c.image)}" alt="Additional page image"></div>`:'<div class="empty-art">Upload an image for this additional page.</div>'; return ''; }
+
+
+    function buildPublicationPages(){
+      const pages=[{type:'cover',kind:'frontCover',title:state.frontCoverText||schoolYearText(),image:state.frontCoverImage,fit:state.frontCoverFit||'cover'}];
+      for(let i=0;i<12;i++){ const m=ym(i); pages.push({type:'personality',monthIndex:i,month:m,title:`${monthNames[m.month]} ${m.year}`,image:artFor(i),fit:'cover'}); pages.push({type:'calendar',monthIndex:i,month:m,title:`${monthNames[m.month]} ${m.year}`}); }
+      paginateAdditionalPages(state.layoutMode==='half').forEach((p,i)=>pages.push({type:'additional',page:p,index:i}));
+      pages.push({type:'cover',kind:'backCover',title:state.backCoverText||'',image:state.backCoverImage,fit:state.backCoverFit||'cover'});
+      return pages;
+    }
+    function buildPrintReadyPages(){
+      const logical=buildPublicationPages();
+      if(state.layoutMode!=='half') return logical;
+      return pairHalfSheetPanels(logical);
+    }
+    function pdfPageSizeFor(page, mode){
+      if(mode==='printReady' && page.type==='sheet') return [612,792];
+      if(state.layoutMode==='half') return [612,396];
+      return [792,612];
+    }
+    async function renderPdf(publicationPages, mode='publication'){
+      if(!window.PDFLib) throw new Error('PDF-lib did not load. Check your network connection and try again.');
+      const { PDFDocument, StandardFonts, rgb, degrees } = PDFLib;
+      const pdf=await PDFDocument.create();
+      const fonts={ regular:await pdf.embedFont(StandardFonts.Helvetica), bold:await pdf.embedFont(StandardFonts.HelveticaBold), italic:await pdf.embedFont(StandardFonts.HelveticaOblique) };
+      const ctx={pdf,fonts,rgb,degrees};
+      for(const item of publicationPages){
+        const [w,h]=pdfPageSizeFor(item, mode); const page=pdf.addPage([w,h]);
+        if(item.type==='sheet'){ await drawPanel(ctx,page,item.panels[0],0,h/2,w,h/2); await drawPanel(ctx,page,item.panels[1],0,0,w,h/2); }
+        else await drawPanel(ctx,page,item,0,0,w,h);
+      }
+      const bytes=await pdf.save();
+      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'})); a.download=`calendar-${mode==='printReady'?'print-ready':'publication'}.pdf`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    }
+    function hexRgb(hex){ hex=colorValue(hex).replace('#',''); if(hex.length===3) hex=hex.split('').map(x=>x+x).join(''); return [0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255); }
+    function pdfColor(ctx, hex){ const [r,g,b]=hexRgb(hex||'#000'); return ctx.rgb(r,g,b); }
+    async function embedDataImage(ctx, src){ if(!isImageDataUrl(src)) return null; const bytes=await fetch(src).then(r=>r.arrayBuffer()); return src.includes('image/png') ? ctx.pdf.embedPng(bytes) : ctx.pdf.embedJpg(bytes); }
+    async function drawImageBox(ctx,page,src,x,y,w,h,fit='cover',options={}){
+      const img=await embedDataImage(ctx,src).catch(()=>null); if(!img){ drawCenteredText(ctx,page,'Upload artwork',x,y,w,h,14,'#94a3b8'); return; }
+      const iw=img.width, ih=img.height; let dw=w,dh=h,dx=x,dy=y;
+      if(fit==='stretch'){ /* defaults */ }
+      else if(fit==='center'){ dw=Math.min(w,iw*.35); dh=dw*ih/iw; if(dh>h){dh=h;dw=dh*iw/ih;} dx=x+(w-dw)/2; dy=y+(h-dh)/2; }
+      else { const contain=fit==='fit'; const scale=contain?Math.min(w/iw,h/ih):Math.max(w/iw,h/ih); dw=iw*scale; dh=ih*scale; dx=x+(w-dw)/2; dy=y+(h-dh)/2; }
+      if(options.rotate?.angle === 180){
+        dx=(2*x)+w-dx;
+        dy=(2*y)+h-dy;
+      }
+      page.drawImage(img,{x:dx,y:dy,width:dw,height:dh,...options});
+    }
+    function drawCenteredText(ctx,page,text,x,y,w,h,size=24,color='#0B3954'){ page.drawText(String(text||''),{x:x+w/2-(String(text||'').length*size*.25),y:y+h/2-size/2,size,font:ctx.fonts.bold,color:pdfColor(ctx,color),maxWidth:w-24}); }
+    function pdfHeaderFont(ctx, h={}){ return h.style === 'regular' ? ctx.fonts.regular : h.style === 'italic' ? ctx.fonts.italic : ctx.fonts.bold; }
+    function pdfHeaderText(type, item, m){
+      if(type === 'frontCover') return item?.title || state.frontCoverText || schoolYearText();
+      if(type === 'backCover') return item?.title || state.backCoverText || '';
+      const month = m || item?.month; return month ? `${monthNames[month.month]} ${month.year}` : (item?.title || '');
+    }
+    function pdfHeaderMetrics(type, text, h={}){
+      const size=Math.max(8,(Number(h.size)||0.32)*72), lines=String(text||'').split(/\s*\n\s*/).filter(Boolean);
+      const lineHeight=size*1.12, padX=Math.max(12,size*.86), padY=Math.max(5,size*.34);
+      const width=Math.max(72, Math.max(...(lines.length?lines:['']).map(line=>line.length))*size*.56 + padX*2);
+      const height=Math.max(24, (lines.length||1)*lineHeight + padY*2);
+      return {size, lines, lineHeight, padX, padY, width, height};
+    }
+    function drawHeaderPdf(ctx,page,type,text,x,y,w,h,options={}){
+      const header=state.headers?.[type];
+      if(!header?.show || !text) return {height:0};
+      const metrics=pdfHeaderMetrics(type, text, header);
+      const boxW=Math.min(metrics.width, Math.max(0,w-24)), boxH=metrics.height;
+      const align=options.align || 'floating';
+      const hx=align === 'topLeft' ? x + (Number(header.x)||0)/100 * Math.max(0,w-boxW) : x + (Number(header.x)||0)/100 * w - boxW/2;
+      const hy=align === 'topLeft' ? y + h - boxH - 8 - (Number(header.y)||0)/100 * Math.max(0,h-boxH-16) : y + h - ((Number(header.y)||0)/100 * h) - boxH/2;
+      const safeX=Math.max(x+6, Math.min(x+w-boxW-6, hx));
+      const safeY=Math.max(y+6, Math.min(y+h-boxH-6, hy));
+      const rotated=options.rotate?.angle === 180;
+      const boxX=rotated ? (2*x)+w-safeX : safeX;
+      const boxY=rotated ? (2*y)+h-safeY : safeY;
+      if(header.showBackground && header.shape !== 'none') page.drawRectangle({x:boxX,y:boxY,width:boxW,height:boxH,color:pdfColor(ctx,header.backgroundColor||'#ffffff'),borderRadius:header.shape === 'square' ? 0 : Math.min(boxH/2, 18),...(options.rotate?{rotate:options.rotate}:{})});
+      const font=pdfHeaderFont(ctx, header), color=pdfColor(ctx, header.color || '#0B3954');
+      metrics.lines.forEach((line,i)=>{ const tw=font.widthOfTextAtSize(line, metrics.size); const tx=safeX+(boxW-tw)/2, ty=safeY+boxH-metrics.padY-metrics.size-(i*metrics.lineHeight); page.drawText(line,{x:rotated?(2*x)+w-tx:(tx),y:rotated?(2*y)+h-ty:(ty),size:metrics.size,font,color,maxWidth:boxW-(metrics.padX*2),...(options.rotate?{rotate:options.rotate}:{})}); });
+      return {height:boxH + 8};
+    }
+    async function drawPanel(ctx,page,item,x,y,w,h){
+      page.drawRectangle({x,y,width:w,height:h,color:ctx.rgb(1,1,1)});
+      if(!item || item.type==='blank') return;
+      const drawX=x, drawY=y;
+      const opts=item.rotate180 ? {rotate:ctx.degrees(180)} : {};
+      if(item.type==='cover'){ await drawImageBox(ctx,page,item.image,drawX,drawY,w,h,item.fit,opts); drawHeaderPdf(ctx,page,item.kind,pdfHeaderText(item.kind,item),drawX,drawY,w,h,opts); return; }
+      if(item.type==='personality'){ await drawImageBox(ctx,page,item.image,drawX,drawY,w,h,item.fit,opts); drawHeaderPdf(ctx,page,'personality',pdfHeaderText('personality',item),drawX,drawY,w,h,opts); return; }
+      if(item.type==='calendar') return drawCalendarPdf(ctx,page,item.month,drawX,drawY,w,h,opts);
+      if(item.type==='additional') return drawAdditionalPdf(ctx,page,item.page,item.index,drawX,drawY,w,h,opts);
+    }
+    function fitPdfText(ctx, text, font, maxWidth, preferredSize, minSize=5){
+      let value=String(text||'').replace(/\s+/g,' ').trim();
+      if(!value) return {text:'', size:preferredSize};
+      for(let size=preferredSize; size>=minSize; size-=.5){
+        if(font.widthOfTextAtSize(value, size) <= maxWidth) return {text:value, size};
+      }
+      const ellipsis='…';
+      let lo=0, hi=value.length;
+      while(lo < hi){
+        const mid=Math.ceil((lo+hi)/2);
+        if(font.widthOfTextAtSize(value.slice(0, mid).trimEnd()+ellipsis, minSize) <= maxWidth) lo=mid; else hi=mid-1;
+      }
+      return {text:value.slice(0, lo).trimEnd()+ellipsis, size:minSize};
+    }
+    function drawCalendarPdf(ctx,page,m,x,y,w,h){
+      const [main,soft]=themes[state.themes[m.key]||'Classic'];
+      const margin=Math.min(w,h)*.04, headerH=Math.min(38, Math.max(28, h*.072));
+      const title=`${monthNames[m.month].toUpperCase()} ${m.year}`;
+      const calendarHeader={...defaultHeaders().calendar, ...(state.headers?.calendar||{})};
+      const titleSize=Math.min(24, Math.max(15, (Number(calendarHeader.size)||.32)*58));
+      const titleFont=pdfHeaderFont(ctx,calendarHeader);
+      const footerH=8;
+      const gridX=x+margin, gridY=y+margin+footerH, gridW=w-margin*2, gridH=h-margin*2-headerH-footerH;
+      const titleY=y+h-margin-titleSize;
+      const titleWidth=Math.min(gridW*.46,titleFont.widthOfTextAtSize(title,titleSize));
+      if(calendarHeader.show !== false){
+        const titlePadX=calendarHeader.showBackground ? Math.max(7,titleSize*.45) : 0;
+        const titlePadY=calendarHeader.showBackground ? Math.max(3,titleSize*.18) : 0;
+        if(calendarHeader.showBackground && calendarHeader.shape !== 'none'){
+          page.drawRectangle({x:gridX-titlePadX,y:titleY-titlePadY,width:titleWidth+(titlePadX*2),height:titleSize+(titlePadY*2),color:pdfColor(ctx,calendarHeader.backgroundColor||'#ffffff'),borderRadius:calendarHeader.shape==='square'?0:Math.min(10,(titleSize+(titlePadY*2))/2)});
+        }
+        page.drawText(title,{x:gridX,y:titleY,size:titleSize,font:titleFont,color:pdfColor(ctx,calendarHeader.color || '#087E8B'),maxWidth:gridW*.46});
+      }
+      if(state.showCalendarNotice !== false){
+        const notice=String(state.calendarNoticeText || defaultCalendarNotice);
+        const noticeX=gridX+Math.min(gridW*.50, titleWidth+20);
+        const noticeW=gridX+gridW-noticeX;
+        if(noticeW > 36){
+          const fit=fitPdfText(ctx, notice, ctx.fonts.regular, noticeW, Math.min(7.5, Math.max(6, titleSize*.36)), 5.5);
+          page.drawText(fit.text,{x:noticeX,y:titleY+Math.max(1,titleSize*.12),size:fit.size,font:ctx.fonts.regular,color:ctx.rgb(.32,.39,.45),maxWidth:noticeW});
+        }
+      }
+      page.drawLine({start:{x:gridX,y:gridY+gridH+5},end:{x:gridX+gridW,y:gridY+gridH+5},thickness:.8,color:ctx.rgb(.80,.84,.87)});
+      const layout=buildMonthCalendarLayout(m.month, m.year), { cells, weekRows:rows }=layout;
+      const weekdayFs=Math.min(11, Math.max(7,(state.fontSizes?.weekday||.12)*58)), headH=Math.max(18, weekdayFs*1.9), cellW=gridW/7, cellH=(gridH-headH)/rows;
+      const dayFs=Math.min(13, Math.max(8,(state.fontSizes?.dayNumber||.16)*58));
+      const preferredEventFs=Math.min(8.5, Math.max(5.8,(state.fontSizes?.event||.105)*55));
+      const dayArea=Math.max(dayFs+9, Math.min(cellH*.28, layout.metrics.dayArea*60));
+      const availableLaneH=Math.max(8, cellH-dayArea-5);
+      const laneStep=Math.max(8, Math.min(layout.metrics.laneStep*58, availableLaneH/Math.max(1, layout.metrics.maxMultiLanes || 1)));
+      const barH=Math.max(7, Math.min(laneStep-2, preferredEventFs+4));
+      page.drawRectangle({x:gridX,y:gridY,width:gridW,height:gridH,borderColor:ctx.rgb(.70,.75,.79),borderWidth:.9});
+      const weekdays=weekdayNames.map((_,i)=>weekdayNames[(i+state.firstDay)%7].toUpperCase());
+      weekdays.forEach((wd,i)=>{ const fit=fitPdfText(ctx, wd, ctx.fonts.bold, cellW-8, weekdayFs, 5.5); page.drawText(fit.text,{x:gridX+i*cellW+4,y:gridY+gridH-(headH+fit.size)/2+1,size:fit.size,font:ctx.fonts.bold,color:ctx.rgb(.06,.18,.27),maxWidth:cellW-8}); });
+      page.drawLine({start:{x:gridX,y:gridY+gridH-headH},end:{x:gridX+gridW,y:gridY+gridH-headH},thickness:.9,color:ctx.rgb(.70,.75,.79)});
+      for(let r=0;r<rows;r++) for(let c=0;c<7;c++){
+        const cx=gridX+c*cellW, cy=gridY+gridH-headH-(r+1)*cellH, cell=cells[r*7+c];
+        if(state.shadeWeekends && [0,6].includes(cell.date.getDay())) page.drawRectangle({x:cx,y:cy,width:cellW,height:cellH,color:pdfColor(ctx,soft)});
+        page.drawRectangle({x:cx,y:cy,width:cellW,height:cellH,borderColor:ctx.rgb(.78,.82,.86),borderWidth:.55});
+      }
+      for(let r=0;r<rows;r++) for(let c=0;c<7;c++){
+        const cx=gridX+c*cellW, cy=gridY+gridH-headH-(r+1)*cellH, cell=cells[r*7+c];
+        if(!cell.other) page.drawText(String(cell.d),{x:cx+4,y:cy+cellH-dayFs-4,size:dayFs,font:ctx.fonts.bold,color:ctx.rgb(.06,.18,.27)});
+        if(!cell.other&&state.showWeekNumbers&&cell.date.getDay()===state.firstDay) page.drawText(`W${weekNumber(cell.date)}`,{x:cx+cellW-21,y:cy+cellH-10,size:6,font:ctx.fonts.bold,color:ctx.rgb(.58,.64,.71),maxWidth:18});
+      }
+      layout.eventBarSegments.forEach(seg=>{
+        const rowTop=gridY+gridH-headH-(seg.row*cellH), rowBottom=rowTop-cellH;
+        const padX=seg.isSingleDay ? 3 : (seg.continuesLeft || seg.continuesRight ? 0 : 1.5);
+        const bx=gridX+(seg.col-1)*cellW+padX, bw=((seg.endCol-seg.col)*cellW)-(padX*2);
+        const by=rowTop-dayArea-((seg.lane+1)*laneStep)+Math.max(0,(laneStep-barH)/2);
+        if(by < rowBottom+2 || by+barH > rowTop-dayArea+2 || bw <= 8) return;
+        page.drawRectangle({x:bx,y:by,width:bw,height:barH,color:pdfColor(ctx,seg.color),borderColor:ctx.rgb(1,1,1),borderWidth:.25});
+        const fit=fitPdfText(ctx, seg.label||'', ctx.fonts.bold, bw-6, Math.min(preferredEventFs, barH-2), 4.8);
+        if(fit.text) page.drawText(fit.text,{x:bx+3,y:by+Math.max(1.5,(barH-fit.size)/2),size:fit.size,font:ctx.fonts.bold,color:pdfColor(ctx,seg.textColor),maxWidth:bw-6});
+      });
+    }
+    async function drawAdditionalPdf(ctx,page,p,i,x,y,w,h){ const s=p.settings||defaultPageSettings(), c=p.content||{}; page.drawRectangle({x,y,width:w,height:h,color:pdfColor(ctx,s.backgroundColor||'#fff')}); let cx=x+(+s.margins||.5)*72, cy=y+h-(+s.margins||.5)*72, cw=w-2*((+s.margins||.5)*72); if(s.showTitle){ const titleSize=+(c.titleFontSize||18); page.drawText(s.title||p.name,{x:cx,y:cy-titleSize,size:titleSize,font:ctx.fonts.bold,color:pdfColor(ctx,s.fontColor||'#1a2b3c')}); cy-=titleSize*1.18+(c.compactMode?4:12); } if(p.type==='image') return drawImageBox(ctx,page,c.image,cx,y+(+s.margins||.5)*72,cw,cy-y-(+s.margins||.5)*72,c.imageFit); if(p.type==='blank') return; if(p.type==='richText'){ const text=(c.text||'').replace(/<li>/g,'• ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); wrapDraw(ctx,page,text,cx,cy,cw,+(s.fontSize||11),s.fontColor); } else { drawTablePdf(ctx,page,(p.type==='csvTable'?c.csvRows:c.rows)||[],c,cx,cy,cw,+(c.fontSize||10)); } if(s.pageNumber) page.drawText(String(i+1),{x:x+w/2,y:y+12,size:8,font:ctx.fonts.regular,color:ctx.rgb(.4,.45,.5)}); }
+    function wrapDraw(ctx,page,text,x,y,w,size,color){ const words=String(text||'').split(/\s+/); let line='', cy=y; words.forEach(word=>{ if((line+' '+word).length*size*.5>w){ page.drawText(line,{x,y:cy,size,font:ctx.fonts.regular,color:pdfColor(ctx,color)}); cy-=size*1.35; line=word; } else line=(line?line+' ':'')+word; }); if(line) page.drawText(line,{x,y:cy,size,font:ctx.fonts.regular,color:pdfColor(ctx,color)}); }
+    function pdfWrapCellText(font, text, size, maxWidth, wrap=true){
+      const value=String(text ?? '').replace(/\s+/g,' ').trim();
+      if(!value) return [''];
+      if(!wrap) return [value];
+      const lines=[]; let line='';
+      value.split(' ').forEach(word=>{
+        const test=line ? `${line} ${word}` : word;
+        if(font.widthOfTextAtSize(test, size) <= maxWidth || !line) line=test;
+        else { lines.push(line); line=word; }
+      });
+      if(line) lines.push(line);
+      return lines;
+    }
+    function drawTablePdf(ctx,page,rows,c,x,y,w,size){
+      c=normalizeAdditionalTableSettings(c);
+      const safe=normalizeTableRows(rows,tableColumnCount(rows,c));
+      if(!safe.length) return;
+      const tableFontSize=+(size||c.fontSize||10);
+      const pad=effectiveCellPadding(c)*72;
+      const lineHeight=tableFontSize*1.22;
+      const cols=tableColumnCount(safe,c), widths=tableColumnWidths(c._tableColumnWidths?c:{...c,_tableColumnWidths:calculateTableColumnWidths(safe,c)},cols);
+      let cy=y;
+      safe.forEach((r,ri)=>{
+        const isHeader=ri===0 && c.headerRow;
+        const font=isHeader ? ctx.fonts.bold : ctx.fonts.regular;
+        const rowCells=Array.from({length:cols},(_,ci)=>String(r?.[ci] ?? ''));
+        const cellLines=rowCells.map((cell,ci)=>pdfWrapCellText(font, cell, tableFontSize, Math.max(1, (w*widths[ci]/100)-(pad*2)), c.wrapText!==false));
+        const rowH=Math.max(tableFontSize*1.1+(pad*2), Math.max(...cellLines.map(lines=>lines.length))*lineHeight+(pad*2));
+        let cx=x;
+        rowCells.forEach((cell,ci)=>{
+          const cw=w*widths[ci]/100;
+          if(isHeader) page.drawRectangle({x:cx,y:cy-rowH,width:cw,height:rowH,color:pdfColor(ctx,c.headerColor||'#0B3954')});
+          else if(c.alternateRows && ri % 2 === (c.headerRow ? 0 : 1)) page.drawRectangle({x:cx,y:cy-rowH,width:cw,height:rowH,color:pdfColor(ctx,c.alternateRowColor||'#f8fafc')});
+          if(c.borders) page.drawRectangle({x:cx,y:cy-rowH,width:cw,height:rowH,borderColor:pdfColor(ctx,c.borderColor||'#94a3b8'),borderWidth:Math.max(0,+c.borderWidth||.5)});
+          const color=isHeader ? ctx.rgb(1,1,1) : ctx.rgb(.1,.16,.24);
+          cellLines[ci].forEach((line,li)=>page.drawText(line,{x:cx+pad,y:cy-pad-tableFontSize-(li*lineHeight),size:tableFontSize,font,color,maxWidth:Math.max(1,cw-(pad*2))}));
+          cx+=cw;
+        });
+        cy-=rowH;
+      });
+    }
+    async function downloadPdf(mode){ try{ migrateHeaders(); const chunks=paginateAdditionalPages(state.layoutMode==='half'); if(!validateAdditionalTablePagination(chunks, state.layoutMode==='half', true)) alert('Warning: an Additional Page table row-count mismatch was detected. Check the visible pagination warning before using this PDF.'); const pages=mode==='printReady'?buildPrintReadyPages():buildPublicationPages(); await renderPdf(pages, mode); }catch(err){ console.error(err); alert(err.message || 'PDF export failed.'); } }
+
+    function saveEvent(){ if(!$('eventStartDate').value || !$('eventName').value.trim()) return alert('Start Date and Event Name are required.'); const start=$('eventStartDate').value; const end=$('eventEndDate').value || start; if(!isIsoDate(start) || !isIsoDate(end)) return alert('Please enter valid event dates.'); if(end < start) return alert('End Date cannot be before Start Date.'); const e={ id: editingEventId || crypto.randomUUID(), startDate:start, endDate:end, time:$('eventTime').value, name:$('eventName').value.trim(), location:$('eventLocation').value, eventType:cleanEventType($('eventType').value), color:$('eventColor').value.trim() }; state.events = editingEventId ? state.events.map(x=>x.id===editingEventId?e:x) : [...state.events,e]; syncDetectedEventTypes(); clearEventForm(); saveAuto(); render(); }
+    function editEvent(id){ const found=state.events.find(x=>x.id===id); if(!found) return; const e=normalizeEvent(found); editingEventId=id; $('eventStartDate').value=e.startDate; $('eventEndDate').value=e.endDate===e.startDate?'':e.endDate; $('eventTime').value=e.time||''; $('eventName').value=e.name; $('eventLocation').value=e.location||''; $('eventType').value=e.eventType||''; $('eventColor').value=e.color||''; $('saveEvent').textContent='Update Event'; }
+    function clearEventForm(){ editingEventId=null; ['eventStartDate','eventEndDate','eventTime','eventName','eventLocation','eventType','eventColor'].forEach(id=>$(id).value=''); $('saveEvent').textContent='Add Event'; }
+    function parseCsv(text){ const rows=[]; let row=[], val='', q=false; for(let i=0;i<text.length;i++){ const c=text[i], n=text[i+1]; if(c==='"'&&q&&n==='"'){val+='"';i++;} else if(c==='"') q=!q; else if(c===','&&!q){row.push(val);val='';} else if((c==='\n'||c==='\r')&&!q){ if(c==='\r'&&n==='\n') i++; row.push(val); if(row.some(x=>x.trim())) rows.push(row); row=[]; val=''; } else val+=c; } row.push(val); if(row.some(x=>x.trim())) rows.push(row); return rows; }
+    function importCsv(text){ const rows=parseCsv(text); const headers=(rows.shift()||[]).map(h=>h.trim().replace(/\*/g,'').trim().toLowerCase()); const idx=n=>headers.indexOf(n); const cell=(r,n)=>idx(n)>=0 ? (r[idx(n)]||'').trim() : ''; const dateHelp='Examples: 2026-08-17, 8/17/2026, 8/17/26, Aug 17 2026.'; const errors=[], imported=[]; rows.forEach((r,i)=>{ const rawStart=cell(r,'start date')||cell(r,'date'), name=cell(r,'event name'); const rawEnd=cell(r,'end date'); const start=parseCsvDate(rawStart); const end=rawEnd ? parseCsvDate(rawEnd) : start; if(!rawStart||!name) { errors.push(`Row ${i+2}: Start Date and Event Name are required.`); return; } if(!start) { errors.push(`Row ${i+2}: Start Date must be a valid date. ${dateHelp}`); return; } if(rawEnd && !end) { errors.push(`Row ${i+2}: End Date must be a valid date. ${dateHelp}`); return; } if(end < start) { errors.push(`Row ${i+2}: End Date is before Start Date.`); return; } imported.push({id:crypto.randomUUID(), startDate:start, endDate:end, time:cell(r,'time'), name, location:cell(r,'location'), eventType:cleanEventType(cell(r,'event type')), color:cell(r,'color')}); }); state.events=[...state.events,...imported]; $('csvErrors').style.display=errors.length?'block':'none'; $('csvErrors').innerHTML=errors.map(escapeHtml).join('<br>'); saveAuto(); render(); }
+    function isImageFile(file){ return !!file && typeof file.type === 'string' && file.type.startsWith('image/'); }
+    function isImageDataUrl(value){ return typeof value === 'string' && value.startsWith('data:image/'); }
+    function readImageFile(file){ return new Promise((resolve, reject)=>{ if(!isImageFile(file)) return reject(new Error(`${file?.name || 'Selected file'} is not an image.`)); const reader=new FileReader(); reader.onload=()=>isImageDataUrl(reader.result) ? resolve(reader.result) : reject(new Error(`${file.name} did not load as an image.`)); reader.onerror=()=>reject(reader.error || new Error(`Unable to read ${file.name}.`)); reader.readAsDataURL(file); }); }
+    async function handleSingleImageUpload(file, assignImage, label){ if(!file) return; console.log(`[Calendar Builder] ${label}: 1 selected file`); if(!isImageFile(file)){ alert(`Please choose an image file for ${label}.`); console.warn(`[Calendar Builder] ${label}: ignored non-image file`, file.name); return; } try{ const image=await readImageFile(file); assignImage(image); console.log(`[Calendar Builder] ${label}: 1 image loaded`); saveAuto(); render(); }catch(err){ console.error(`[Calendar Builder] ${label}: failed image upload`, file.name, err); alert(`We could not load ${file.name}. Please try a different image file.`); } }
+    const monthFileAliases = monthNames.map((name,i)=>[i, [name.toLowerCase(), name.slice(0,3).toLowerCase(), ...(name === 'September' ? ['sept'] : [])]]).flatMap(([i, aliases])=>aliases.map(alias=>[alias,i])).sort((a,b)=>b[0].length-a[0].length);
+    function monthIndexFromFilename(filename=''){ const normalized=String(filename).toLowerCase().replace(/\.[^.]+$/, '').replace(/[^a-z]+/g, ' '); const padded=` ${normalized} `; const match=monthFileAliases.find(([alias])=>padded.includes(` ${alias} `)); return match ? match[1] : -1; }
+    function nextMonthSlot(images, reserved=new Set(), preferEmpty=true){ let idx=images.findIndex((img,i)=>!reserved.has(i) && (!preferEmpty || !img)); if(idx < 0 && preferEmpty) idx=nextMonthSlot(images, reserved, false); return idx; }
+    async function handleMonthImagesUpload(fileList){ const selected=Array.from(fileList || []); const files=selected.filter(isImageFile); const ignored=selected.filter(file=>!isImageFile(file)).map(file=>file.name); const failed=[]; const duplicateMatches=[]; const unmatched=[]; const matchedMonths=new Set(); const note=$('monthImagesNote'); console.log(`[Calendar Builder] Month artwork: ${selected.length} selected files`); if(!files.length){ if(note) note.textContent=ignored.length ? `Ignored non-image files: ${ignored.join(', ')}.` : ''; console.log('[Calendar Builder] Month artwork: 0 images loaded'); return; } try{ const loaded=[]; for(const file of files){ try{ loaded.push({ file, image:await readImageFile(file), monthIndex:monthIndexFromFilename(file.name) }); }catch(err){ failed.push(file.name); console.error('[Calendar Builder] Month artwork: failed file', file.name, err); } }
+      const images=Array.from({length:12},(_,i)=>(state.monthImages||[])[i] || '');
+      loaded.forEach(item=>{ if(item.monthIndex >= 0){ if(!matchedMonths.has(item.monthIndex)){ images[item.monthIndex]=item.image; matchedMonths.add(item.monthIndex); } else duplicateMatches.push(`${item.file.name} (${monthNames[item.monthIndex]})`); } else unmatched.push(item); });
+      unmatched.forEach(item=>{ const slot=nextMonthSlot(images, matchedMonths, true); if(slot >= 0){ images[slot]=item.image; matchedMonths.add(slot); } });
+      state.monthImages=images;
+      const messages=[]; if(ignored.length) messages.push(`Ignored non-image files: ${ignored.join(', ')}.`); if(failed.length) messages.push(`Some images could not be loaded: ${failed.join(', ')}.`); if(duplicateMatches.length) messages.push(`Skipped duplicate month matches: ${duplicateMatches.join(', ')}.`); if(unmatched.length) messages.push(`Assigned ${unmatched.length} file${unmatched.length===1?'':'s'} without month names to remaining months in upload order.`); if(note) note.textContent=messages.join(' ');
+      console.log(`[Calendar Builder] Month artwork: ${loaded.length} images loaded`); saveAuto(); render(); }catch(err){ if(note) note.textContent='One or more images could not be loaded. Please try again.'; console.error('[Calendar Builder] Month artwork upload failed', err); alert('Some month images could not be loaded. Please try again with smaller image files.'); } }
+    function attachDraggers(){ document.querySelectorAll('[data-drag]').forEach(el=>{ el.onpointerdown=e=>{ el.setPointerCapture(e.pointerId); const type=el.dataset.drag; const page=el.closest('.half-cover-panel, .print-page, .art, .calendar-page'); const move=ev=>{ const r=page.getBoundingClientRect(); const x=Math.max(0,Math.min(100,((ev.clientX-r.left)/r.width)*100)); const y=Math.max(0,Math.min(100,((ev.clientY-r.top)/r.height)*100)); state.headers[type].x=Math.round(x); state.headers[type].y=Math.round(y); syncHeaderPanelControls([type]); saveAuto(); }; el.onpointermove=move; el.onpointerup=()=>{ el.onpointermove=null; render(); }; }; }); }
+    function download(name, content, type='text/plain'){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+    function projectSnapshot(includeImages=false){ const copy=JSON.parse(JSON.stringify(state)); if(!includeImages){ delete copy.frontCoverImage; delete copy.backCoverImage; delete copy.globalMonthImage; delete copy.monthImages; (copy.additionalPages||[]).forEach(p=>{ if(p.content) delete p.content.image; }); } return copy; }
+    function saveAuto(){ try{ localStorage.setItem('imsda-calendar-builder', JSON.stringify(projectSnapshot(false))); }catch(err){ console.warn('[Calendar Builder] Auto-save skipped because storage is full or unavailable.', err); } }
+    function loadAuto(){ const saved=localStorage.getItem('imsda-calendar-builder'); if(saved) try{ state={...defaultState(),...JSON.parse(saved)}; migrateHeaders(); saveAuto(); }catch(err){ console.warn('[Calendar Builder] Saved project could not be loaded.', err); } }
+    function resetProject(){ if(confirm('Reset this calendar project?')){ localStorage.removeItem('imsda-calendar-builder'); state=defaultState(); syncControls(); render(); } }
+    document.addEventListener('input', e=>{ if(['startMonth','startYear','layoutMode','firstDay','holidaysToggle','weekendsToggle','weekNumbersToggle','calendarNoticeToggle','calendarNoticeText','frontCoverFit','backCoverFit','frontCoverTitleText','backCoverTitleText','dayNumberFontSize','weekdayFontSize','eventFontSize'].includes(e.target.id)) collectControls(); if(e.target.dataset.ap || e.target.dataset.apSetting || e.target.dataset.apContent){ updateAdditionalPageInput(e.target); } if(e.target.id==='richTextEditor'){ const p=additionalPageById(); if(p){ p.content.text=e.target.innerHTML; saveAuto(); } } if(e.target.dataset.apCell){ const p=additionalPageById(); const [r,c]=e.target.dataset.apCell.split(':').map(Number); p.content.rows[r][c]=e.target.value; saveAuto(); } if(e.target.dataset.apTableSize){ const p=additionalPageById(); p.content[e.target.dataset.apTableSize]=+e.target.value; setManualTableSize(p); saveAuto(); render(); } if(e.target.dataset.header){ const h=state.headers[e.target.dataset.header]; const prop=e.target.dataset.prop; h[prop]=e.target.type==='checkbox' ? e.target.checked : ((e.target.type==='number' || e.target.type==='range') ? +e.target.value : e.target.value); saveAuto(); syncHeaderPanelControls([e.target.dataset.header]); render(); } if(e.target.id==='defaultEventColor'){ state.defaultEventColor=e.target.value || '#D32F2F'; saveAuto(); render(); } if(e.target.dataset.eventTypeColor){ state.eventTypes[e.target.dataset.eventTypeColor]=e.target.value; saveAuto(); render(); } });
+    document.addEventListener('change', e=>{ if(e.target.id==='frontCoverImage') handleSingleImageUpload(e.target.files[0], image=>{ state.frontCoverImage=image; }, 'front cover'); if(e.target.id==='backCoverImage') handleSingleImageUpload(e.target.files[0], image=>{ state.backCoverImage=image; }, 'back cover'); if(e.target.id==='globalMonthImage') handleSingleImageUpload(e.target.files[0], image=>{ state.globalMonthImage=image; }, 'global month image'); if(e.target.id==='monthImages') handleMonthImagesUpload(e.target.files); if(e.target.id==='csvFile' && e.target.files[0]) e.target.files[0].text().then(importCsv); if(e.target.id==='loadJson' && e.target.files[0]) e.target.files[0].text().then(t=>{state={...defaultState(),...JSON.parse(t)}; syncControls(); saveAuto(); render();}); if(e.target.id==='additionalCsvFile' && e.target.files[0]) e.target.files[0].text().then(t=>{ const p=additionalPageById(); if(p){ p.content.csvRows=parseCsv(t); saveAuto(); render(); }}); if(e.target.id==='additionalImageFile') handleSingleImageUpload(e.target.files[0], image=>{ const p=additionalPageById(); if(p) p.content.image=image; }, 'additional page image'); if(e.target.dataset.eventTypeName){ const oldName=e.target.dataset.eventTypeName; const newName=cleanEventType(e.target.value); if(newName && newName!==oldName){ state.eventTypes[newName]=state.eventTypes[oldName] || state.eventTypes[newName] || ''; delete state.eventTypes[oldName]; state.events=state.events.map(ev=>cleanEventType(ev.eventType)===oldName ? {...ev,eventType:newName} : ev); saveAuto(); render(); } else { renderEventTypes(); } } if(['startMonth','startYear','layoutMode','firstDay'].includes(e.target.id)) collectControls(); });
+    $('downloadTemplate').onclick=()=>download('calendar-events-template.csv','Start Date*,End Date,Time,Event Name*,Location,Event Type,Color\n2026-08-17,2026-08-21,,Elementary Teachers’ Meetings,Des Moines IA,School,\n','text/csv');
+    $('saveEvent').onclick=saveEvent; $('clearEvent').onclick=clearEventForm; $('addEventType').onclick=()=>{ let base='New Type', name=base, i=2; state.eventTypes=state.eventTypes||{}; while(name in state.eventTypes) name=`${base} ${i++}`; state.eventTypes[name]=''; saveAuto(); render(); }; $('eventSearch').oninput=renderEvents; $('saveJson').onclick=()=>download('calendar-builder-project.json', JSON.stringify(projectSnapshot(false),null,2), 'application/json'); $('resetProject').onclick=resetProject; function setPrintOrientation(mode='print'){ let style=$('calendarPrintOrientation'); if(!style){ style=document.createElement('style'); style.id='calendarPrintOrientation'; document.head.appendChild(style); } const landscape = state.layoutMode === 'full'; style.textContent = landscape ? '@media print { @page { size: letter landscape; margin: 0; } }' : '@media print { @page { size: letter portrait; margin: 0; } }'; }
+    window.addEventListener('beforeprint', ()=>setPrintOrientation(document.body.dataset.outputMode || 'print'));
+    function printCalendar(){ setOutputMode('print'); setPrintOrientation('print'); window.print(); }
+    function exportPublicationPdf(){ downloadPdf('publication'); }
+    function exportPrintReadyPdf(){ downloadPdf('printReady'); }
+    $('printBtn').onclick=$('printBtn2').onclick=printCalendar; $('downloadPublicationPdfBtn').onclick=$('downloadPublicationPdfBtn2').onclick=exportPublicationPdf; $('downloadPrintReadyPdfBtn').onclick=$('downloadPrintReadyPdfBtn2').onclick=exportPrintReadyPdf;
+    document.addEventListener('click', e=>{ const add=e.target.closest('#addAdditionalPage'); if(add){ const p=defaultAdditionalPage(); state.additionalPages.push(p); selectedAdditionalPageId=p.id; saveAuto(); render(); } const ps=e.target.closest('[data-page-select]'); if(ps){ selectedAdditionalPageId=ps.dataset.pageSelect; renderAdditionalPageManager(); } const pd=e.target.closest('[data-page-del]'); if(pd && confirm('Delete this additional page?')){ state.additionalPages=state.additionalPages.filter(p=>p.id!==pd.dataset.pageDel); selectedAdditionalPageId=state.additionalPages[0]?.id||null; saveAuto(); render(); } const dup=e.target.closest('[data-page-dup]'); if(dup){ const p=state.additionalPages.find(x=>x.id===dup.dataset.pageDup); if(p){ const copy=JSON.parse(JSON.stringify(p)); copy.id=crypto.randomUUID(); copy.name=`${p.name} Copy`; state.additionalPages.splice(state.additionalPages.indexOf(p)+1,0,copy); selectedAdditionalPageId=copy.id; saveAuto(); render(); }} const up=e.target.closest('[data-page-up],[data-page-down]'); if(up){ const id=up.dataset.pageUp||up.dataset.pageDown; const i=state.additionalPages.findIndex(p=>p.id===id); const j=up.dataset.pageUp?i-1:i+1; if(i>=0&&j>=0&&j<state.additionalPages.length){ [state.additionalPages[i],state.additionalPages[j]]=[state.additionalPages[j],state.additionalPages[i]]; saveAuto(); render(); }} const fmt=e.target.closest('[data-format]'); if(fmt){ document.execCommand(fmt.dataset.format,false,null); const ed=$('richTextEditor'); if(ed){ ed.dispatchEvent(new Event('input',{bubbles:true})); ed.focus(); }} const rowAdd=e.target.closest('[data-ap-row="add"]'); if(rowAdd){ const p=additionalPageById(); p.content.rows.push(Array(p.content.columns).fill('')); p.content.rowCount=p.content.rows.length; saveAuto(); render(); } const rowDel=e.target.closest('[data-ap-row-del]'); if(rowDel){ const p=additionalPageById(); p.content.rows.splice(+rowDel.dataset.apRowDel,1); p.content.rowCount=p.content.rows.length; saveAuto(); render(); } const reset=e.target.closest('[data-reset-header]'); if(reset){ const type=reset.dataset.resetHeader; state.headers[type].x=type==='calendar'?0:50; state.headers[type].y=(type==='frontCover'||type==='backCover')?50:(type==='calendar'?0:12); saveAuto(); syncHeaderPanelControls([type]); render(); } const nudge=e.target.closest('[data-nudge]'); if(nudge){ const h=state.headers[nudge.dataset.nudge]; h.x=Math.max(0,Math.min(100,h.x + +nudge.dataset.dx)); h.y=Math.max(0,Math.min(100,h.y + +nudge.dataset.dy)); saveAuto(); syncHeaderPanelControls([nudge.dataset.nudge]); render(); } const etc=e.target.closest('[data-event-type-clear]'); if(etc){ const type=etc.dataset.eventTypeClear; state.eventTypes[type]=automaticEventTypeColor(type); saveAuto(); render(); } const etd=e.target.closest('[data-event-type-delete]'); if(etd && confirm(`Delete event type "${etd.dataset.eventTypeDelete}"? Events using it will keep their dates and names but lose this type label.`)){ const type=etd.dataset.eventTypeDelete; delete state.eventTypes[type]; state.events=state.events.map(ev=>cleanEventType(ev.eventType)===type ? {...ev,eventType:''} : ev); saveAuto(); render(); } });
+    initOptions(); loadAuto(); if(!state.frontCoverText) state.frontCoverText=schoolYearText(); syncControls(); render();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>
