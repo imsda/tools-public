@@ -5,6 +5,9 @@
     - Logos/Logo Template Black.png  (default logo asset)
     - Logos/Logo Template Blue.png  (default logo asset)
     - Logos/Logo Template White.png  (default logo asset)
+    - Logos/Logo Vertical Black.png  (default logo asset)
+    - Logos/Logo Vertical Blue.png  (default logo asset)
+    - Logos/Logo Vertical White.png  (default logo asset)
     - fonts/AdventSans-Beta.otf  (required - logo text is rendered in this font)
     - tools-nav.css  (optional - shared top nav styling; page works without it)
     - tools-nav.js  (optional - shared top nav + tool list; page works without it)
@@ -327,6 +330,20 @@
           </div>
 
           <div class="field">
+            <label>Logo layout</label>
+            <div class="color-picker" role="radiogroup" aria-label="Logo layout">
+              <label class="color-option" for="logoLayoutHorizontal">
+                <input id="logoLayoutHorizontal" name="logoLayout" type="radio" value="horizontal" checked />
+                <span>Horizontal</span>
+              </label>
+              <label class="color-option" for="logoLayoutVertical">
+                <input id="logoLayoutVertical" name="logoLayout" type="radio" value="vertical" />
+                <span>Vertical</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
             <label>Logo color</label>
             <div class="color-picker" role="radiogroup" aria-label="Logo color">
               <label class="color-option" for="logoColorBlue">
@@ -370,16 +387,19 @@
         blue: {
           label: 'Blue',
           image: 'Logos/Logo Template Blue.png',
+          verticalImage: 'Logos/Logo Vertical Blue.png',
           textColor: '#003b5c'
         },
         white: {
           label: 'White',
           image: 'Logos/Logo Template White.png',
+          verticalImage: 'Logos/Logo Vertical White.png',
           textColor: '#ffffff'
         },
         black: {
           label: 'Black',
           image: 'Logos/Logo Template Black.png',
+          verticalImage: 'Logos/Logo Vertical Black.png',
           textColor: '#000000'
         }
       };
@@ -397,9 +417,21 @@
       const BOTTOM_TEXT_TRACKING_RATIO = 0.12;
       const BOTTOM_TEXT_RIGHT_PADDING = 48;
       const BOTTOM_TEXT_MAX_LINES = 2;
+      // Vertical lockup: church name is centered under "Adventist Church", sized and
+      // positioned to match the conference reference (e.g. "DES MOINES"). Ratios are
+      // relative to the vertical template's width/height so they survive re-exports.
+      const VERTICAL_FONT_SIZE_RATIO = 0.0544;
+      const VERTICAL_TRACKING_RATIO = 0.169;
+      const VERTICAL_FIRST_BASELINE_RATIO = 0.9059;
+      const VERTICAL_LINE_HEIGHT_RATIO = 1.45;
+      // Wrap when the name is wider than the "Adventist Church" line of the logo.
+      const VERTICAL_MAX_TEXT_WIDTH_RATIO = 0.9465;
+      const VERTICAL_MAX_LINES = 3;
+      const DEFAULT_LAYOUT = 'horizontal';
 
       const input = document.getElementById('churchName');
       const colorInputs = Array.from(document.querySelectorAll('input[name="logoColor"]'));
+      const layoutInputs = Array.from(document.querySelectorAll('input[name="logoLayout"]'));
       const previewCanvas = document.getElementById('logoPreview');
       const downloadButton = document.getElementById('downloadButton');
       const statusText = document.getElementById('statusText');
@@ -423,6 +455,7 @@
 
       const loadedTemplates = {};
       let activeColor = DEFAULT_COLOR;
+      let activeLayout = DEFAULT_LAYOUT;
       let fontLoaded = false;
       let fontLoadingPromise;
       let renderSequence = 0;
@@ -435,9 +468,13 @@
         return logoOptions[activeColor];
       }
 
+      function getTemplateSrc(option) {
+        return activeLayout === 'vertical' ? option.verticalImage : option.image;
+      }
+
       function getTemplateErrorMessage(colorKey) {
         const option = logoOptions[colorKey];
-        return 'Logo template could not be loaded. Confirm ' + option.image + ' is available.';
+        return 'Logo template could not be loaded. Confirm ' + getTemplateSrc(option) + ' is available.';
       }
 
       function setLoadingStatus(colorKey) {
@@ -590,9 +627,42 @@
         };
       }
 
+      function drawVerticalLogo(templateImage, churchName, option) {
+        const width = templateImage.naturalWidth;
+        const baseHeight = templateImage.naturalHeight;
+        const fontSize = Math.max(12, Math.round(width * VERTICAL_FONT_SIZE_RATIO));
+        const tracking = fontSize * VERTICAL_TRACKING_RATIO;
+        const lineHeight = fontSize * VERTICAL_LINE_HEIGHT_RATIO;
+        const maxWidth = width * VERTICAL_MAX_TEXT_WIDTH_RATIO;
+
+        ctx.font = getFontSpec(fontSize);
+        const lines = churchName
+          ? buildWrappedLines(churchName.toUpperCase(), maxWidth, tracking).slice(0, VERTICAL_MAX_LINES)
+          : [];
+        const extraLines = Math.max(0, lines.length - 1);
+
+        previewCanvas.width = width;
+        previewCanvas.height = Math.round(baseHeight + (extraLines * lineHeight));
+        ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+        ctx.drawImage(templateImage, 0, 0);
+        if (!lines.length) {
+          return;
+        }
+
+        ctx.font = getFontSpec(fontSize);
+        ctx.fillStyle = option.textColor;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        const firstBaseline = baseHeight * VERTICAL_FIRST_BASELINE_RATIO;
+        lines.forEach(function (line, index) {
+          const lineWidth = measureTrackedTextWidth(line, tracking);
+          drawTrackedText(line, (width - lineWidth) / 2, firstBaseline + (index * lineHeight), tracking);
+        });
+      }
+
       function updateControls(churchName) {
         const activeOption = getActiveColorOption();
-        const hasTemplate = Boolean(activeOption && loadedTemplates[activeOption.image]);
+        const hasTemplate = Boolean(activeOption && loadedTemplates[getTemplateSrc(activeOption)]);
         downloadButton.disabled = !(hasTemplate && fontLoaded && churchName);
       }
 
@@ -661,7 +731,7 @@
 
         let templateImage;
         try {
-          templateImage = await loadImage(activeOption.image);
+          templateImage = await loadImage(getTemplateSrc(activeOption));
         } catch (error) {
           console.error('[Logo Generator] Image load failure for color "' + activeColor + '".', error);
           setStatus(getTemplateErrorMessage(activeColor));
@@ -676,8 +746,21 @@
         const canvasWidth = templateImage.naturalWidth;
         const canvasHeightBase = templateImage.naturalHeight;
         if (!canvasWidth || !canvasHeightBase) {
-          console.error('[Logo Generator] Loaded image has invalid dimensions.', activeOption.image, canvasWidth, canvasHeightBase);
+          console.error('[Logo Generator] Loaded image has invalid dimensions.', getTemplateSrc(activeOption), canvasWidth, canvasHeightBase);
           setStatus('Render error: template dimensions are invalid.');
+          return;
+        }
+
+        if (activeLayout === 'vertical') {
+          try {
+            drawVerticalLogo(templateImage, churchName, activeOption);
+          } catch (error) {
+            console.error('[Logo Generator] Failed while drawing vertical canvas.', error);
+            setStatus('Render error while drawing canvas. Check console for details.');
+            return;
+          }
+          updateControls(churchName);
+          setStatus(churchName ? 'Preview ready. Download will export this composed PNG.' : 'Template ready. Enter a church name to enable PNG export.');
           return;
         }
 
@@ -723,6 +806,16 @@
       input.addEventListener('input', function () {
         renderLogo();
       });
+      layoutInputs.forEach(function (layoutInput) {
+        layoutInput.addEventListener('change', function (event) {
+          if (!event.target.checked) {
+            return;
+          }
+
+          activeLayout = event.target.value;
+          renderLogo();
+        });
+      });
       colorInputs.forEach(function (colorInput) {
         colorInput.addEventListener('change', function (event) {
           if (!event.target.checked) {
@@ -743,7 +836,7 @@
 
         await renderLogo();
         const activeOption = getActiveColorOption();
-        if (!fontLoaded || !activeOption || !loadedTemplates[activeOption.image]) {
+        if (!fontLoaded || !activeOption || !loadedTemplates[getTemplateSrc(activeOption)]) {
           console.error('[Logo Generator] Export blocked because canvas assets are not ready.');
           setStatus('PNG export is not ready yet. Wait for preview to finish loading.');
           return;
@@ -757,7 +850,7 @@
 
         try {
           const safeName = churchName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'church-logo';
-          const fileName = safeName + '-logo.png';
+          const fileName = safeName + (activeLayout === 'vertical' ? '-logo-vertical.png' : '-logo.png');
 
           const triggerDownload = function (url) {
             const downloadLink = document.createElement('a');
@@ -782,7 +875,7 @@
               triggerDownload(objectUrl);
               setStatus('PNG downloaded.');
             } finally {
-              URL.revokeObjectURL(objectUrl);
+              setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 1000);
             }
           }, 'image/png');
         } catch (error) {
