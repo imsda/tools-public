@@ -174,21 +174,12 @@ const SURVEILLANCE_DRIVES = [
 ];
 const storageFor=ecosystem=>SURVEILLANCE_DRIVES.filter(d=>!d.ecosystemOnly||d.ecosystemOnly===ecosystem);
 const SHARED_CUSTOM_UPS = [
-  {
-    id: 'ups-small',
-    name: 'UPS pequeño (provisional)',
-    msrp: 0
-  },
-  {
-    id: 'ups-medium',
-    name: 'UPS mediano (provisional)',
-    msrp: 0
-  },
-  {
-    id: 'ups-rackmount',
-    name: 'UPS para rack (provisional)',
-    msrp: 0
-  }
+  { id: 'unifi-ups-2U-rack', name: 'Unifi UPS 2U (montaje en rack)', msrp: 279 },
+  { id: 'unifi-ups-tower', name: 'Unifi UPS torre', msrp: 159 },
+  { id: 'apc-1500', name: 'APC Back-UPS Pro 1500VA torre', msrp: 219.99 },
+  { id: 'cyber-CP1500PFCLCD', name: 'CyberPower 1500VA CP1500PFCLCD torre', msrp: 274.95 },
+  { id: 'cyber-CP1500PFCRM2U', name: 'CyberPower 1500VA CP1500PFCRM2U rack', msrp: 359.95 },
+  { id: 'cyber-OR1500PFCRT2U', name: 'CyberPower OR1500PFCRT2U rack', msrp: 719.95 }
 ];
 const SHARED_AIO_ADDONS = [
   {
