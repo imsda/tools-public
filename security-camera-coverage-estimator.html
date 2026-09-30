@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    (none)
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Camera Coverage Estimator</title>
+  <style>
+    :root {
+      --bg: #f5f8fb;
+      --surface: #ffffff;
+      --surface-soft: #f9fcff;
+      --text: #153042;
+      --muted: #4f6473;
+      --line: #d6e1ea;
+      --line-strong: #bfcfdb;
+      --primary: #1f5f8b;
+      --primary-strong: #144a70;
+      --accent: #eaf4ff;
+      --success-bg: #edf8f1;
+      --success-line: #c8e7d3;
+      --shadow: 0 18px 34px rgba(21, 48, 66, 0.08);
+      --radius-xl: 22px;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 1rem;
+      font-family: "Inter", "Manrope", "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top right, #f7fbff, #f2f7fb 45%, #eef4f9);
+      line-height: 1.45;
+    }
+
+    .app {
+      width: min(1150px, 100%);
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 1.1rem;
+    }
+
+    .title-block {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, #ffffff, #f8fbff);
+    }
+
+    .eyebrow {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 0.3rem;
+    }
+
+    h1 {
+      margin: 0;
+      line-height: 1.1;
+      font-size: clamp(1.55rem, 3.2vw, 2.3rem);
+    }
+
+    .intro {
+      margin: 0.55rem 0 0;
+      color: var(--muted);
+      max-width: 980px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 1rem;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      padding: 1rem;
+    }
+
+    .card h2 {
+      margin: 0 0 0.85rem;
+      font-size: 1.08rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.38rem;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #21475f;
+    }
+
+    .help {
+      font-size: 0.77rem;
+      color: var(--muted);
+      margin-top: -0.15rem;
+    }
+
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-md);
+      background: #fff;
+      color: var(--text);
+      padding: 0.64rem 0.72rem;
+      font: inherit;
+    }
+
+    input[type="checkbox"] {
+      width: 1.05rem;
+      height: 1.05rem;
+      margin: 0.1rem 0.55rem 0 0;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      font-size: 0.9rem;
+      color: var(--text);
+      padding: 0.55rem 0.62rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: #fcfeff;
+    }
+
+    .actions {
+      margin-top: 0.9rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    button {
+      border: 1px solid var(--line-strong);
+      border-radius: 11px;
+      padding: 0.7rem 0.9rem;
+      font: 600 0.9rem/1.2 "Inter", "Manrope", sans-serif;
+      cursor: pointer;
+      background: #f4f8fc;
+      color: var(--primary-strong);
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #2a78ad, #1f5f8b);
+      border-color: #1f5f8b;
+      color: #fff;
+      min-width: 200px;
+      font-size: 0.96rem;
+      padding: 0.78rem 1rem;
+    }
+
+    button:hover { filter: brightness(0.98); }
+
+    .results {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.36rem;
+      padding: 0.28rem 0.62rem;
+      border: 1px solid #bfd8ef;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #18496e;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+    }
+
+    .stats {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: linear-gradient(180deg, #fff, #f8fcff);
+      padding: 0.8rem;
+      display: grid;
+      gap: 0.48rem;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 0.38rem;
+      font-size: 0.92rem;
+    }
+
+    .stat:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .stat strong { text-align: right; }
+
+    .summary {
+      border: 1px solid var(--success-line);
+      border-radius: var(--radius-md);
+      background: var(--success-bg);
+      padding: 0.75rem;
+      color: #21543a;
+      font-size: 0.9rem;
+      margin: 0;
+    }
+
+    .breakdown-list {
+      margin: 0;
+      padding-left: 1.1rem;
+      display: grid;
+      gap: 0.24rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .planning-note {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #5d6f7d;
+      padding: 0.6rem 0.68rem;
+      border-radius: 10px;
+      background: #f6fafc;
+      border: 1px dashed #cad8e5;
+    }
+
+    .result-note {
+      margin: 0;
+      font-size: 0.78rem;
+      color: #6e7f8d;
+    }
+
+    .label-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .hint-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1rem;
+      height: 1rem;
+      border-radius: 999px;
+      border: 1px solid #b8c8d6;
+      font-size: 0.7rem;
+      color: #557287;
+      cursor: help;
+      user-select: none;
+      background: #f5f9fd;
+    }
+
+    #copy-feedback {
+      min-height: 1.1rem;
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    #motion-field[hidden] { display: none; }
+
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .app { padding: 0.9rem; }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .app {
+        width: 100%;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0;
+      }
+      .title-block { border: 1px solid #bbb; }
+      .layout { grid-template-columns: 1fr; }
+      .no-print { display: none !important; }
+      .card, .stats, .summary, .planning-note {
+        border-color: #bbb;
+        background: #fff;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="app">
+    <header class="title-block">
+      <div class="eyebrow">IMSDA Utility</div>
+      <h1>Security Camera Coverage Estimator</h1>
+      <p class="intro">Plan how many security cameras your facility may need and what recorder/storage capacity to budget before requesting a final design.</p>
+    </header>
+
+    <section class="layout">
+      <section class="card no-print">
+        <h2>Project Inputs</h2>
+        <form id="estimator-form" class="form-grid">
+          <div class="field full">
+            <label for="coverage">How much coverage do you want?</label>
+            <select id="coverage">
+              <option value="full">Full Coverage</option>
+              <option value="moderate" selected>Moderate Coverage</option>
+              <option value="bare">Bare Minimum</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="buildingType">Building type</label>
+            <select id="buildingType">
+              <option>Church</option>
+              <option>School</option>
+              <option>Church + School</option>
+              <option>Office / Conference Building</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="mainRooms">Number of main rooms</label>
+            <input id="mainRooms" type="number" min="0" value="3" />
+            <div class="help">Examples: sanctuary, gym, fellowship hall, cafeteria, large classroom groups</div>
+          </div>
+
+          <div class="field">
+            <label for="exteriorDoors">Number of exterior doors</label>
+            <input id="exteriorDoors" type="number" min="0" value="4" />
+          </div>
+
+          <div class="field">
+            <label for="hallways">Number of hallways / major corridors</label>
+            <input id="hallways" type="number" min="0" value="3" />
+          </div>
+
+          <div class="field">
+            <label for="offices">Number of offices to consider</label>
+            <input id="offices" type="number" min="0" value="6" />
+          </div>
+
+          <div class="field full">
+            <label class="check-row"><input id="parkingLot" type="checkbox" />Do you want parking lot coverage?</label>
+          </div>
+          <div class="field full">
+            <label class="check-row"><input id="playground" type="checkbox" />Do you want playground / outdoor activity area coverage?</label>
+          </div>
+          <div class="field full">
+            <label class="check-row"><input id="nursery" type="checkbox" />Do you want nursery / children’s area coverage?</label>
+          </div>
+
+          <div class="field">
+            <label for="retention">How long do you want recordings saved?</label>
+            <select id="retention">
+              <option value="7">7 days</option>
+              <option value="14">14 days</option>
+              <option value="30" selected>30 days</option>
+              <option value="60">60 days</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="quality">Recording quality</label>
+            <select id="quality">
+              <option value="standard">Standard (1080p)</option>
+              <option value="high">High (2K / 4MP)</option>
+              <option value="veryHigh">Very High (4K)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="recordingMode">Recording mode</label>
+            <select id="recordingMode">
+              <option value="motion" selected>Motion-Based Recording</option>
+              <option value="continuous">Continuous 24/7 Recording</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="compression" class="label-inline">
+              <span>Video Compression</span>
+              <span class="hint-icon" title="H.265 = smaller file sizes, H.264 = wider compatibility" aria-label="Compression help">?</span>
+            </label>
+            <select id="compression">
+              <option value="h264" selected>H.264 (Standard Compatibility)</option>
+              <option value="h265">H.265 (More Efficient Storage)</option>
+            </select>
+            <div class="help">H.265 typically reduces storage usage compared to H.264, but may require newer cameras and recorders.</div>
+          </div>
+
+          <div class="field" id="motion-field">
+            <label for="motionHours">Average hours of motion per day</label>
+            <select id="motionHours">
+              <option value="4">4 hours/day</option>
+              <option value="8" selected>8 hours/day</option>
+              <option value="12">12 hours/day</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <label for="notes">Notes (optional)</label>
+            <textarea id="notes" rows="3" placeholder="Add planning notes, follow-up questions, or site-specific details..."></textarea>
+          </div>
+
+          <div class="actions full">
+            <button class="btn-primary" type="submit">Calculate Estimate</button>
+            <button id="resetBtn" type="button">Reset</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card results" aria-live="polite">
+        <div>
+          <span class="badge" id="systemBadge">Recommended System Size: --</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><span>Estimated cameras needed</span><strong id="outCameras">--</strong></div>
+          <div class="stat"><span>Estimated storage needed (TB)</span><strong id="outStorageTB">--</strong></div>
+          <div class="stat"><span>Estimated daily storage use</span><strong id="outDaily">--</strong></div>
+          <div class="stat"><span>Compression format</span><strong id="outCompression">--</strong></div>
+          <div class="stat"><span>Recommended NVR channel size</span><strong id="outNvr">--</strong></div>
+          <div class="stat"><span>Recommended storage size</span><strong id="outStorageTier">--</strong></div>
+          <div class="stat"><span>Why this recommendation</span><strong id="outReason">--</strong></div>
+        </div>
+
+        <p class="summary" id="summarySentence">Fill in your inputs, then click Calculate Estimate to plan camera coverage and recorder/storage capacity.</p>
+
+        <div>
+          <h2 style="margin-bottom:0.55rem;">Camera Breakdown</h2>
+          <ul id="breakdown" class="breakdown-list"></ul>
+        </div>
+
+        <p class="planning-note">This is a planning estimate. Final camera placement and count should be confirmed with a site survey.</p>
+        <p class="result-note">Most modern NVR systems support both H.264 and H.265 and allow switching between them. H.265 is more storage-efficient, but H.264 may be used for broader compatibility with older systems.</p>
+
+        <div class="actions no-print">
+          <button id="copyBtn" type="button">Copy Coverage Summary</button>
+          <button id="useEstimateBtn" type="button">Use This Estimate in Quote Generator</button>
+          <button id="printBtn" type="button">Print Estimate</button>
+        </div>
+        <p id="copy-feedback" class="no-print"></p>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    // ===== Easy-to-edit constants =====
+    const STORAGE_PER_CAMERA_GB_CONTINUOUS = {
+      standard: 60,
+      high: 100,
+      veryHigh: 180
+    };
+
+    // Compression efficiency factors
+    const COMPRESSION_MULTIPLIERS = {
+      h264: 1.0,
+      h265: 0.6
+    };
+
+    const STORAGE_TIERS_TB = [4, 8, 16, 24, 32];
+
+    // ===== Utilities =====
+    const $ = (id) => document.getElementById(id);
+    const toInt = (value) => Math.max(0, Number.parseInt(value, 10) || 0);
+    const round1 = (value) => Math.round(value * 10) / 10;
+
+    function coverageLabel(value) {
+      if (value === "full") return "full";
+      if (value === "bare") return "bare minimum";
+      return "moderate";
+    }
+
+    function getNvrChannelRecommendation(cameraCount) {
+      if (cameraCount <= 8) return "8-channel NVR may be sufficient";
+      if (cameraCount <= 16) return "16-channel NVR recommended";
+      if (cameraCount <= 32) return "32-channel NVR recommended";
+      return "Enterprise / VMS-style system recommended";
+    }
+
+    function getStorageTierRecommendation(totalTB) {
+      for (const tier of STORAGE_TIERS_TB) {
+        if (totalTB <= tier) return `${tier} TB system`;
+      }
+      return "Custom / multi-drive NVR solution";
+    }
+
+    // Camera estimate logic with breakdown details.
+    function estimateCameras(inputs) {
+      const breakdown = [];
+      let total = 0;
+
+      if (inputs.coverage === "bare") {
+        const doors = Math.max(1, Math.min(inputs.exteriorDoors, 2));
+        const mainRoomBase = 1;
+        const mainRoomExtra = inputs.mainRooms >= 3 ? 1 : 0;
+        const parking = inputs.parkingLot ? 1 : 0;
+
+        total = doors + mainRoomBase + mainRoomExtra + parking;
+        breakdown.push(`Exterior entries focus: ${doors} camera${doors === 1 ? "" : "s"}`);
+        breakdown.push(`Main room coverage: ${mainRoomBase + mainRoomExtra} camera${(mainRoomBase + mainRoomExtra) === 1 ? "" : "s"}`);
+        if (parking) breakdown.push("Parking lot coverage: 1 camera");
+      } else if (inputs.coverage === "moderate") {
+        const mainRooms = inputs.mainRooms;
+        const doors = inputs.exteriorDoors;
+        const hallways = Math.ceil(inputs.hallways / 2);
+        const nursery = inputs.nursery ? 1 : 0;
+        const parking = inputs.parkingLot ? 2 : 0;
+        const playground = inputs.playground ? 1 : 0;
+
+        total = mainRooms + doors + hallways + nursery + parking + playground;
+        breakdown.push(`Main rooms: ${mainRooms} camera${mainRooms === 1 ? "" : "s"}`);
+        breakdown.push(`Exterior doors: ${doors} camera${doors === 1 ? "" : "s"}`);
+        breakdown.push(`Hallways/corridors: ${hallways} camera${hallways === 1 ? "" : "s"}`);
+        if (nursery) breakdown.push("Nursery / children’s area: 1 camera");
+        if (parking) breakdown.push("Parking lot coverage: 2 cameras");
+        if (playground) breakdown.push("Playground/outdoor area: 1 camera");
+      } else {
+        const mainRooms = inputs.mainRooms * 2;
+        const doors = inputs.exteriorDoors;
+        const hallways = inputs.hallways;
+        const offices = Math.ceil(inputs.offices / 3);
+        const nursery = inputs.nursery ? 2 : 0;
+        const parking = inputs.parkingLot ? 3 : 0;
+        const playground = inputs.playground ? 2 : 0;
+        const churchSchoolBonus = inputs.buildingType === "Church + School" ? 2 : 0;
+
+        total = mainRooms + doors + hallways + offices + nursery + parking + playground + churchSchoolBonus;
+        breakdown.push(`Main rooms: ${mainRooms} cameras`);
+        breakdown.push(`Exterior doors: ${doors} camera${doors === 1 ? "" : "s"}`);
+        breakdown.push(`Hallways/corridors: ${hallways} camera${hallways === 1 ? "" : "s"}`);
+        breakdown.push(`Offices: ${offices} camera${offices === 1 ? "" : "s"}`);
+        if (nursery) breakdown.push("Nursery / children’s area: 2 cameras");
+        if (parking) breakdown.push("Parking lot coverage: 3 cameras");
+        if (playground) breakdown.push("Playground/outdoor area: 2 cameras");
+        if (churchSchoolBonus) breakdown.push("Church + School connecting/common areas: 2 cameras");
+      }
+
+      total = Math.max(2, Math.round(total));
+      return { total, breakdown };
+    }
+
+    function estimateStorage(inputs, cameraCount) {
+      const continuousRate = STORAGE_PER_CAMERA_GB_CONTINUOUS[inputs.quality];
+      const motionFactor = inputs.recordingMode === "motion" ? (inputs.motionHours / 24) : 1;
+      const compressionMultiplier = COMPRESSION_MULTIPLIERS[inputs.compression] ?? COMPRESSION_MULTIPLIERS.h264;
+      const perCameraDailyStorage = continuousRate * motionFactor * compressionMultiplier;
+      const totalDailyGB = cameraCount * perCameraDailyStorage;
+      const totalStorageGB = totalDailyGB * inputs.retentionDays;
+      const totalStorageTB = totalStorageGB / 1024;
+
+      return {
+        perCameraDailyStorage,
+        totalDailyGB,
+        totalStorageGB,
+        totalStorageTB
+      };
+    }
+
+    function renderBreakdown(items) {
+      const list = $("breakdown");
+      list.innerHTML = "";
+      if (!items.length) {
+        const li = document.createElement("li");
+        li.textContent = "No breakdown available yet.";
+        list.appendChild(li);
+        return;
+      }
+      items.forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        list.appendChild(li);
+      });
+    }
+
+    function getInputs() {
+      return {
+        coverage: $("coverage").value,
+        buildingType: $("buildingType").value,
+        mainRooms: toInt($("mainRooms").value),
+        exteriorDoors: toInt($("exteriorDoors").value),
+        hallways: toInt($("hallways").value),
+        offices: toInt($("offices").value),
+        parkingLot: $("parkingLot").checked,
+        playground: $("playground").checked,
+        nursery: $("nursery").checked,
+        retentionDays: toInt($("retention").value),
+        quality: $("quality").value,
+        recordingMode: $("recordingMode").value,
+        compression: $("compression").value,
+        motionHours: toInt($("motionHours").value),
+        notes: $("notes").value.trim()
+      };
+    }
+
+    function calculateAndRender() {
+      const inputs = getInputs();
+      const cameraResult = estimateCameras(inputs);
+      const storageResult = estimateStorage(inputs, cameraResult.total);
+      const storageTBRounded = round1(storageResult.totalStorageTB);
+      const dailyGBRounded = round1(storageResult.totalDailyGB);
+
+      const nvrRecommendation = getNvrChannelRecommendation(cameraResult.total);
+      const storageRecommendation = getStorageTierRecommendation(storageTBRounded);
+      const compressionLabel = inputs.compression === "h265" ? "H.265" : "H.264";
+
+      const whyText = `${coverageLabel(inputs.coverage)} coverage, ${inputs.retentionDays}-day retention, ${inputs.recordingMode === "motion" ? "motion-based" : "continuous"} recording, ${compressionLabel} compression`;
+
+      $("outCameras").textContent = `${cameraResult.total}`;
+      $("outStorageTB").textContent = `${storageTBRounded.toFixed(1)} TB`;
+      $("outDaily").textContent = `${dailyGBRounded.toFixed(1)} GB/day`;
+      $("outCompression").textContent = compressionLabel;
+      $("outNvr").textContent = nvrRecommendation;
+      $("outStorageTier").textContent = storageRecommendation;
+      $("outReason").textContent = whyText;
+      $("systemBadge").textContent = `Recommended System Size: ${storageRecommendation}`;
+
+      const summarySentence = `Based on your selections, a ${coverageLabel(inputs.coverage)} system with approximately ${cameraResult.total} cameras using ${compressionLabel} compression would require about ${storageTBRounded.toFixed(1)} TB of storage for ${inputs.retentionDays} days.`;
+      $("summarySentence").textContent = summarySentence;
+      $("summarySentence").dataset.copy = summarySentence;
+
+      renderBreakdown(cameraResult.breakdown);
+
+      // Keep a reusable plain-text export for copy/clipboard.
+      localStorage.setItem("securityCameraCoverageEstimate", JSON.stringify({
+        cameraCount: cameraResult.total,
+        nvrRecommendation,
+        storageRecommendation,
+        coverageLevel: inputs.coverage,
+        retentionDays: inputs.retentionDays,
+        recordingQuality: inputs.quality,
+        recordingMode: inputs.recordingMode,
+        compression: inputs.compression,
+        compressionType: inputs.compression,
+        updatedAt: new Date().toISOString()
+      }));
+
+      window.latestSummaryText = [
+        "Security Camera Coverage Estimator Summary",
+        summarySentence,
+        `Compression format: ${compressionLabel}`,
+        `Daily storage use: ${dailyGBRounded.toFixed(1)} GB/day`,
+        `NVR recommendation: ${nvrRecommendation}`,
+        `Storage recommendation: ${storageRecommendation}`,
+        `Building type: ${inputs.buildingType}`,
+        `Notes: ${inputs.notes || "(none)"}`
+      ].join("\n");
+    }
+
+    function toggleMotionField() {
+      const isMotion = $("recordingMode").value === "motion";
+      $("motion-field").hidden = !isMotion;
+    }
+
+    async function copySummary() {
+      const feedback = $("copy-feedback");
+      if (!window.latestSummaryText) {
+        feedback.textContent = "Please calculate an estimate first.";
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(window.latestSummaryText);
+        feedback.textContent = "Coverage summary copied to clipboard.";
+      } catch (_) {
+        feedback.textContent = "Copy not available in this browser. Try printing the estimate instead.";
+      }
+    }
+
+    function resetForm() {
+      $("estimator-form").reset();
+      $("coverage").value = "moderate";
+      $("retention").value = "30";
+      $("recordingMode").value = "motion";
+      $("compression").value = "h264";
+      $("motionHours").value = "8";
+      toggleMotionField();
+      calculateAndRender();
+      $("copy-feedback").textContent = "";
+    }
+
+    $("estimator-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      calculateAndRender();
+    });
+
+    $("recordingMode").addEventListener("change", () => {
+      toggleMotionField();
+      calculateAndRender();
+    });
+
+    ["coverage", "buildingType", "quality", "retention", "motionHours", "compression"].forEach((id) => {
+      $(id).addEventListener("change", calculateAndRender);
+    });
+
+    ["mainRooms", "exteriorDoors", "hallways", "offices", "parkingLot", "playground", "nursery"].forEach((id) => {
+      $(id).addEventListener("input", calculateAndRender);
+      $(id).addEventListener("change", calculateAndRender);
+    });
+
+    $("resetBtn").addEventListener("click", resetForm);
+    $("copyBtn").addEventListener("click", copySummary);
+    $("printBtn").addEventListener("click", () => window.print());
+    $("useEstimateBtn").addEventListener("click", () => {
+      calculateAndRender();
+      window.location.href = "security-camera-quote-generator.html?import=security-camera-coverage";
+    });
+
+    toggleMotionField();
+    calculateAndRender();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>

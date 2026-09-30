@@ -27,6 +27,7 @@
       ['church-network-quote-request.html','Church Networking/Internet Quote Request'],
       ['livestream-equipment-checklist.html','Livestream Equipment Checklist'],
       ['livestream-checklist.html','Livestream Checklist'],
+      ['security-camera-coverage-estimator.html','Security Camera Estimator'],
       ['security-camera-quote-generator.html','Security Camera Quote Request']
     ]},
     { section: 'Special Tools', items: [

@@ -27,6 +27,7 @@
       ['church-network-quote-request.html','Solicitud de cotización de red/Internet para la iglesia'],
       ['livestream-equipment-checklist.html','Lista de equipo para transmisión en vivo'],
       ['livestream-checklist.html','Lista de verificación para transmisión en vivo'],
+      ['security-camera-coverage-estimator.html','Estimador de cámaras de seguridad'],
       ['security-camera-quote-generator.html','Solicitud de cotización de cámaras de seguridad']
     ]},
     { section: 'Herramientas especiales', items: [
