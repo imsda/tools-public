@@ -334,7 +334,7 @@
       margin: 0 auto;
       background: #fff;
       color: #000;
-      font-family: Georgia, "Times New Roman", Times, serif;
+      font-family: var(--font-body, Georgia, "Times New Roman", Times, serif);
       border: 1px solid #cfcfcf;
       box-shadow: 0 8px 22px rgba(9, 20, 31, 0.08);
       padding-top: var(--print-page-margin-top);
@@ -432,11 +432,12 @@
     }
     .bb-header h2 {
       margin: 0;
+      font-family: var(--font-church-name);
       font-size: var(--print-font-size-cover-title);
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
-    .bb-contact, .bb-date { margin: 0.14rem 0 0; font-size: var(--print-font-size-meta); }
+    .bb-contact, .bb-date { margin: 0.14rem 0 0; font-family: var(--font-details); font-size: var(--print-font-size-meta); }
     .bb-date { font-weight: 700; margin-top: 0.16rem; }
     .front-cover-block {
       display: grid;
@@ -458,8 +459,8 @@
       object-fit: contain;
       border: 0;
     }
-    .front-cover-church { margin: 0; font-size: var(--print-font-size-meta); letter-spacing: 0.5px; text-transform: uppercase; }
-    .front-cover-title { margin: 0.08rem 0 0; font-size: calc(var(--print-font-size-cover-title) * 1.24); letter-spacing: 0.5px; text-transform: uppercase; }
+    .front-cover-church { margin: 0; font-family: var(--font-church-name); font-size: var(--print-font-size-meta); letter-spacing: 0.5px; text-transform: uppercase; }
+    .front-cover-title { margin: 0.08rem 0 0; font-family: var(--font-church-name); font-size: calc(var(--print-font-size-cover-title) * 1.24); letter-spacing: 0.5px; text-transform: uppercase; }
     .front-cover-subtitle { margin: 0.03rem 0 0.08rem; font-size: var(--print-font-size-meta); }
     .front-cover-sermon { margin: 0.08rem 0 0; font-size: var(--print-font-size-section-title); font-weight: 700; }
     .front-cover-speaker, .front-cover-date, .front-cover-note { margin: 0.02rem 0 0; font-size: var(--print-font-size-body); }
@@ -484,6 +485,7 @@
     .sec { margin-bottom: 0.2rem; break-inside: avoid; }
     .sec-title {
       margin: 0 0 0.13rem;
+      font-family: var(--font-section-title);
       font-size: var(--print-font-size-section-title);
       font-weight: 700;
       letter-spacing: 0.46px;
@@ -548,7 +550,7 @@
       border: 1px solid #d6e3ec;
       border-radius: 10px;
       padding: 1rem;
-      font-family: Georgia, "Times New Roman", serif;
+      font-family: var(--font-body, Georgia, "Times New Roman", serif);
       line-height: 1.42;
     }
     .bulletin-web .sec-title { font-size: var(--web-font-size-section-title); }
@@ -584,6 +586,67 @@
     }
     .print-only { display: none; }
 
+    .type-settings {
+      margin: 0.8rem 0 0;
+      border: 1px solid #d5e2eb;
+      border-radius: 12px;
+      background: #fbfdff;
+      padding: 0.5rem 0.62rem;
+    }
+    .type-settings summary {
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 0.93rem;
+      color: #1f4f67;
+    }
+    .type-help { margin: 0.45rem 0 0.55rem; font-size: 0.8rem; color: var(--muted); }
+    .type-rows { display: grid; gap: 0.5rem; }
+    .type-row { display: grid; grid-template-columns: 1fr 5.4rem; gap: 0.4rem; align-items: end; }
+    .type-row .type-label { grid-column: 1 / -1; margin: 0; }
+    .type-row .type-label small { font-weight: 600; color: var(--muted); }
+    .type-row input[type="number"] {
+      width: 100%;
+      border: 1px solid #bfd0dc;
+      border-radius: 10px;
+      font: inherit;
+      padding: 0.55rem 0.5rem;
+    }
+    .type-sample { grid-column: 1 / -1; margin: -0.1rem 0 0; font-size: 0.95rem; color: #24384a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .help-btn { border-style: dashed; }
+    .save-warning {
+      display: none;
+      margin-top: 0.6rem;
+      border: 1px solid #e8c98f;
+      background: #fff9ec;
+      color: #6b4a0b;
+      border-radius: 10px;
+      padding: 0.5rem 0.65rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .save-warning.show { display: block; }
+    .help-dialog {
+      max-width: 560px;
+      width: calc(100% - 2rem);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 48px rgba(9, 31, 46, 0.25);
+      padding: 1.1rem 1.25rem;
+      color: var(--text);
+    }
+    .help-dialog::backdrop { background: rgba(12, 28, 40, 0.45); }
+    .help-dialog h2 { margin: 0 0 0.5rem; color: var(--primary-dark); font-size: 1.2rem; }
+    .help-dialog h3 { margin: 0.85rem 0 0.25rem; font-size: 0.95rem; color: #1f4f67; }
+    .help-dialog p, .help-dialog li { font-size: 0.88rem; line-height: 1.45; margin: 0 0 0.35rem; }
+    .help-dialog ul { margin: 0.2rem 0 0.4rem; padding-left: 1.2rem; }
+    .sunset-box { border: 1px dashed #c4d6e3; border-radius: 10px; padding: 0.55rem; background: #f6fafd; display: grid; gap: 0.45rem; }
+    .sunset-status { font-size: 0.8rem; color: var(--muted); margin: 0; }
+    .sunset-status.error { color: #8a2f3f; font-weight: 700; }
+    .sunset-row { display: grid; grid-template-columns: 1fr 8.5rem; gap: 0.4rem; align-items: center; }
+    .sunset-row span { font-size: 0.85rem; font-weight: 700; color: #2d4659; }
+    .sunset-coords { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+    .sunset-manual summary { cursor: pointer; font-size: 0.8rem; font-weight: 700; color: #2d4659; }
+
     @media (max-width: 1060px) {
       .layout { grid-template-columns: 1fr; }
       .editor { max-height: none; }
@@ -593,7 +656,8 @@
       .row-item input { grid-column: 1 / -1; }
     }
     @media print {
-      body { background: #fff !important; }
+      body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+      .app { padding: 0 !important; margin: 0 !important; max-width: none !important; }
       .app > *:not(.print-only) { display: none !important; }
       .print-only { display: block !important; }
       .print-only .bulletin-sheet {
@@ -603,11 +667,14 @@
         border: none;
         box-shadow: none;
       }
+      .print-only .bulletin-sheet.trifold-sheet { width: 14in; }
       .preview-only-divider { display: none !important; }
       .overflow-warning, .overflow-badge { display: none !important; }
       .bulletin-panel.panel-overflow { outline: none !important; }
       .bulletin-panel.panel-overflow::after { display: none !important; }
-      @page { size: Letter landscape; margin: var(--print-page-margin-top) var(--print-page-margin-right) var(--print-page-margin-bottom) var(--print-page-margin-left); }
+      /* Sheets are full-page (11x8.5 / 14x8.5) with the margins built in as padding,
+         so the printer page margin must be zero or Chrome/Edge/Firefox spill onto extra pages. */
+      @page { size: Letter landscape; margin: 0; }
     }
   </style>
   <link rel="stylesheet" href="tools-nav.css?v=20260928" />
@@ -628,6 +695,12 @@
             <option value="trifold-legal">Tri-fold (Legal)</option>
           </select>
         </div>
+        <details class="type-settings" id="typeSettings">
+          <summary>Fonts &amp; Text Sizes</summary>
+          <p class="type-help">Choose a font and size (in points) for each kind of text. Applies to the preview, Print/PDF, and the Word download, and is saved with the bulletin.</p>
+          <div id="typeSettingsRows" class="type-rows"></div>
+          <div class="action-wrap"><button class="btn" type="button" id="resetTypographyBtn">Reset Fonts &amp; Sizes</button></div>
+        </details>
         <div class="group-title">Movable Sections</div>
         <div id="sectionList" class="section-list"></div>
         <div class="action-wrap"><button class="btn" type="button" id="addSectionBtn">+ Add Section</button></div>
@@ -640,8 +713,10 @@
           <button class="btn" type="button" id="wordBtn">Download Word Doc</button>
           <button class="btn" type="button" id="exportJsonBtn">Export JSON</button>
           <button class="btn" type="button" id="importJsonBtn">Import JSON</button>
+          <button class="btn help-btn" type="button" id="saveHelpBtn" aria-haspopup="dialog" title="How saving, Export JSON and Import JSON work">? How saving works</button>
           <input type="file" id="importJsonInput" accept=".json,application/json" style="display:none;" />
         </div>
+        <div class="save-warning" id="saveWarning" role="status"></div>
       </aside>
 
       <section class="panel preview">
@@ -661,6 +736,27 @@
 
     <section class="print-only" id="printContainer"></section>
   </main>
+
+  <dialog class="help-dialog" id="saveHelpDialog" aria-labelledby="saveHelpTitle">
+    <h2 id="saveHelpTitle">How saving works</h2>
+    <h3>Automatic save (this browser only)</h3>
+    <p>Every change is saved automatically in <strong>this browser on this computer</strong>. Close the page and come back later and your bulletin is still here. It is <strong>not</strong> available in a different browser, on another computer, or after clearing your browser data.</p>
+    <h3>Export JSON &mdash; make a save file</h3>
+    <p>Downloads <code>church-bulletin.json</code>: one file containing the whole bulletin &mdash; every section, uploaded images, layout, and font settings. Nothing is uploaded to a server; the file stays on your computer.</p>
+    <ul>
+      <li>Keep a backup, or a weekly template you can reuse.</li>
+      <li>Move your bulletin to another computer or browser.</li>
+      <li>Send it to someone else so they can edit it.</li>
+    </ul>
+    <h3>Import JSON &mdash; open a save file</h3>
+    <p>Choose a <code>.json</code> file made with Export JSON. It <strong>replaces</strong> the bulletin currently on screen, so export first if you want to keep what you have.</p>
+    <h3>Tips</h3>
+    <ul>
+      <li>Uploaded images are stored inside the file, so large photos make the file (and the browser's automatic save) bigger. If you see a &ldquo;could not save&rdquo; warning, use smaller images and Export JSON to keep a copy.</li>
+      <li>Sunset locations are stored rounded to about 100&nbsp;m.</li>
+    </ul>
+    <div class="action-wrap"><button class="btn primary" type="button" id="saveHelpClose">Got it</button></div>
+  </dialog>
 
   <script>
     (function () {
@@ -735,8 +831,73 @@
       let defaultFrontImageDataUrlPromise = null;
       const exportImageDataUrlCache = new Map();
 
-      /* BACKEND TYPOGRAPHY CONFIG */
-      const TYPOGRAPHY = APP_CONFIG.typography;
+      /* USER TYPOGRAPHY (Fonts & Text Sizes panel). Saved with the bulletin and in JSON exports.
+         Font stacks are system fonts only so pages stay self-contained and Word/PDF exports match. */
+      const FONT_CHOICES = [
+        { id: "georgia", label: "Georgia (serif)", css: 'Georgia, "Times New Roman", Times, serif' },
+        { id: "times", label: "Times New Roman (serif)", css: '"Times New Roman", Times, serif' },
+        { id: "palatino", label: "Palatino / Book Antiqua (serif)", css: '"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif' },
+        { id: "garamond", label: "Garamond (serif)", css: 'Garamond, "Garamond Premier Pro", Georgia, serif' },
+        { id: "arial", label: "Arial / Helvetica (sans-serif)", css: 'Arial, Helvetica, sans-serif' },
+        { id: "verdana", label: "Verdana (sans-serif)", css: 'Verdana, Geneva, sans-serif' },
+        { id: "trebuchet", label: "Trebuchet MS (sans-serif)", css: '"Trebuchet MS", "Segoe UI", Helvetica, sans-serif' },
+        { id: "system", label: "System UI (sans-serif)", css: 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif' },
+        { id: "courier", label: "Courier New (monospace)", css: '"Courier New", Courier, monospace' }
+      ];
+      /* Default sizes reproduce the original look: 1rem = 12pt in print. */
+      const TEXT_STYLES = [
+        { key: "churchName", label: "Church Name / Header", font: "georgia", size: 13.5 },
+        { key: "sectionTitle", label: "Section Titles", font: "georgia", size: 12.5 },
+        { key: "body", label: "Body Text", hint: "lists, announcements, text", font: "georgia", size: 10 },
+        { key: "details", label: "Contact & Date Details", font: "georgia", size: 12 }
+      ];
+      const FONT_SIZE_MIN = 6;
+      const FONT_SIZE_MAX = 36;
+
+      function defaultTypographySettings() {
+        return Object.fromEntries(TEXT_STYLES.map(style => [style.key, { font: style.font, size: style.size }]));
+      }
+
+      function sanitizeTypographySettings(raw) {
+        const defaults = defaultTypographySettings();
+        const source = raw && typeof raw === "object" ? raw : {};
+        return Object.fromEntries(TEXT_STYLES.map(style => {
+          const entry = source[style.key] && typeof source[style.key] === "object" ? source[style.key] : {};
+          const font = FONT_CHOICES.some(choice => choice.id === entry.font) ? entry.font : defaults[style.key].font;
+          const sizeNum = Number(entry.size);
+          const size = Number.isFinite(sizeNum) ? Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, Math.round(sizeNum * 2) / 2)) : defaults[style.key].size;
+          return [style.key, { font, size }];
+        }));
+      }
+
+      function fontCss(fontId) {
+        const choice = FONT_CHOICES.find(item => item.id === fontId) || FONT_CHOICES[0];
+        return choice.css;
+      }
+
+      let typographySettings = defaultTypographySettings();
+
+      /* Live values used by the preview, print/PDF window and Word export. */
+      const TYPOGRAPHY = { ...APP_CONFIG.typography };
+      function refreshTypography() {
+        const s = typographySettings;
+        const pt = value => `${value}pt`;
+        Object.assign(TYPOGRAPHY, {
+          printBody: pt(s.body.size),
+          printSectionTitle: pt(s.sectionTitle.size),
+          printCoverTitle: pt(s.churchName.size),
+          printMeta: pt(s.details.size),
+          wordBody: pt(s.body.size),
+          // Web preview keeps its original proportions (body 12pt at the 10pt default).
+          webBody: pt(Math.round(s.body.size * 1.2 * 10) / 10),
+          webSectionTitle: pt(s.sectionTitle.size),
+          fontChurchName: fontCss(s.churchName.font),
+          fontSectionTitle: fontCss(s.sectionTitle.font),
+          fontBody: fontCss(s.body.font),
+          fontDetails: fontCss(s.details.font)
+        });
+      }
+      refreshTypography();
 
       const previewCanvas = document.getElementById("previewCanvas");
       const printContainer = document.getElementById("printContainer");
@@ -807,6 +968,10 @@
           --web-font-size-section-title:${TYPOGRAPHY.webSectionTitle};
           --word-font-size-body:${TYPOGRAPHY.wordBody};
           --web-font-size-image-meta:${TYPOGRAPHY.webImageMeta};
+          --font-church-name:${TYPOGRAPHY.fontChurchName};
+          --font-section-title:${TYPOGRAPHY.fontSectionTitle};
+          --font-body:${TYPOGRAPHY.fontBody};
+          --font-details:${TYPOGRAPHY.fontDetails};
           --print-page-margin-top:${margin.top};
           --print-page-margin-right:${margin.right};
           --print-page-margin-bottom:${margin.bottom};
@@ -850,6 +1015,7 @@
         if (type === "list") return { columns: 2, rows: [createDefaultListRow()] };
         if (type === "image") return { src: "", alt: "" };
         if (type === "front-image") return { src: FRONT_IMAGE_DEFAULT_SRC, alt: "" };
+        if (type === "sunset") return { lat: "", lon: "", fridayTime: "", saturdayTime: "" };
         return { content: "" };
       }
 
@@ -936,7 +1102,7 @@
         const title = typeof raw.title === "string" ? raw.title : (kind === "church-info" ? "Church Information" : (kind === "sermon-info" ? "Sermon Information" : "New Section"));
 
         const rawType = raw.type === "front-cover" ? "front-image" : raw.type;
-        let type = ["announcement", "list", "text", "image", "front-image"].includes(rawType) ? rawType : "text";
+        let type = ["announcement", "list", "text", "image", "front-image", "sunset"].includes(rawType) ? rawType : "text";
         let data;
         let placement = safePlacement;
         let previousType = typeof raw.previousType === "string" ? raw.previousType : "";
@@ -955,6 +1121,14 @@
           data = {
             src: String((raw.data && raw.data.src) || ""),
             alt: String((raw.data && raw.data.alt) || "")
+          };
+        } else if (type === "sunset") {
+          const src = raw.data || {};
+          data = {
+            lat: normalizeCoordinate(src.lat, 90),
+            lon: normalizeCoordinate(src.lon, 180),
+            fridayTime: String(src.fridayTime || ""),
+            saturdayTime: String(src.saturdayTime || "")
           };
         } else if (type === "front-image") {
           placement = layoutMode === "trifold-legal" ? "front-right" : "front-cover";
@@ -1010,7 +1184,7 @@
               id: uid(),
               title: "Sermon Information",
               kind: "sermon-info",
-              placement: "finside-left",
+              placement: "inside-left",
               visible: true,
               data: {
                 sermonTitle: global.sermonTitle || "",
@@ -1024,11 +1198,61 @@
       }
 
       function getState() {
-        return { layoutMode, sections: sections.map(s => JSON.parse(JSON.stringify(s))) };
+        return { layoutMode, typography: JSON.parse(JSON.stringify(typographySettings)), sections: sections.map(s => JSON.parse(JSON.stringify(s))) };
       }
 
+      const saveWarning = document.getElementById("saveWarning");
+
       function saveState() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(getState()));
+        // Large uploaded images can exceed the browser's storage quota. Never let that stop
+        // the preview from updating; warn instead so the user can Export JSON.
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(getState()));
+          if (saveWarning) saveWarning.classList.remove("show");
+        } catch (error) {
+          console.warn("Bulletin autosave failed.", error);
+          if (saveWarning) {
+            saveWarning.textContent = "Could not save automatically in this browser (storage is full, usually from large images). Your work is still on screen. Use Export JSON to keep a copy, or use smaller images.";
+            saveWarning.classList.add("show");
+          }
+        }
+      }
+
+      function renderTypographyControls() {
+        const rows = document.getElementById("typeSettingsRows");
+        if (!rows) return;
+        rows.innerHTML = TEXT_STYLES.map(style => {
+          const current = typographySettings[style.key];
+          const sampleText = style.key === "churchName" ? "Example SDA Church" : (style.key === "sectionTitle" ? "ORDER OF WORSHIP" : (style.key === "details" ? "Saturday, October 17" : "Welcome to Sabbath worship"));
+          return `
+            <div class="type-row" data-type-key="${style.key}">
+              <label class="type-label" for="typeFont_${style.key}">${esc(style.label)}${style.hint ? ` <small>(${esc(style.hint)})</small>` : ""}</label>
+              <select id="typeFont_${style.key}" data-type-key="${style.key}" data-type-field="font" aria-label="${esc(style.label)} font">
+                ${FONT_CHOICES.map(choice => `<option value="${choice.id}" style="font-family:${esc(choice.css)}" ${choice.id === current.font ? "selected" : ""}>${esc(choice.label)}</option>`).join("")}
+              </select>
+              <input type="number" min="${FONT_SIZE_MIN}" max="${FONT_SIZE_MAX}" step="0.5" inputmode="decimal" data-type-key="${style.key}" data-type-field="size" value="${current.size}" aria-label="${esc(style.label)} size in points" title="Size in points" />
+              <p class="type-sample" style="font-family:${esc(fontCss(current.font))}">${esc(sampleText)}</p>
+            </div>`;
+        }).join("");
+      }
+
+      function updateTypographyFromControl(target) {
+        const key = target.dataset.typeKey;
+        const field = target.dataset.typeField;
+        if (!key || !field || !typographySettings[key]) return false;
+        const next = { ...typographySettings, [key]: { ...typographySettings[key] } };
+        if (field === "font") next[key].font = target.value;
+        if (field === "size") {
+          const value = Number(target.value);
+          if (!Number.isFinite(value) || value < FONT_SIZE_MIN || value > FONT_SIZE_MAX) return false;
+          next[key].size = value;
+        }
+        typographySettings = sanitizeTypographySettings(next);
+        refreshTypography();
+        applyBackendCssVars();
+        const sample = target.closest(".type-row") && target.closest(".type-row").querySelector(".type-sample");
+        if (sample) sample.style.fontFamily = fontCss(typographySettings[key].font);
+        return true;
       }
 
       function showRenderError(message) {
@@ -1174,6 +1398,7 @@
               </div>
             `;
           }
+          if (section.type === "sunset") return renderSunsetEditor(section);
           if (section.type === "front-image") {
             const imageSrc = String(section.data.src || "").trim() || FRONT_IMAGE_DEFAULT_SRC;
             return `
@@ -1211,6 +1436,7 @@
                 <option value="list" ${section.type === "list" ? "selected" : ""}>List Type</option>
                 <option value="text" ${section.type === "text" ? "selected" : ""}>Text Type</option>
                 <option value="image" ${section.type === "image" ? "selected" : ""}>Image Type</option>
+                <option value="sunset" ${section.type === "sunset" ? "selected" : ""}>Sunset Times (Fri &amp; Sat)</option>
                 <option value="front-image" ${section.type === "front-image" ? "selected" : ""}>Front Image</option>
               </select>`}
             </div>
@@ -1242,6 +1468,190 @@
         else current.replaceWith(next);
       }
 
+      /* ---------- Sunset Times add-on ----------
+         Dates: the Friday and Saturday that follow the bulletin date (or today if no date).
+         Times: calculated in the browser from latitude/longitude (NOAA sunrise/sunset
+         algorithm, accurate to ~1-2 minutes) and shown in this computer's time zone.
+         A time typed by hand always wins over the calculated one. */
+      function normalizeCoordinate(value, limit) {
+        const num = Number(value);
+        if (value === "" || value === null || value === undefined || !Number.isFinite(num) || Math.abs(num) > limit) return "";
+        return String(Math.round(num * 1000) / 1000);
+      }
+
+      function getBulletinBaseDate(stateSections) {
+        const church = (stateSections || sections).find(s => s && s.kind === "church-info");
+        const value = church && church.data && church.data.bulletinDate;
+        const parsed = value ? new Date(value + "T12:00:00") : null;
+        if (parsed && !Number.isNaN(parsed.getTime())) return parsed;
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+        return today;
+      }
+
+      function getFollowingFridaySaturday(baseDate) {
+        const friday = new Date(baseDate.getTime());
+        const daysUntilFriday = ((5 - friday.getDay() + 7) % 7) || 7;
+        friday.setDate(friday.getDate() + daysUntilFriday);
+        const saturday = new Date(friday.getTime());
+        saturday.setDate(saturday.getDate() + 1);
+        return { friday, saturday };
+      }
+
+      function computeSunsetDate(date, lat, lon) {
+        const rad = Math.PI / 180;
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const day = date.getDate();
+        const dayOfYear = Math.round((Date.UTC(year, month, day) - Date.UTC(year, 0, 0)) / 86400000);
+        const lngHour = lon / 15;
+        const t = dayOfYear + ((18 - lngHour) / 24);
+        const meanAnomaly = (0.9856 * t) - 3.289;
+        let trueLong = meanAnomaly + (1.916 * Math.sin(meanAnomaly * rad)) + (0.020 * Math.sin(2 * meanAnomaly * rad)) + 282.634;
+        trueLong = ((trueLong % 360) + 360) % 360;
+        let rightAsc = Math.atan(0.91764 * Math.tan(trueLong * rad)) / rad;
+        rightAsc = ((rightAsc % 360) + 360) % 360;
+        rightAsc += (Math.floor(trueLong / 90) * 90) - (Math.floor(rightAsc / 90) * 90);
+        rightAsc /= 15;
+        const sinDec = 0.39782 * Math.sin(trueLong * rad);
+        const cosDec = Math.cos(Math.asin(sinDec));
+        const cosHour = (Math.cos(90.833 * rad) - (sinDec * Math.sin(lat * rad))) / (cosDec * Math.cos(lat * rad));
+        if (cosHour > 1 || cosHour < -1) return null; // no sunset that day (polar regions)
+        const hourAngle = Math.acos(cosHour) / rad / 15;
+        const localMeanTime = hourAngle + rightAsc - (0.06571 * t) - 6.622;
+        const utcHours = (((localMeanTime - lngHour) % 24) + 24) % 24;
+        let instant = Date.UTC(year, month, day) + (utcHours * 3600000);
+        const solarNoon = Date.UTC(year, month, day, 12) - (lngHour * 3600000);
+        if (instant < solarNoon) instant += 86400000;
+        return new Date(instant);
+      }
+
+      function formatSunsetTime(date) {
+        if (!date) return "";
+        const rounded = new Date(Math.round(date.getTime() / 60000) * 60000);
+        return rounded.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+      }
+
+      function formatShortDay(date) {
+        return date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+      }
+
+      function getSunsetRows(section, stateSections) {
+        const { friday, saturday } = getFollowingFridaySaturday(getBulletinBaseDate(stateSections));
+        const lat = Number(section.data.lat);
+        const lon = Number(section.data.lon);
+        const hasCoords = section.data.lat !== "" && section.data.lon !== "" && Number.isFinite(lat) && Number.isFinite(lon);
+        return [
+          { key: "fridayTime", date: friday },
+          { key: "saturdayTime", date: saturday }
+        ].map(day => {
+          const computed = hasCoords ? formatSunsetTime(computeSunsetDate(day.date, lat, lon)) : "";
+          const manual = String(section.data[day.key] || "").trim();
+          return { key: day.key, date: day.date, label: formatShortDay(day.date), computed, time: manual || computed };
+        });
+      }
+
+      function sunsetAsListSection(section, stateSections) {
+        const rows = getSunsetRows(section, stateSections).map(row => ({ cells: [row.label, "Sunset", row.time], underline: true }));
+        return { ...section, type: "list", data: { columns: 3, rows } };
+      }
+
+      /* State used for previews and exports: virtual section types become plain lists. */
+      function getRenderState() {
+        const state = getState();
+        state.sections = state.sections.map(section =>
+          section && section.kind === "dynamic" && section.type === "sunset" ? sunsetAsListSection(section, state.sections) : section);
+        return state;
+      }
+
+      function renderSunsetEditor(section) {
+        const rows = getSunsetRows(section);
+        const hasCoords = section.data.lat !== "" && section.data.lon !== "";
+        const status = hasCoords
+          ? `Location set (${esc(section.data.lat)}, ${esc(section.data.lon)}). Times update automatically when the bulletin date changes.`
+          : "Share your location to fill in sunset times, or type the times below.";
+        return `
+          <div class="sunset-box">
+            <div class="action-wrap" style="margin-top:0;">
+              <button type="button" class="btn" data-action="sunset-locate" data-section-id="${section.id}">📍 Use My Location</button>
+              ${hasCoords ? `<button type="button" class="btn" data-action="sunset-clear-location" data-section-id="${section.id}">Clear Location</button>` : ""}
+            </div>
+            <p class="sunset-status" data-sunset-status="${section.id}">${status}</p>
+            ${rows.map(row => `
+              <label class="sunset-row">
+                <span>${esc(row.label)}</span>
+                <input type="text" data-action="sunset-time" data-field="${row.key}" data-section-id="${section.id}" value="${esc(section.data[row.key] || "")}" placeholder="${esc(row.computed || `Sunset ${row.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`)}" aria-label="Sunset time for ${esc(row.label)}" />
+              </label>`).join("")}
+            <p class="sunset-status">Leave a time blank to use the calculated time shown in gray. Dates follow the bulletin date in Church Information.</p>
+            <details class="sunset-manual">
+              <summary>Enter location manually</summary>
+              <div class="sunset-coords" style="margin-top:0.4rem;">
+                <input type="text" inputmode="decimal" data-action="sunset-coord" data-field="lat" data-section-id="${section.id}" value="${esc(section.data.lat)}" placeholder="Latitude (e.g. 41.586)" aria-label="Latitude" />
+                <input type="text" inputmode="decimal" data-action="sunset-coord" data-field="lon" data-section-id="${section.id}" value="${esc(section.data.lon)}" placeholder="Longitude (e.g. -93.711)" aria-label="Longitude" />
+              </div>
+            </details>
+          </div>`;
+      }
+
+      function setSunsetStatus(sectionId, message, isError) {
+        const el = sectionList.querySelector(`[data-sunset-status="${sectionId}"]`);
+        if (!el) return;
+        el.textContent = message;
+        el.classList.toggle("error", !!isError);
+      }
+
+      function requestSunsetLocation(sectionId) {
+        if (!window.isSecureContext) {
+          setSunsetStatus(sectionId, "Location sharing needs a secure (https://) page. Enter latitude/longitude manually below, or type the times.", true);
+          return;
+        }
+        if (!navigator.geolocation) {
+          setSunsetStatus(sectionId, "This browser can't share location. Enter latitude/longitude manually below, or type the times.", true);
+          return;
+        }
+        setSunsetStatus(sectionId, "Requesting your location…", false);
+        navigator.geolocation.getCurrentPosition(position => {
+          const idx = getSectionIndexById(sectionId);
+          if (idx === -1) return;
+          const sec = sections[idx];
+          sec.data.lat = normalizeCoordinate(position.coords.latitude, 90);
+          sec.data.lon = normalizeCoordinate(position.coords.longitude, 180);
+          sec.data.fridayTime = "";
+          sec.data.saturdayTime = "";
+          commitSectionPatch(sectionId);
+        }, error => {
+          const message = error && error.code === 1
+            ? "Location permission was denied. Allow location for this site in your browser, or enter latitude/longitude manually below."
+            : "Couldn't get your location. Try again, or enter latitude/longitude manually below.";
+          setSunsetStatus(sectionId, message, true);
+        }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 3600000 });
+      }
+
+      /* Images change panel heights once loaded; re-flow once per newly loaded image so
+         layout and overflow warnings use real image sizes. */
+      const reflowImageSources = new Set();
+      let reflowTimer = null;
+      function trackImagesForReflow(state) {
+        const sources = [];
+        (state.sections || []).forEach(section => {
+          if (!section || !section.data) return;
+          if (section.type === "image" || section.type === "front-image") sources.push(String(section.data.src || "").trim() || (section.type === "front-image" ? FRONT_IMAGE_DEFAULT_SRC : ""));
+          if (section.kind === "church-info" && section.data.logoUrl) sources.push(String(section.data.logoUrl).trim());
+        });
+        sources.filter(Boolean).forEach(src => {
+          if (reflowImageSources.has(src)) return;
+          reflowImageSources.add(src);
+          const img = new Image();
+          const done = () => {
+            clearTimeout(reflowTimer);
+            reflowTimer = setTimeout(renderPreviews, 80);
+          };
+          img.addEventListener("load", done, { once: true });
+          img.addEventListener("error", () => {}, { once: true });
+          img.src = src;
+        });
+      }
+
       function sectionIsEmpty(section) {
         if (!section || !section.visible) return true;
         if (section.kind === "church-info") {
@@ -1254,6 +1664,7 @@
         if (section.type === "list") return !normalizeListRows(section.data.rows).some(row => row.cells.some(v => String(v || "").trim()));
         if (section.type === "image") return !String(section.data.src || "").trim();
         if (section.type === "front-image") return !String((section.data && section.data.src) || "").trim();
+        if (section.type === "sunset") return false;
         return !String(section.data.content || "").trim();
       }
 
@@ -1359,6 +1770,12 @@
           if (frontImageActive && section.placement === frontPlacement && section.type !== "front-image") return;
           const placement = getPanelOrderForLayout(layoutMode).includes(section.placement) ? section.placement : (layoutMode === "trifold-legal" ? "back-center" : "inside-left");
           const baseTitle = String(section.title || "Section").trim() || "Section";
+          // Church Info / Sermon Info are stored with type "text" but have no text content;
+          // place them as whole blocks (previously they were silently dropped from print/PDF/web).
+          if (section.kind !== "dynamic") {
+            blocks.push({ id: section.id, placement, type: section.kind, split: false, section });
+            return;
+          }
           if (section.type === "announcement") {
             const items = (section.data.items || []).map(v => String(v || "").trim()).filter(Boolean);
             if (!items.length) return;
@@ -1656,8 +2073,8 @@
         return chunks.join("\n");
       }
 
-      function renderPrintPreview(state) {
-        const flow = layoutBlocksIntoPanels(state);
+      function renderPrintPreview(state, precomputedFlow) {
+        const flow = precomputedFlow || layoutBlocksIntoPanels(state);
         if (layoutMode === "trifold-legal") {
           const frontSheet = buildTriFoldSheet(
             `<section class="bulletin-panel bulletin-panel-trifold" data-panel-name="Front Left">${flow.panels["front-left"].join("")}</section>
@@ -1804,21 +2221,22 @@
           document.head.appendChild(style);
         }
         const pageSize = layoutMode === "trifold-legal" ? "legal landscape" : "Letter landscape";
-        style.textContent = `@media print { @page { size: ${pageSize}; margin: var(--print-page-margin-top) var(--print-page-margin-right) var(--print-page-margin-bottom) var(--print-page-margin-left); } }`;
+        style.textContent = `@media print { @page { size: ${pageSize}; margin: 0; } }`;
       }
 
       function renderPreviews() {
-        const state = getState();
+        const state = getRenderState();
         try {
           printNote.textContent = layoutMode === "trifold-legal"
             ? "Print double-sided • Legal landscape • Tri-fold into 3 panels"
             : "Print double-sided • Flip on short edge • Fold in half";
           const flow = layoutBlocksIntoPanels(state);
-          if (currentTab === "print") renderPrintPreview(state);
+          if (currentTab === "print") renderPrintPreview(state, flow);
           else if (currentTab === "web") renderWebPreview(state);
           else renderWordPressPreview(state);
           printContainer.innerHTML = buildFlowedPrintHtml(flow, false);
           updatePrintLayoutStyle();
+          trackImagesForReflow(state);
         } catch (error) {
           showRenderError(`Render error: ${error && error.message ? error.message : String(error)}`);
         }
@@ -1883,6 +2301,7 @@
         }
         if (action === "image-alt") { sec.data.alt = target.value; return true; }
         if (action === "text-content") { sec.data.content = target.value; return true; }
+        if (action === "sunset-time" && sec.type === "sunset") { sec.data[target.dataset.field] = target.value; return true; }
         return false;
       }
 
@@ -1936,6 +2355,7 @@
           }
           sec.type = nextType;
           sec.data = defaultDataForType(nextType);
+          if (nextType === "sunset" && (!sec.title.trim() || sec.title === "New Section")) sec.title = "Sunset Times";
           commitSectionPatch(sectionId);
           return;
         }
@@ -1961,6 +2381,22 @@
           sec.data.rows[row] = normalizeListRow(sec.data.rows[row]);
           sec.data.rows[row].underline = !!target.checked;
           commitPreviewOnly();
+          return;
+        }
+        if (action === "core-field" && target.dataset.field === "bulletinDate") {
+          // Sunset dates follow the bulletin date.
+          sections.filter(s => s.type === "sunset").forEach(s => patchSectionEditor(s.id));
+          return;
+        }
+        if (action === "sunset-coord" && sec.type === "sunset") {
+          const field = target.dataset.field === "lon" ? "lon" : "lat";
+          const normalized = normalizeCoordinate(target.value.trim(), field === "lat" ? 90 : 180);
+          if (target.value.trim() && !normalized) {
+            setSunsetStatus(sectionId, field === "lat" ? "Latitude must be a number between -90 and 90." : "Longitude must be a number between -180 and 180 (west is negative).", true);
+            return;
+          }
+          sec.data[field] = normalized;
+          commitSectionPatch(sectionId);
           return;
         }
         if (action === "list-cols" && sec.kind === "dynamic") {
@@ -2021,6 +2457,16 @@
         }
         if (action === "clear-image" && sections[sectionIndex].type === "image") {
           sections[sectionIndex].data.src = "";
+          commitSectionPatch(sectionId);
+          return;
+        }
+        if (action === "sunset-locate" && sections[sectionIndex].type === "sunset") {
+          requestSunsetLocation(sectionId);
+          return;
+        }
+        if (action === "sunset-clear-location" && sections[sectionIndex].type === "sunset") {
+          sections[sectionIndex].data.lat = "";
+          sections[sectionIndex].data.lon = "";
           commitSectionPatch(sectionId);
           return;
         }
@@ -2113,16 +2559,10 @@
               id: uid(),
               title: "Sunset Times",
               kind: "dynamic",
-              type: "list",
+              type: "sunset",
               placement: "back-cover",
               visible: true,
-              data: {
-                columns: 3,
-                rows: [
-                  { cells: ["Friday", "Sunset", "6:41 PM"], underline: true },
-                  { cells: ["Saturday", "Sunset", "6:42 PM"], underline: true }
-                ]
-              }
+              data: { lat: "41.586", lon: "-93.711", fridayTime: "", saturdayTime: "" }
             },
             {
               id: uid(),
@@ -2142,6 +2582,10 @@
         const source = migrateLegacyState(data && typeof data === "object" ? data : sample) || sample;
         layoutMode = normalizeLayoutMode(source.layoutMode);
         if (layoutModeSelect) layoutModeSelect.value = layoutMode;
+        typographySettings = sanitizeTypographySettings(source.typography);
+        refreshTypography();
+        applyBackendCssVars();
+        renderTypographyControls();
         const rawSections = Array.isArray(source.sections) ? source.sections : sample.sections;
         sections = rawSections.map(sanitizeSection).filter(Boolean);
         if (!sections.length) sections = sample.sections.map(sanitizeSection).filter(Boolean);
@@ -2256,13 +2700,30 @@
         return results;
       }
 
-      async function openPrintWindow(state) {
+      /* Open the window synchronously inside the click handler; browsers (Chrome, Edge,
+         Firefox, Safari) block window.open() that happens after awaiting image loading. */
+      function openPendingPrintWindow() {
+        const win = window.open("", "_blank");
+        if (!win) {
+          alert("Please allow pop-ups for this site to print or save a PDF.");
+          return null;
+        }
+        try {
+          win.document.write('<!DOCTYPE html><title>Preparing bulletin…</title><p style="font:16px system-ui,sans-serif;padding:2rem;color:#1c4b61">Preparing bulletin for printing…</p>');
+        } catch (_) { /* ignore */ }
+        return win;
+      }
+
+      async function openPrintWindow(state, win) {
         const resolvedState = await buildResolvedPrintState(state);
         const flow = layoutBlocksIntoPanels(resolvedState);
         const overflowNames = detectRemainingOverflow(flow);
         if (overflowNames.length) {
           const proceed = window.confirm(`Content still overflows after panel flow: ${overflowNames.join(", ")}.\n\nPress OK to continue with clipped output, or Cancel to go back and edit.`);
-          if (!proceed) return;
+          if (!proceed) {
+            win.close();
+            return;
+          }
         }
         const isTriFold = layoutMode === "trifold-legal";
         const printHtml = buildFlowedPrintHtml(flow, false).replace(/\sloading=("|')lazy\1/gi, ' loading="eager"');
@@ -2317,7 +2778,7 @@
         })();</scr` + `ipt>`;
         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bulletin PDF Export</title><style>
           ${typographyCssVars()}
-          body{margin:0;background:#fff;font-family:Georgia,"Times New Roman",serif;color:#000;}
+          body{margin:0;background:#fff;font-family:var(--font-body);color:#000;}
           .bulletin-sheet{width:${isTriFold ? "14in" : "11in"};height:8.5in;margin:0 auto;background:#fff;padding-top:var(--print-page-margin-top);padding-right:var(--print-page-margin-right);padding-bottom:var(--print-page-margin-bottom);padding-left:var(--print-page-margin-left);display:grid;grid-template-columns:${isTriFold ? "1fr 1fr 1fr" : "1fr 1fr"};position:relative;page-break-after:always;box-sizing:border-box;overflow:hidden;}
           .bulletin-sheet:last-child{page-break-after:auto;}
           .preview-only-divider{display:none!important;}
@@ -2328,14 +2789,14 @@
           .bulletin-panel-trifold{padding-top:var(--trifold-panel-padding-top);padding-right:var(--trifold-panel-padding-right);padding-bottom:var(--trifold-panel-padding-bottom);padding-left:var(--trifold-panel-padding-left);}
           .bb-header{text-align:center;border-bottom:1px solid #000;padding-bottom:.2rem;margin-bottom:.28rem;}
           .bb-logo{max-width:76px;max-height:76px;object-fit:contain;margin:0 auto .18rem;display:block;}
-          .bb-header h2{margin:0;font-size:var(--print-font-size-cover-title);text-transform:uppercase;}
-          .bb-contact,.bb-date{margin:.14rem 0 0;font-size:var(--print-font-size-meta);}
+          .bb-header h2{margin:0;font-family:var(--font-church-name);font-size:var(--print-font-size-cover-title);text-transform:uppercase;}
+          .bb-contact,.bb-date{margin:.14rem 0 0;font-family:var(--font-details);font-size:var(--print-font-size-meta);}
           .bb-date{font-weight:700;}
           .front-cover-block{display:grid;gap:.2rem;align-content:start;min-height:100%;text-align:center;}
           .front-cover-image-wrap{margin:0 0 .22rem;text-align:center;}
           .front-cover-image-wrap img{display:inline-block;width:auto;height:auto;max-width:var(--print-image-max-width);max-height:calc(var(--print-image-max-height) * 1.55);object-fit:contain;border:0;}
-          .front-cover-church{margin:0;font-size:var(--print-font-size-meta);text-transform:uppercase;}
-          .front-cover-title{margin:.08rem 0 0;font-size:calc(var(--print-font-size-cover-title) * 1.24);text-transform:uppercase;}
+          .front-cover-church{margin:0;font-family:var(--font-church-name);font-size:var(--print-font-size-meta);text-transform:uppercase;}
+          .front-cover-title{margin:.08rem 0 0;font-family:var(--font-church-name);font-size:calc(var(--print-font-size-cover-title) * 1.24);text-transform:uppercase;}
           .front-cover-subtitle{margin:.03rem 0 .08rem;font-size:var(--print-font-size-meta);}
           .front-cover-sermon{margin:.08rem 0 0;font-size:var(--print-font-size-section-title);font-weight:700;}
           .front-cover-speaker,.front-cover-date,.front-cover-note{margin:.02rem 0 0;font-size:var(--print-font-size-body);}
@@ -2343,7 +2804,7 @@
           .front-image-panel{width:100%;height:100%;min-height:100%;display:block;line-height:0;}
           .front-image-panel img{width:100%;height:100%;min-height:100%;display:block;object-fit:var(--front-image-fit);object-position:var(--front-image-position);border:0;}
           .sec{margin-bottom:.2rem;}
-          .sec-title{margin:0 0 .13rem;font-size:var(--print-font-size-section-title);font-weight:700;text-transform:uppercase;}
+          .sec-title{margin:0 0 .13rem;font-family:var(--font-section-title);font-size:var(--print-font-size-section-title);font-weight:700;text-transform:uppercase;}
           .announcement-list{margin:0;padding-left:1rem;}
           .announcement-list li{margin:0 0 .11rem;font-size:var(--print-font-size-body);}
           .list-rows{display:block;}
@@ -2358,14 +2819,10 @@
           .image-wrap{margin-top:var(--image-margin-top);margin-bottom:var(--image-margin-bottom);text-align:var(--image-align);}
           .image-wrap img{display:inline-block;width:auto;height:auto;max-width:var(--print-image-max-width);max-height:var(--print-image-max-height);object-fit:contain;border:0;}
           .rule{border-top:1px solid #000;margin:.2rem 0;}
-          @page{size:${isTriFold ? "legal" : "Letter"} landscape;margin:var(--print-page-margin-top) var(--print-page-margin-right) var(--print-page-margin-bottom) var(--print-page-margin-left);}
+          @page{size:${isTriFold ? "legal" : "Letter"} landscape;margin:0;}
         </style></head><body>${printHtml}${autoPrintScript}</body></html>`;
 
-        const win = window.open("", "_blank");
-        if (!win) {
-          alert("Please allow popups to export PDF.");
-          return;
-        }
+        if (win.closed) return;
         win.document.open();
         win.document.write(html);
         win.document.close();
@@ -2521,10 +2978,10 @@
           return `<div style="margin:0 0 10pt 0;">
             <div style="text-align:center;border-bottom:1px solid #000;padding:0 0 7pt 0;margin:0 0 8pt 0;">
               ${section.data.logoUrl ? `<p style="margin:0 0 6pt 0;text-align:center;"><img src="${esc(section.data.logoUrl)}" alt="Church logo" style="max-width:76px;max-height:76px;border:0;" /></p>` : ""}
-              <p style="margin:0;text-align:center;font-size:${esc(TYPOGRAPHY.printCoverTitle)};font-weight:700;text-transform:uppercase;">${esc(section.data.churchName || "Church Name")}</p>
-              ${contactLines.length ? `<p style="margin:5pt 0 0 0;text-align:center;font-size:${esc(TYPOGRAPHY.printMeta)};">${esc(contactLines.join(" | "))}</p>` : ""}
-              ${section.data.churchAddress ? `<p style="margin:3pt 0 0 0;text-align:center;font-size:${esc(TYPOGRAPHY.printMeta)};">${esc(section.data.churchAddress)}</p>` : ""}
-              <p style="margin:5pt 0 0 0;text-align:center;font-size:${esc(TYPOGRAPHY.printMeta)};font-weight:700;">${esc(dateLine)}</p>
+              <p style="margin:0;text-align:center;font-family:${esc(TYPOGRAPHY.fontChurchName)};font-size:${esc(TYPOGRAPHY.printCoverTitle)};font-weight:700;text-transform:uppercase;">${esc(section.data.churchName || "Church Name")}</p>
+              ${contactLines.length ? `<p style="margin:5pt 0 0 0;text-align:center;font-family:${esc(TYPOGRAPHY.fontDetails)};font-size:${esc(TYPOGRAPHY.printMeta)};">${esc(contactLines.join(" | "))}</p>` : ""}
+              ${section.data.churchAddress ? `<p style="margin:3pt 0 0 0;text-align:center;font-family:${esc(TYPOGRAPHY.fontDetails)};font-size:${esc(TYPOGRAPHY.printMeta)};">${esc(section.data.churchAddress)}</p>` : ""}
+              <p style="margin:5pt 0 0 0;text-align:center;font-family:${esc(TYPOGRAPHY.fontDetails)};font-size:${esc(TYPOGRAPHY.printMeta)};font-weight:700;">${esc(dateLine)}</p>
             </div>
             ${section.data.bulletinTitle ? `<p style="margin:0 0 6pt 0;text-align:center;font-weight:700;">${esc(section.data.bulletinTitle)}</p>` : ""}
           </div>`;
@@ -2534,7 +2991,7 @@
           const speaker = String(section.data.speaker || "").trim();
           if (!sermonTitle && !speaker) return "";
           return `<div style="margin:0 0 10pt 0;">
-            <p style="margin:0 0 5pt 0;font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Sermon Information")}</p>
+            <p style="margin:0 0 5pt 0;font-family:${esc(TYPOGRAPHY.fontSectionTitle)};font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Sermon Information")}</p>
             ${sermonTitle ? `<p style="margin:0 0 4pt 0;font-weight:700;line-height:1.25;">${esc(sermonTitle)}</p>` : ""}
             ${speaker ? `<p style="margin:0 0 4pt 0;line-height:1.25;">${esc(speaker)}</p>` : ""}
           </div>`;
@@ -2543,7 +3000,7 @@
           const items = (section.data.items || []).map(v => String(v || "").trim()).filter(Boolean);
           if (!items.length) return "";
           return `<div style="margin:0 0 10pt 0;">
-            <p style="margin:0 0 5pt 0;font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Section")}</p>
+            <p style="margin:0 0 5pt 0;font-family:${esc(TYPOGRAPHY.fontSectionTitle)};font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Section")}</p>
             <ul style="margin:0 0 0 18pt;padding:0;">${items.map(v => `<li style="margin:0 0 4pt 0;line-height:1.25;">${esc(v)}</li>`).join("")}</ul>
           </div>`;
         }
@@ -2566,7 +3023,7 @@
             </tr>`;
           }).join("");
           return `<div style="margin:0 0 10pt 0;">
-            <p style="margin:0 0 5pt 0;font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Section")}</p>
+            <p style="margin:0 0 5pt 0;font-family:${esc(TYPOGRAPHY.fontSectionTitle)};font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Section")}</p>
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;width:100%;table-layout:fixed;">
               ${rowHtml}
             </table>
@@ -2589,7 +3046,7 @@
         const content = String(section.data.content || "").trim();
         if (!content) return "";
         return `<div style="margin:0 0 10pt 0;">
-          <p style="margin:0 0 5pt 0;font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Section")}</p>
+          <p style="margin:0 0 5pt 0;font-family:${esc(TYPOGRAPHY.fontSectionTitle)};font-size:${esc(TYPOGRAPHY.printSectionTitle)};font-weight:700;text-transform:uppercase;">${esc(section.title || "Section")}</p>
           ${textToWordParagraphs(content)}
         </div>`;
       }
@@ -2605,8 +3062,8 @@
         const rightPad = rightIsFrontImage ? "padding:0;" : `padding:${esc(panel.top)} ${esc(panel.rightPanelRight)} ${esc(panel.bottom)} ${esc(panel.rightPanelLeft)};`;
         return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;margin:0;">
           <tr>
-            <td style="width:50%;vertical-align:top;height:7.7in;${leftPad}font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${leftHtml || ""}</td>
-            <td style="width:50%;vertical-align:top;height:7.7in;${rightPad}font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${rightHtml || ""}</td>
+            <td style="width:50%;vertical-align:top;height:7.7in;${leftPad}font-family:${esc(TYPOGRAPHY.fontBody)};font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${leftHtml || ""}</td>
+            <td style="width:50%;vertical-align:top;height:7.7in;${rightPad}font-family:${esc(TYPOGRAPHY.fontBody)};font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${rightHtml || ""}</td>
           </tr>
         </table>`;
       }
@@ -2617,9 +3074,9 @@
         const rightPad = rightIsFrontImage ? "padding:0;" : panelPad;
         return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed;margin:0;">
           <tr>
-            <td style="width:${esc(tri.wordPanelWidth)};vertical-align:top;height:7.7in;${panelPad}font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${leftHtml || ""}</td>
-            <td style="width:${esc(tri.wordPanelWidth)};vertical-align:top;height:7.7in;${panelPad}font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${centerHtml || ""}</td>
-            <td style="width:${esc(tri.wordPanelWidth)};vertical-align:top;height:7.7in;${rightPad}font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${rightHtml || ""}</td>
+            <td style="width:${esc(tri.wordPanelWidth)};vertical-align:top;height:7.7in;${panelPad}font-family:${esc(TYPOGRAPHY.fontBody)};font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${leftHtml || ""}</td>
+            <td style="width:${esc(tri.wordPanelWidth)};vertical-align:top;height:7.7in;${panelPad}font-family:${esc(TYPOGRAPHY.fontBody)};font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${centerHtml || ""}</td>
+            <td style="width:${esc(tri.wordPanelWidth)};vertical-align:top;height:7.7in;${rightPad}font-family:${esc(TYPOGRAPHY.fontBody)};font-size:${esc(TYPOGRAPHY.wordBody)};line-height:1.23;">${rightHtml || ""}</td>
           </tr>
         </table>`;
       }
@@ -2643,7 +3100,7 @@
           <style>
             @page SectionLandscape { size:14in 8.5in; mso-page-orientation:landscape; margin:${APP_CONFIG.printPageMargin.top} ${APP_CONFIG.printPageMargin.right} ${APP_CONFIG.printPageMargin.bottom} ${APP_CONFIG.printPageMargin.left}; }
             div.word-section { page: SectionLandscape; }
-          </style></head><body style="margin:0;padding:0;font-family:Georgia,'Times New Roman',serif;color:#000;font-size:${esc(TYPOGRAPHY.wordBody)};">
+          </style></head><body style="margin:0;padding:0;font-family:${esc(TYPOGRAPHY.fontBody)};color:#000;font-size:${esc(TYPOGRAPHY.wordBody)};">
             <div class="word-section">${frontTable}</div>
             <div style="page-break-before:always;"></div>
             <div class="word-section">${backTable}</div>
@@ -2663,7 +3120,7 @@
         <style>
           @page SectionLandscape { size:11in 8.5in; mso-page-orientation:landscape; margin:${APP_CONFIG.printPageMargin.top} ${APP_CONFIG.printPageMargin.right} ${APP_CONFIG.printPageMargin.bottom} ${APP_CONFIG.printPageMargin.left}; }
           div.word-section { page: SectionLandscape; }
-        </style></head><body style="margin:0;padding:0;font-family:Georgia,'Times New Roman',serif;color:#000;font-size:${esc(TYPOGRAPHY.wordBody)};">
+        </style></head><body style="margin:0;padding:0;font-family:${esc(TYPOGRAPHY.fontBody)};color:#000;font-size:${esc(TYPOGRAPHY.wordBody)};">
           <div class="word-section">${outerTable}</div>
           <div style="page-break-before:always;"></div>
           <div class="word-section">${innerTable}</div>
@@ -2671,7 +3128,7 @@
       }
 
       async function downloadWordDoc() {
-        const state = getState();
+        const state = getRenderState();
         const doc = await buildWordDocument(state);
         const blob = new Blob(["﻿", doc], { type: "application/msword" });
         const url = URL.createObjectURL(blob);
@@ -2685,7 +3142,7 @@
       }
 
       async function copyWordPressHtml() {
-        const html = buildWordPressHtml(getState());
+        const html = buildWordPressHtml(getRenderState());
         try {
           await navigator.clipboard.writeText(html);
           const btn = document.getElementById("copyHtmlBtn");
@@ -2705,20 +3162,18 @@
         document.getElementById("addSectionBtn").addEventListener("click", addSection);
         document.getElementById("loadSampleBtn").addEventListener("click", loadSampleData);
         document.getElementById("resetBtn").addEventListener("click", resetAll);
-        document.getElementById("printBtn").addEventListener("click", async () => {
+        const startPrint = async failMessage => {
+          const win = openPendingPrintWindow();
+          if (!win) return;
           try {
-            await openPrintWindow(getState());
+            await openPrintWindow(getRenderState(), win);
           } catch (error) {
-            alert(error && error.message ? error.message : "Could not open print view.");
+            win.close();
+            alert(error && error.message ? error.message : failMessage);
           }
-        });
-        document.getElementById("pdfBtn").addEventListener("click", async () => {
-          try {
-            await openPrintWindow(getState());
-          } catch (error) {
-            alert(error && error.message ? error.message : "Could not generate PDF export.");
-          }
-        });
+        };
+        document.getElementById("printBtn").addEventListener("click", () => startPrint("Could not open print view."));
+        document.getElementById("pdfBtn").addEventListener("click", () => startPrint("Could not generate PDF export."));
         document.getElementById("wordBtn").addEventListener("click", downloadWordDoc);
         document.getElementById("exportJsonBtn").addEventListener("click", () => downloadJson(exportJsonState()));
         document.getElementById("importJsonBtn").addEventListener("click", () => {
@@ -2728,6 +3183,10 @@
           const input = event.target;
           const file = input.files && input.files[0];
           if (!file) return;
+          if (!window.confirm("Importing replaces the bulletin currently on screen.\n\nExport JSON first if you want to keep it. Continue?")) {
+            input.value = "";
+            return;
+          }
           try {
             await importJsonFile(file);
           } catch (error) {
@@ -2737,6 +3196,34 @@
           }
         });
         document.getElementById("copyHtmlBtn").addEventListener("click", copyWordPressHtml);
+
+        const typeRows = document.getElementById("typeSettingsRows");
+        const onTypographyEdit = event => {
+          if (!updateTypographyFromControl(event.target)) return;
+          commitPreviewOnly();
+        };
+        typeRows.addEventListener("change", onTypographyEdit);
+        typeRows.addEventListener("input", event => { if (event.target.dataset.typeField === "size") onTypographyEdit(event); });
+        document.getElementById("resetTypographyBtn").addEventListener("click", () => {
+          typographySettings = defaultTypographySettings();
+          refreshTypography();
+          applyBackendCssVars();
+          renderTypographyControls();
+          commitPreviewOnly();
+        });
+
+        const helpDialog = document.getElementById("saveHelpDialog");
+        document.getElementById("saveHelpBtn").addEventListener("click", () => {
+          if (typeof helpDialog.showModal === "function") helpDialog.showModal();
+          else helpDialog.setAttribute("open", "");
+        });
+        document.getElementById("saveHelpClose").addEventListener("click", () => {
+          if (typeof helpDialog.close === "function") helpDialog.close();
+          else helpDialog.removeAttribute("open");
+        });
+        helpDialog.addEventListener("click", event => {
+          if (event.target === helpDialog && typeof helpDialog.close === "function") helpDialog.close();
+        });
 
         tabs.forEach(tab => {
           tab.addEventListener("click", () => {
