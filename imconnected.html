@@ -1,4 +1,15 @@
 <!doctype html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    - WordPress REST API (/wp-json/) - optional, for media library uploads
+    - IMConnected website publish API (GET/POST /api/publish, default https://stories.imadventist.org) - optional, for "Publish to IMConnected"
+    - IMConnected website story list API (GET /api/stories, same site and token) - optional, for "Import from IMConnected"
+    - Cloudflare Web Analytics beacon (static.cloudflareinsights.com) - optional, page analytics
+-->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -282,6 +293,29 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
 .export-dialog { width: min(980px, calc(100vw - 28px)); }
 .media-dialog { width: min(920px, calc(100vw - 28px)); }
 .command-dialog { width: min(620px, calc(100vw - 28px)); margin-top: 10vh; }
+.publish-body { overflow: auto; padding: 18px 20px 24px; }
+.publish-body .field-row { align-items: end; }
+.publish-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+.publish-status { font-size: 12px; line-height: 1.5; margin: 0 0 12px; }
+.publish-status.error { color: var(--danger); }
+.publish-status.success { color: var(--teal-strong); }
+.publish-row { border: 1px solid var(--line); border-radius: 11px; padding: 10px; margin-bottom: 8px; }
+.publish-row.has-error { border-color: var(--danger); background: var(--danger-soft); }
+.publish-row .publish-tick { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+.publish-row .publish-tick input { margin-top: 2px; }
+.publish-row .field { margin-bottom: 8px; }
+.publish-row .field-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.publish-result { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.7; word-break: break-all; }
+.import-group { margin: 14px 0 6px; font-size: 13px; font-weight: 800; }
+.import-row { display: flex; align-items: flex-start; gap: 10px; border: 1px solid var(--line); border-radius: 11px; padding: 10px; margin-bottom: 8px; cursor: pointer; }
+.import-row input { margin-top: 3px; flex: none; }
+.import-row img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex: none; background: var(--line); }
+.import-row .import-text { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.import-row .import-title { display: block; font-size: 13px; font-weight: 700; }
+.import-row .import-meta { display: block; font-size: 11px; line-height: 1.5; opacity: .75; }
+.import-row .import-flag { display: inline-block; font-size: 10px; font-weight: 800; border-radius: 99px; padding: 1px 7px; margin: 2px 4px 0 0; background: var(--line); }
+.import-row .import-flag.warn { background: var(--danger-soft); color: var(--danger); }
+@media (max-width: 640px) { .publish-row .field-row { grid-template-columns: minmax(0, 1fr); } }
 .dialog-shell { min-height: 0; max-height: inherit; display: flex; flex-direction: column; background: white; }
 .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 20px 21px 16px; border-bottom: 1px solid var(--line); }
 .dialog-header h2 { margin: 3px 0 5px; font-size: 23px; letter-spacing: -.6px; }
@@ -483,6 +517,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
 }
 
   </style>
+  <link rel="stylesheet" href="tools-nav.css" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -576,6 +611,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     <button type="button" data-menu-action="export-draft">Export draft</button>
     <button type="button" data-menu-action="recover-import">Recover draft before last import</button>
     <button type="button" data-menu-action="command">Command palette</button>
+    <button type="button" data-menu-action="publish-site">Publish to IMConnected</button>
+    <button type="button" data-menu-action="import-site">Import from IMConnected</button>
     <hr />
     <button type="button" data-menu-action="reset" class="danger-text">Reset newsletter</button>
   </div>
@@ -660,6 +697,51 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       </div>
       <div id="mediaBody" class="media-body"></div>
     </form>
+  </dialog>
+
+  <dialog id="publishDialog" class="studio-dialog wide-dialog" aria-labelledby="publishTitle">
+    <div class="dialog-shell">
+      <header class="dialog-header">
+        <div>
+          <span class="eyebrow">IMConnected website</span>
+          <h2 id="publishTitle">Publish to IMConnected</h2>
+          <p>Send the ticked stories to the IMConnected website and fill in their links for the email.</p>
+        </div>
+        <button type="button" class="icon-button" id="publishCloseBtn" aria-label="Close">×</button>
+      </header>
+      <div class="publish-body">
+        <div data-conn="publish"></div>
+        <p id="publishStatus" class="publish-status" role="status" aria-live="polite"></p>
+        <div id="publishList" hidden>
+          <h3 style="margin:0 0 8px;font-size:14px;">Stories</h3>
+          <div id="publishRows"></div>
+          <div class="publish-actions"><button type="button" class="primary-button" id="publishSendBtn">Publish ticked stories</button></div>
+        </div>
+        <div id="publishResult" aria-live="polite"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="importDialog" class="studio-dialog wide-dialog" aria-labelledby="importTitle">
+    <div class="dialog-shell">
+      <header class="dialog-header">
+        <div>
+          <span class="eyebrow">IMConnected website</span>
+          <h2 id="importTitle">Import from IMConnected</h2>
+          <p>Add stories from the website, and drafts waiting for review, to this newsletter as story blocks.</p>
+        </div>
+        <button type="button" class="icon-button" id="importCloseBtn" aria-label="Close">×</button>
+      </header>
+      <div class="publish-body">
+        <div data-conn="import"></div>
+        <p id="importStatus" class="publish-status" role="status" aria-live="polite"></p>
+        <div id="importList" hidden>
+          <div class="field"><label for="importSection">Section</label><select id="importSection"></select></div>
+          <div id="importRows"></div>
+          <div class="publish-actions"><button type="button" class="primary-button" id="importAddBtn">Add ticked stories</button></div>
+        </div>
+      </div>
+    </div>
   </dialog>
 
   <dialog id="commandDialog" class="studio-dialog command-dialog">
@@ -1022,6 +1104,14 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         layout: 'one',
         appearance: 'soft',
         imageHeight: 'medium',
+        tagStyle: 'bar',
+        photoPosition: 'belowTag',
+        corners: 'auto',
+        accentMode: 'brand',
+        accentColor: '',
+        textAlign: 'left',
+        headlineSize: 'medium',
+        buttonStyle: 'pill',
         photos: []
       },
       gallery: {
@@ -1702,6 +1792,14 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     }, Object.assign({ type: 'block-change' }, options || {}));
   }
 
+  function patchBlocks(changes, options) {
+    const list = (changes || []).filter(function (change) { return getBlock(change.id); });
+    if (!list.length) return;
+    mutate(function () {
+      list.forEach(function (change) { U.setPath(getBlock(change.id), change.path, change.value); });
+    }, Object.assign({ type: 'block-change' }, options || {}));
+  }
+
   function addBlock(type, afterId, initial) {
     const block = Templates.makeBlock(type, initial || {});
     mutate(function (doc) {
@@ -1713,6 +1811,19 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       selectedId = block.id;
     }, { source: 'add-block', type: 'structure', structure: true });
     return block;
+  }
+
+  function addBlocks(specs, afterId) {
+    const blocks = (specs || []).map(function (spec) { return Templates.makeBlock(spec.type, spec.initial || {}); });
+    if (!blocks.length) return [];
+    mutate(function (doc) {
+      const index = afterId && afterId !== 'document' ? doc.blocks.findIndex(function (item) { return item.id === afterId; }) : -1;
+      const footerIndex = doc.blocks.findIndex(function (item) { return item.type === 'footer'; });
+      const insertAt = index >= 0 ? index + 1 : (footerIndex >= 0 ? footerIndex : doc.blocks.length);
+      blocks.forEach(function (block, offset) { doc.blocks.splice(insertAt + offset, 0, block); });
+      selectedId = blocks[0].id;
+    }, { source: 'add-blocks', type: 'structure', structure: true });
+    return blocks;
   }
 
   function addBlockFromSaved(savedId, afterId) {
@@ -1896,7 +2007,9 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       if (!block || !/^(?:photos\.\d+\.focalX|photoFocalX)$/.test(xPath) || !/^(?:photos\.\d+\.focalY|photoFocalY)$/.test(yPath)) return;
       mutate(function () { U.setPath(block, xPath, x); U.setPath(block, yPath, y); }, { source: 'focal-point' });
     },
+    patchBlocks: patchBlocks,
     addBlock: addBlock,
+    addBlocks: addBlocks,
     addBlockFromSaved: addBlockFromSaved,
     removeBlock: removeBlock,
     duplicateBlock: duplicateBlock,
@@ -1949,6 +2062,49 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
   }
 
+  // Natural photo sizes, measured in the editor so exported crops can honor the
+  // focal point in clients without object-fit. Only image dimensions are kept.
+  const ImageSizes = (function () {
+    const KEY = 'imconnected_studio_image_sizes';
+    let sizes = {};
+    const pending = {};
+    try { sizes = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (error) { sizes = {}; }
+    function persist() {
+      const keys = Object.keys(sizes).filter(function (url) { return !/^data:/i.test(url) && url.length < 2048; }).slice(-300);
+      const out = {};
+      keys.forEach(function (url) { out[url] = sizes[url]; });
+      try { localStorage.setItem(KEY, JSON.stringify(out)); } catch (error) {}
+    }
+    function get(url) {
+      const size = url && sizes[url];
+      return size && size.w > 0 && size.h > 0 ? size : null;
+    }
+    function measure(urls, onChange) {
+      urls.forEach(function (url) {
+        if (!url || get(url) || pending[url]) return;
+        pending[url] = true;
+        const img = new Image();
+        img.onload = function () {
+          delete pending[url];
+          if (!img.naturalWidth || !img.naturalHeight) return;
+          sizes[url] = { w: img.naturalWidth, h: img.naturalHeight };
+          persist();
+          if (onChange) onChange();
+        };
+        img.onerror = function () { delete pending[url]; };
+        img.src = url;
+      });
+    }
+    function photoUrls(doc) {
+      const urls = [];
+      (doc && doc.blocks || []).forEach(function (block) {
+        (block.photos || []).forEach(function (p) { if (p && p.url) urls.push(p.url); });
+      });
+      return urls;
+    }
+    return { get: get, measure: measure, photoUrls: photoUrls };
+  })();
+
   function theme(doc) {
     return {
       primary: safeColor(doc.brand.primary, '#087E8B'),
@@ -1972,6 +2128,29 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     const src = U.normalizeUrl(url, { allowBareDomain: false });
     if (!src) return '';
     return '<img src="' + U.escapeAttr(U.normalizeUrl(src)) + '" width="' + width + '" alt="' + U.escapeAttr(alt || '') + '" style="display:block;width:100%;max-width:' + width + 'px;height:auto;border:0;' + (style || '') + '" />';
+  }
+
+  // Email-safe crop. The image itself keeps its natural proportions (Gmail and
+  // Outlook ignore object-fit, which used to squash photos). A wrapper with
+  // max-height + overflow:hidden trims it; a negative top margin aims the trim at
+  // the vertical focal point. Clients that support object-fit get an exact cover
+  // crop from the separate @supports style block in renderEmail.
+  const CROP_HEIGHTS = [120, 170, 180, 260, 350];
+  function croppedImage(photo, width, height, alt, wrapStyle) {
+    const src = U.normalizeUrl(photo && photo.url, { allowBareDomain: false });
+    if (!src) return '';
+    const fx = Math.max(0, Math.min(100, Number(photo.focalX ?? 50)));
+    const fy = Math.max(0, Math.min(100, Number(photo.focalY ?? 50)));
+    const size = ImageSizes.get(photo.url);
+    const offset = size ? Math.max(0, Math.round((width * size.h / size.w - height) * fy / 100)) : 0;
+    return '<div class="em-crop em-h' + height + '" style="max-height:' + height + 'px;overflow:hidden;' + (wrapStyle || '') + '">'
+      + '<img src="' + U.escapeAttr(U.normalizeUrl(src)) + '" width="' + width + '" alt="' + U.escapeAttr(alt || '') + '" style="display:block;width:100%;max-width:' + width + 'px;height:auto;border:0;' + (offset ? 'margin-top:-' + offset + 'px;' : '') + 'object-position:' + fx + '% ' + fy + '%;" />'
+      + '</div>';
+  }
+
+  function cropSupportCss() {
+    return '<style>@supports (object-fit:cover){.em-crop img{height:100%!important;margin-top:0!important;object-fit:cover}'
+      + CROP_HEIGHTS.map(function (h) { return '.em-h' + h + '{height:' + h + 'px}'; }).join('') + '}</style>';
   }
 
   function headerBlock(block, doc, C, options) {
@@ -2040,77 +2219,145 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     return '<p style="margin:6px 0 0;font-family:Arial,sans-serif;font-size:10px;line-height:15px;color:#7a858a;text-align:center;font-style:italic;">' + U.escapeHtml(value) + '</p>';
   }
 
-  function storyPhotoHtml(block, C) {
+  // Story design settings. Missing values fall back to the original look so
+  // older drafts render the same apart from the photo-corner fix.
+  function storyStyle(block, C) {
+    const corners = block.corners || 'auto';
+    const appearance = block.appearance || 'soft';
+    const cardRadius = { square: 0, slight: 6, round: 22 }[corners] ?? (appearance === 'clean' ? 0 : 16);
+    const insetRadius = { square: 0, slight: 4, round: 12 }[corners] ?? (appearance === 'clean' ? 0 : (appearance === 'floating' ? 14 : 9));
+    const accentMap = { brand: C.primary, dark: C.dark, accent: C.accent, custom: safeColor(block.accentColor, C.primary) };
+    const accent = accentMap[block.accentMode] || C.primary;
+    const sizes = { small: [18, 25], medium: [21, 29], large: [26, 33] };
+    return {
+      cardRadius: cardRadius,
+      insetRadius: insetRadius,
+      bordered: appearance !== 'clean',
+      floating: appearance === 'floating',
+      accent: accent,
+      tagStyle: ['bar', 'solid', 'label', 'none'].includes(block.tagStyle) ? block.tagStyle : 'bar',
+      position: ['top', 'belowTag', 'belowHeadline'].includes(block.photoPosition) ? block.photoPosition : 'belowTag',
+      align: block.textAlign === 'center' ? 'center' : 'left',
+      headline: sizes[block.headlineSize] || sizes.medium,
+      buttonStyle: ['pill', 'outline', 'link'].includes(block.buttonStyle) ? block.buttonStyle : 'pill'
+    };
+  }
+
+  // Inner card width is 600 - 2×28 padding - 2×1 border; inset photos add 20px padding.
+  function storyPhotoHtml(block, C, S, firstRow) {
     const photos = (block.photos || []).filter(function (item) { return item && item.url; });
     if (!photos.length) return '';
-    const radius = block.appearance === 'clean' ? '0' : (block.appearance === 'floating' ? '14px' : '9px');
-    const shadow = block.appearance === 'floating' ? 'box-shadow:0 8px 18px rgba(8,30,42,.20);' : '';
-    const heightMap = { short: '180px', medium: '260px', tall: '350px', auto: 'auto' };
-    const maxHeight = heightMap[block.imageHeight] || '260px';
+    const fullWidth = S.bordered ? 542 : 544;
+    const insetWidth = fullWidth - 40;
+    const thumbWidth = Math.floor(insetWidth * 0.48);
+    const r = S.insetRadius + 'px';
+    const shadow = S.floating ? 'box-shadow:0 8px 18px rgba(8,30,42,.20);' : '';
+    const heightMap = { short: 180, medium: 260, tall: 350, auto: 0 };
+    const height = heightMap[block.imageHeight] ?? 260;
+    const alt = function (p) { return p.alt || p.caption || block.title || ''; };
+
+    // Full-bleed photos stay square so they meet the tag bar and card edges
+    // cleanly; only the top corners follow the card when the photo opens it.
+    const bleed = function (p) {
+      const top = firstRow ? S.cardRadius : 0;
+      const radius = top ? 'border-radius:' + top + 'px ' + top + 'px 0 0;' : '';
+      return (height
+        ? croppedImage(p, fullWidth, height, alt(p), radius)
+        : image(p.url, fullWidth, alt(p), radius)) + photoCaption(p.caption);
+    };
     const wide = function (p) {
-      const object = maxHeight === 'auto' ? '' : 'max-height:' + maxHeight + ';object-fit:cover;object-position:' + (p.focalX ?? 50) + '% ' + (p.focalY ?? 50) + '%;';
-      return image(p.url, 600, p.alt || p.caption || block.title || '', 'border-radius:' + radius + ';' + shadow + object) + photoCaption(p.caption);
+      const style = 'border-radius:' + r + ';' + shadow;
+      return (height
+        ? croppedImage(p, insetWidth, height, alt(p), style)
+        : image(p.url, insetWidth, alt(p), style)) + photoCaption(p.caption);
     };
     const thumb = function (p) {
-      return image(p.url, 258, p.alt || p.caption || block.title || '', 'border-radius:' + radius + ';' + shadow + 'height:170px;object-fit:cover;object-position:' + (p.focalX ?? 50) + '% ' + (p.focalY ?? 50) + '%;') + photoCaption(p.caption);
+      return croppedImage(p, thumbWidth, 170, alt(p), 'border-radius:' + r + ';' + shadow) + photoCaption(p.caption);
     };
-
-    if (block.layout === 'twoUp' && photos.length > 1) {
-      return '<tr><td style="padding:0 20px 10px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
-        + photos.slice(0, 2).map(function (p) { return '<td width="48%" valign="top">' + thumb(p) + '</td>'; }).join('<td width="4%"></td>')
+    const pairRow = function (pair, padding) {
+      return '<tr><td class="em-pad-in" style="padding:' + padding + ';"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
+        + pair.map(function (p) { return '<td width="' + (pair.length === 1 ? '100' : '48') + '%" valign="top">' + (pair.length === 1 ? wide(p) : thumb(p)) + '</td>'; }).join(pair.length === 2 ? '<td width="4%"></td>' : '')
         + '</tr></table></td></tr>';
-    }
+    };
+    const edge = S.position === 'belowHeadline' ? '0' : '16px';
+
+    if (block.layout === 'twoUp' && photos.length > 1) return pairRow(photos.slice(0, 2), edge + ' 20px 4px');
 
     if (block.layout === 'heroGrid' && photos.length > 1) {
-      const hero = photos[0];
       const rest = photos.slice(1, 3);
-      return '<tr><td style="padding:0;background:' + C.light + ';">' + wide(hero) + '</td></tr>'
-        + (rest.length ? '<tr><td style="padding:9px 20px 8px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
-          + rest.map(function (p) { return '<td width="48%" valign="top">' + thumb(p) + '</td>'; }).join('<td width="4%"></td>')
-          + '</tr></table></td></tr>' : '');
+      return '<tr><td style="padding:0;background:' + C.light + ';">' + bleed(photos[0]) + '</td></tr>'
+        + (rest.length ? pairRow(rest, '9px 20px 4px') : '');
     }
 
     if (block.layout === 'stack' && photos.length > 1) {
-      return photos.map(function (p) { return '<tr><td style="padding:8px 20px 0;">' + wide(p) + '</td></tr>'; }).join('');
+      return photos.map(function (p, index) { return '<tr><td class="em-pad-in" style="padding:' + (index ? '10px' : edge) + ' 20px 0;">' + wide(p) + '</td></tr>'; }).join('');
     }
 
     if (block.layout === 'mosaic' && photos.length > 1) {
       const rows = [];
       for (let i = 0; i < photos.length; i += 2) rows.push(photos.slice(i, i + 2));
-      return rows.map(function (pair) {
-        return '<tr><td style="padding:8px 20px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
-          + pair.map(function (p) { return '<td width="' + (pair.length === 1 ? '100' : '48') + '%" valign="top">' + (pair.length === 1 ? wide(p) : thumb(p)) + '</td>'; }).join(pair.length === 2 ? '<td width="4%"></td>' : '')
-          + '</tr></table></td></tr>';
-      }).join('');
+      return rows.map(function (pair, index) { return pairRow(pair, (index ? '10px' : edge) + ' 20px 0'); }).join('');
     }
 
-    return '<tr><td style="padding:0;background:' + C.light + ';">' + wide(photos[0]) + '</td></tr>';
+    return '<tr><td style="padding:0;background:' + C.light + ';">' + bleed(photos[0]) + '</td></tr>';
+  }
+
+  function storyButton(block, S) {
+    const link = U.normalizeUrl(block.link, { allowBareDomain: true });
+    if (!link) return '';
+    const label = U.escapeHtml(block.buttonLabel || 'Read full story') + ' →';
+    const href = U.escapeAttr(link);
+    if (S.buttonStyle === 'link') {
+      return '<p style="margin:13px 0 0;font-family:Arial,sans-serif;font-size:13px;line-height:20px;font-weight:bold;text-align:' + S.align + ';"><a href="' + href + '" style="color:' + S.accent + ';text-decoration:underline;">' + label + '</a></p>';
+    }
+    const outline = S.buttonStyle === 'outline';
+    return '<table role="presentation" cellpadding="0" cellspacing="0" border="0"' + (S.align === 'center' ? ' align="center"' : '') + ' style="margin-top:13px;"><tr><td style="background:' + (outline ? 'transparent' : S.accent) + ';border:2px solid ' + S.accent + ';border-radius:20px;padding:7px 17px;">'
+      + '<a href="' + href + '" style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:' + (outline ? S.accent : '#ffffff') + ';text-decoration:none;">' + label + '</a></td></tr></table>';
   }
 
   function storyBlock(block, C, options) {
-    const borderRadius = block.appearance === 'clean' ? '0' : '16px';
-    const border = block.appearance === 'clean' ? '0' : '1px solid ' + C.cardBorder;
-    const shadow = block.appearance === 'floating' ? 'box-shadow:0 9px 22px rgba(11,57,84,.13);' : '';
-    const link = U.normalizeUrl(block.link, { allowBareDomain: true });
+    const S = storyStyle(block, C);
+    const border = S.bordered ? '1px solid ' + C.cardBorder : '0';
+    const shadow = S.floating ? 'box-shadow:0 9px 22px rgba(11,57,84,.13);' : '';
+    const hasPhotos = (block.photos || []).some(function (item) { return item && item.url; });
+    const hasBar = S.tagStyle === 'bar' || S.tagStyle === 'solid';
+    const tagText = U.escapeHtml(block.tag || 'NEWS');
+
     const quote = block.quote
-      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 16px;"><tr><td style="padding:12px 15px;background:' + C.light + ';border-left:4px solid ' + C.primary + ';border-radius:0 8px 8px 0;">'
+      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 16px;"><tr><td style="padding:12px 15px;background:' + C.light + ';border-left:4px solid ' + S.accent + ';border-radius:0 8px 8px 0;text-align:left;">'
         + '<p style="margin:0;font-family:Georgia,Times,serif;font-size:16px;line-height:25px;font-style:italic;color:' + C.dark + ';">' + U.escapeHtml(block.quote) + '</p>'
-        + (block.attribution ? '<p style="margin:6px 0 0;font-family:Arial,sans-serif;font-size:10px;line-height:15px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:' + C.primary + ';">— ' + U.escapeHtml(block.attribution) + '</p>' : '')
+        + (block.attribution ? '<p style="margin:6px 0 0;font-family:Arial,sans-serif;font-size:10px;line-height:15px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:' + S.accent + ';">— ' + U.escapeHtml(block.attribution) + '</p>' : '')
         + '</td></tr></table>'
       : '';
-    const button = link
-      ? '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:13px;"><tr><td style="background:' + C.primary + ';border-radius:20px;padding:8px 17px;"><a href="' + U.escapeAttr(link) + '" style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;text-decoration:none;">' + U.escapeHtml(block.buttonLabel || 'Read full story') + ' →</a></td></tr></table>'
-      : '';
 
-    return '<tr><td' + editAttrs(block, options) + ' style="padding:8px 28px 12px;">'
-      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + C.cardBg + ';border:' + border + ';border-radius:' + borderRadius + ';overflow:hidden;' + shadow + '">'
-      + '<tr><td style="background:' + C.dark + ';background:linear-gradient(135deg,' + C.dark + ',' + C.primary + ');padding:5px 19px;"><p style="margin:0;font-family:Arial,sans-serif;font-size:9px;line-height:14px;font-weight:bold;letter-spacing:2.2px;text-transform:uppercase;color:rgba(255,255,255,.78);">' + U.escapeHtml(block.tag || 'NEWS') + '</p></td></tr>'
-      + storyPhotoHtml(block, C)
-      + '<tr><td style="padding:20px 21px 22px;">'
-      + '<h2 style="margin:0 0 11px;font-family:Georgia,Times,serif;font-size:21px;line-height:29px;color:' + C.dark + ';">' + U.escapeHtml(block.title || 'Untitled story') + '</h2>'
-      + U.paragraphs(block.body || '', 'margin:0 0 12px;font-family:Arial,sans-serif;font-size:14px;line-height:24px;color:#424b50;')
-      + quote + button
-      + '</td></tr></table></td></tr>';
+    const barFirst = hasBar && !(hasPhotos && S.position === 'top');
+    const barRadius = barFirst && S.cardRadius ? 'border-radius:' + S.cardRadius + 'px ' + S.cardRadius + 'px 0 0;' : '';
+    const bar = hasBar
+      ? '<tr><td class="em-pad-in" style="background:' + (S.tagStyle === 'solid' ? S.accent : C.dark + ';background:linear-gradient(135deg,' + C.dark + ',' + S.accent + ')') + ';' + barRadius + 'padding:7px 21px;text-align:' + S.align + ';"><p style="margin:0;font-family:Arial,sans-serif;font-size:10px;line-height:15px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#ffffff;">' + tagText + '</p></td></tr>'
+      : '';
+    const label = S.tagStyle === 'label'
+      ? '<p style="margin:0 0 7px;font-family:Arial,sans-serif;font-size:10px;line-height:15px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:' + S.accent + ';">' + tagText + '</p>'
+      : '';
+    const headline = '<h2 style="margin:0 0 11px;font-family:Georgia,Times,serif;font-size:' + S.headline[0] + 'px;line-height:' + S.headline[1] + 'px;color:' + C.dark + ';">' + U.escapeHtml(block.title || 'Untitled story') + '</h2>';
+    const body = U.paragraphs(block.body || '', 'margin:0 0 12px;font-family:Arial,sans-serif;font-size:14px;line-height:24px;color:#424b50;')
+      + quote + storyButton(block, S);
+    const textCell = function (padding, html) { return '<tr><td class="em-pad-in" style="padding:' + padding + ';text-align:' + S.align + ';">' + html + '</td></tr>'; };
+
+    let rows;
+    if (S.position === 'belowHeadline' && hasPhotos) {
+      rows = bar + textCell((hasBar ? '20px' : '22px') + ' 21px 6px', label + headline)
+        + storyPhotoHtml(block, C, S, false)
+        + textCell('16px 21px 22px', body);
+    } else if (S.position === 'top') {
+      rows = storyPhotoHtml(block, C, S, true) + bar + textCell('20px 21px 22px', label + headline + body);
+    } else {
+      rows = bar + storyPhotoHtml(block, C, S, !hasBar) + textCell('20px 21px 22px', label + headline + body);
+    }
+
+    return '<tr><td' + (editAttrs(block, options, ' em-card-pad') || ' class="em-card-pad"') + ' style="padding:8px 28px 12px;">'
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + C.cardBg + ';border:' + border + ';border-radius:' + S.cardRadius + 'px;overflow:hidden;' + shadow + '">'
+      + rows
+      + '</table></td></tr>';
   }
 
   function galleryBlock(block, C, options) {
@@ -2128,7 +2375,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         return '<tr>' + row.map(function (p) {
           const width = columns === 3 ? 32 : 48;
           return '<td width="' + width + '%" valign="top" style="padding:4px;">'
-            + image(p.url, columns === 3 ? 166 : 258, p.alt || p.caption || '', 'height:' + (columns === 3 ? '120px' : '170px') + ';object-fit:cover;border-radius:9px;object-position:' + (p.focalX ?? 50) + '% ' + (p.focalY ?? 50) + '%;')
+            + croppedImage(p, columns === 3 ? 166 : 258, columns === 3 ? 120 : 170, p.alt || p.caption || '', 'border-radius:9px;')
             + photoCaption(p.caption) + '</td>';
         }).join('') + (row.length < columns ? new Array(columns - row.length + 1).join('<td></td>') : '') + '</tr>';
       }).join('');
@@ -2265,8 +2512,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
 
     return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
       + '<title>' + U.escapeHtml(doc.meta.subject || doc.meta.name || 'Newsletter') + '</title>'
-      + '<style>@media only screen and (max-width:620px){.em-wrapper{width:100%!important;max-width:100%!important}.em-pad{padding-left:18px!important;padding-right:18px!important}.em-stack{display:block!important;width:100%!important}.em-hide-mobile{display:none!important}}body{margin:0!important;padding:0!important;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}table{border-collapse:separate;mso-table-lspace:0pt;mso-table-rspace:0pt;}img{-ms-interpolation-mode:bicubic;}</style>'
-      + previewCss + '</head><body style="margin:0;padding:0;background:' + C.emailBg + ';">'
+      + '<style>@media only screen and (max-width:620px){.em-wrapper{width:100%!important;max-width:100%!important}.em-pad{padding-left:18px!important;padding-right:18px!important}.em-stack{display:block!important;width:100%!important}.em-hide-mobile{display:none!important}.em-card-pad{padding-left:10px!important;padding-right:10px!important}.em-pad-in{padding-left:16px!important;padding-right:16px!important}.em-crop img{margin-top:0!important}}body{margin:0!important;padding:0!important;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}table{border-collapse:separate;mso-table-lspace:0pt;mso-table-rspace:0pt;}img{-ms-interpolation-mode:bicubic;}</style>'
+      + cropSupportCss() + previewCss + '</head><body style="margin:0;padding:0;background:' + C.emailBg + ';">'
       + '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:' + C.emailBg + ';">' + U.escapeHtml(preheader) + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>'
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background:' + C.emailBg + ';"><tr><td align="center" style="padding:22px 10px 32px;">'
       + (showWebView ? '<p style="margin:0 0 9px;font-family:Arial,sans-serif;font-size:10px;line-height:15px;color:#8d969a;text-align:center;"><a href="' + U.escapeAttr(webView) + '" style="color:#8d969a;text-decoration:underline;">View this email in your browser</a></p>' : '')
@@ -2342,6 +2589,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
   }
 
   root.Renderer = {
+    imageSizes: ImageSizes,
     resolveDelivery: resolveDelivery,
     theme: theme,
     renderEmail: renderEmail,
@@ -2368,6 +2616,13 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       blockId: blockId || 'document',
       path: path || ''
     };
+  }
+
+  function hasPublishSettings() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('imconnected_studio_site_publish') || 'null');
+      return !!(saved && typeof saved.siteUrl === 'string' && saved.siteUrl);
+    } catch (error) { return false; }
   }
 
   function validate(doc) {
@@ -2421,6 +2676,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         if (!String(block.body || '').trim()) issues.push(issue('error', 'A story is empty.', 'Add story copy or remove the block.', block.id, 'body'));
         else if (String(block.body).trim().length < 50) issues.push(issue('suggestion', 'A story is very short.', 'Add enough context for readers to understand the update.', block.id, 'body'));
         if (block.link && !U.isLikelyUrl(block.link, { allowBareDomain: true })) issues.push(issue('error', 'A story link looks invalid.', 'Use a full HTTPS URL or remove the link.', block.id, 'link'));
+        if (!String(block.link || '').trim() && hasPublishSettings()) issues.push(issue('warning', 'A story has no link.', 'Publish to IMConnected before sending, or add a link.', block.id, 'link'));
         (block.photos || []).forEach(function (photo, index) {
           if (!photo.url) return;
           imageCount += 1;
@@ -2718,17 +2974,44 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       + field('Attribution', 'block', 'attribution', block.attribution)
       + '<div class="field-row">' + field('Read More URL', 'block', 'link', block.link, { type: 'url' }) + field('Button label', 'block', 'buttonLabel', block.buttonLabel) + '</div>'
     );
-    if (tab === 'design') return section('Photos and layout',
+    const gap = '<div style="height:12px"></div>';
+    if (tab === 'design') return section('Card style',
+      '<div class="field-label">Card appearance</div>' + choice('block', 'appearance', block.appearance, [
+        { value: 'clean', label: 'Clean' }, { value: 'soft', label: 'Soft' }, { value: 'floating', label: 'Floating' }
+      ], 3)
+      + gap + '<div class="field-label">Corners</div>' + choice('block', 'corners', block.corners || 'auto', [
+        { value: 'auto', label: 'Match appearance' }, { value: 'square', label: 'Square' }, { value: 'slight', label: 'Slightly rounded' }, { value: 'round', label: 'Rounded' }
+      ])
+      + gap + '<div class="field-label">Story color</div>' + choice('block', 'accentMode', block.accentMode || 'brand', [
+        { value: 'brand', label: 'Brand primary' }, { value: 'dark', label: 'Brand dark' }, { value: 'accent', label: 'Brand accent' }, { value: 'custom', label: 'Custom' }
+      ])
+      + (block.accentMode === 'custom' ? gap + field('Custom story color', 'block', 'accentColor', block.accentColor, { type: 'color' }) : '')
+    , 'Outlook for Windows shows every card with square corners and no shadow. Other choices still apply there.')
+    + section('Category tag and text',
+      '<div class="field-label">Category tag style</div>' + choice('block', 'tagStyle', block.tagStyle || 'bar', [
+        { value: 'bar', label: 'Gradient bar' }, { value: 'solid', label: 'Solid bar' }, { value: 'label', label: 'Small label' }, { value: 'none', label: 'Hidden' }
+      ])
+      + gap + '<div class="field-label">Headline size</div>' + choice('block', 'headlineSize', block.headlineSize || 'medium', [
+        { value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }
+      ], 3)
+      + gap + '<div class="field-label">Text alignment</div>' + choice('block', 'textAlign', block.textAlign || 'left', [
+        { value: 'left', label: 'Left' }, { value: 'center', label: 'Centered' }
+      ])
+      + gap + '<div class="field-label">Read More button</div>' + choice('block', 'buttonStyle', block.buttonStyle || 'pill', [
+        { value: 'pill', label: 'Filled' }, { value: 'outline', label: 'Outline' }, { value: 'link', label: 'Text link' }
+      ], 3)
+    )
+    + section('Photos and layout',
       '<div class="field-label">Photo layout</div>' + choice('block', 'layout', block.layout, [
         { value: 'one', label: 'One hero' }, { value: 'twoUp', label: 'Two up' }, { value: 'heroGrid', label: 'Hero + grid' }, { value: 'mosaic', label: 'Mosaic' }, { value: 'stack', label: 'Stack' }
       ])
-      + '<div style="height:12px"></div><div class="field-label">Card appearance</div>' + choice('block', 'appearance', block.appearance, [
-        { value: 'clean', label: 'Clean' }, { value: 'soft', label: 'Soft' }, { value: 'floating', label: 'Floating' }
+      + gap + '<div class="field-label">Photo position</div>' + choice('block', 'photoPosition', block.photoPosition || 'belowTag', [
+        { value: 'top', label: 'Top of card' }, { value: 'belowTag', label: 'Below tag' }, { value: 'belowHeadline', label: 'Below headline' }
       ], 3)
-      + '<div style="height:12px"></div>'
+      + gap
       + field('Hero image height', 'block', 'imageHeight', block.imageHeight, { type: 'select', options: [
         { value: 'auto', label: 'Natural height' }, { value: 'short', label: 'Short' }, { value: 'medium', label: 'Medium' }, { value: 'tall', label: 'Tall' }
-      ] })
+      ], help: 'Photos are trimmed to this height using the focal points below. In Outlook for Windows they show at full height.' })
       + photoCards(block, 'photos')
     );
     return commonAdvanced(block);
@@ -3123,11 +3406,13 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       result.textContent = 'Reading images…';
       try {
         const values = await Promise.all(chosen.map(function (file) {
-          return new Promise(function (resolve, reject) {
-            const reader = new FileReader();
-            reader.onload = function () { resolve(reader.result); };
-            reader.onerror = function () { reject(new Error('Could not read ' + file.name)); };
-            reader.readAsDataURL(file);
+          return shrinkImage(file).then(function (small) {
+            return new Promise(function (resolve, reject) {
+              const reader = new FileReader();
+              reader.onload = function () { resolve(reader.result); };
+              reader.onerror = function () { reject(new Error('Could not read ' + file.name)); };
+              reader.readAsDataURL(small);
+            });
           });
         }));
         if (current !== generation || !result.isConnected) return;
@@ -3242,6 +3527,31 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     }
   }
 
+  // Large camera photos are scaled down to 1200px wide (twice the 600px email
+  // width) before upload so newsletters load quickly. GIFs and SVGs are left alone.
+  function shrinkImage(file) {
+    return new Promise(function (resolve) {
+      if (!file || !/^image\/(jpeg|png|webp)$/i.test(file.type)) { resolve(file); return; }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = function () {
+        const max = 1200;
+        if (img.naturalWidth <= max) { URL.revokeObjectURL(url); resolve(file); return; }
+        const canvas = document.createElement('canvas');
+        canvas.width = max;
+        canvas.height = Math.round(img.naturalHeight * max / img.naturalWidth);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(function (blob) {
+          if (!blob || blob.size >= file.size) { resolve(file); return; }
+          resolve(new File([blob], file.name, { type: blob.type, lastModified: Date.now() }));
+        }, file.type, 0.86);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
   let uploading = false;
   async function uploadWordPress(files) {
     if (!wpAuth || !wpAuth.canUpload || uploading) return;
@@ -3252,9 +3562,11 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     try {
       for (const file of files) {
         if (wpAuth !== auth) break;
-        const form = new FormData(); form.append('file', file);
         root.App.toast('Uploading ' + file.name + ' (' + (uploaded.length + failures.length + 1) + '/' + files.length + ')…');
         try {
+          const small = await shrinkImage(file);
+          if (wpAuth !== auth) break;
+          const form = new FormData(); form.append('file', small);
           const result = await wpRequest(auth, 'media', { method: 'POST', body: form });
           if (wpAuth !== auth) break;
           uploaded.push(result.data);
@@ -3567,7 +3879,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       'inspectorPanel', 'inspectorTitle', 'inspectorEyebrow', 'inspectorTabs', 'inspectorBody', 'inspectorToggle',
       'popoverMenu', 'templateDialog', 'templateGrid', 'addBlockDialog', 'blockTypeGrid', 'savedBlockSection', 'savedBlockList',
       'checkDialog', 'checkSummary', 'checkBody', 'exportDialog', 'mediaDialog', 'commandDialog', 'commandInput', 'commandList',
-      'draftImportInput', 'toastRegion'
+      'publishDialog', 'importDialog', 'draftImportInput', 'toastRegion'
     ].forEach(function (id) { elements[id] = document.getElementById(id); });
   }
 
@@ -3750,6 +4062,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       setTimeout(resizePreviewFrame, 350);
     };
     elements.previewFrame.srcdoc = html;
+    const doc = Store.getDocument();
+    Renderer.imageSizes.measure(Renderer.imageSizes.photoUrls(doc), U.debounce(function () { renderPreview(false); }, 150));
   }
 
   function renderAll(forcePreview) {
@@ -3821,7 +4135,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       return 'content';
     }
     if (/^(visible|name)$/.test(issue.path)) return 'advanced';
-    if (/photos\.|layout|appearance|imageHeight|logo|heroImage|photoUrl|photoAlt|alignment|tone|style|spacing|height/.test(issue.path)) return 'design';
+    if (/photos\.|layout|appearance|imageHeight|corners|accent|tagStyle|photoPosition|headlineSize|textAlign|buttonStyle|logo|heroImage|photoUrl|photoAlt|alignment|tone|style|spacing|height/.test(issue.path)) return 'design';
     return 'content';
   }
 
@@ -3993,6 +4307,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       { label: 'Add event section', hint: 'Blocks', run: function () { Store.addBlock('eventList', Store.getSelectedId()); } },
       { label: 'Add photo gallery', hint: 'Blocks', run: function () { Store.addBlock('gallery', Store.getSelectedId()); } },
       { label: 'Open Send Check', hint: 'Review', run: openCheck },
+      { label: 'Publish to IMConnected', hint: 'Website', run: openPublish },
+      { label: 'Import from IMConnected', hint: 'Website', run: openImport },
       { label: 'Export newsletter', hint: 'Export', run: function () { ExportCenter.open(); } },
       { label: 'Start from template', hint: 'Document', run: openTemplates },
       { label: 'Newsletter settings', hint: 'Document', run: function () { Store.select('document'); } },
@@ -4029,7 +4345,672 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     item.run();
   }
 
+  const PUBLISH_KEY = 'imconnected_studio_site_publish';
+  const PUBLISH_SESSION_KEY = 'imconnected_studio_site_publish_session';
+  const PUBLISH_DEFAULT_SITE = 'https://stories.imadventist.org';
+  let publishSections = null;
+  let testedOrigin = '';
+  let publishBusy = false;
+  let publishTestGen = 0;
+
+  function readPublishSettings() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(PUBLISH_KEY) || '{}') || {}; } catch (error) { saved = {}; }
+    let token = '';
+    try { token = sessionStorage.getItem(PUBLISH_SESSION_KEY) || ''; } catch (error) { token = ''; }
+    return {
+      siteUrl: typeof saved.siteUrl === 'string' && saved.siteUrl ? saved.siteUrl : PUBLISH_DEFAULT_SITE,
+      token: token,
+      author: typeof saved.author === 'string' ? saved.author : ''
+    };
+  }
+
+  function writePublishSettings(next) {
+    const merged = Object.assign(readPublishSettings(), next);
+    try { localStorage.setItem(PUBLISH_KEY, JSON.stringify({ siteUrl: merged.siteUrl, author: merged.author })); }
+    catch (error) { toast('Settings could not be saved in this browser.', 'warning'); }
+    try {
+      if (merged.token) sessionStorage.setItem(PUBLISH_SESSION_KEY, merged.token);
+      else sessionStorage.removeItem(PUBLISH_SESSION_KEY);
+    } catch (error) { if (merged.token) toast('The token is kept for this page only; session storage is unavailable.', 'warning'); }
+  }
+
+  function purgeLegacyPublishToken() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PUBLISH_KEY) || 'null');
+      if (saved && typeof saved === 'object' && 'token' in saved) {
+        localStorage.setItem(PUBLISH_KEY, JSON.stringify({ siteUrl: saved.siteUrl || '', author: saved.author || '' }));
+      }
+    } catch (error) {}
+  }
+
+  function syncForgetButtons() {
+    const busy = publishBusy || importBusy;
+    ['publishForgetBtn', 'importForgetBtn'].forEach(function (id) { const node = document.getElementById(id); if (node) node.disabled = busy; });
+  }
+
+  function publishEl(id) { return document.getElementById(id); }
+
+  // Connection fields shared by the publish and import dialogs (ids: <prefix>SiteUrl, <prefix>Token, <prefix>TestBtn, <prefix>ForgetBtn).
+  function renderConnectionFields() {
+    document.querySelectorAll('[data-conn]').forEach(function (host) {
+      const p = host.dataset.conn;
+      host.innerHTML = '<div class="field"><label for="' + p + 'SiteUrl">Site URL</label><input id="' + p + 'SiteUrl" type="url" autocomplete="off" placeholder="' + PUBLISH_DEFAULT_SITE + '"></div>'
+        + '<div class="field"><label for="' + p + 'Token">Publish token</label><input id="' + p + 'Token" type="password" autocomplete="off" placeholder="Token from the website settings"><small>Kept only for this browser session, and cleared when you close the tab or press Forget token. It is never added to your draft or exports.</small></div>'
+        + '<div class="publish-actions"><button type="button" class="primary-button" id="' + p + 'TestBtn">Test connection</button>'
+        + '<button type="button" class="secondary-button" id="' + p + 'ForgetBtn">Forget token</button></div>';
+    });
+  }
+
+  function setPublishStatus(message, kind, nodeId) {
+    const node = publishEl(nodeId || 'publishStatus');
+    node.textContent = message || '';
+    node.className = 'publish-status' + (kind ? ' ' + kind : '');
+  }
+
+  function normalizePublishSite(value) {
+    let url;
+    try { url = new URL(String(value || '').trim()); } catch (error) { throw new Error('Enter the full site URL, such as ' + PUBLISH_DEFAULT_SITE + '.'); }
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) throw new Error('The site URL must start with https://.');
+    if (url.username || url.password) throw new Error('Remove the username or password from the site URL.');
+    return url.origin;
+  }
+
+  function publishRequest(method, siteUrl, token, payload, path, onController) {
+    const controller = new AbortController();
+    if (onController) onController(controller);
+    const timer = setTimeout(function () { controller.abort(); }, 60000);
+    const headers = { Authorization: 'Bearer ' + token };
+    if (payload) headers['Content-Type'] = 'application/json';
+    return fetch(siteUrl + (path || '/api/publish'), {
+      method: method,
+      headers: headers,
+      body: payload ? JSON.stringify(payload) : undefined,
+      signal: controller.signal,
+      redirect: 'error',
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer'
+    }).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (data) { return { status: response.status, data: data || {} }; });
+    }).catch(function (error) {
+      const failure = new Error(error && error.name === 'AbortError'
+        ? 'The site did not answer within 60 seconds. Try again in a moment.'
+        : 'The site couldn’t be reached. Check the site URL, and make sure the site’s PUBLISH_ORIGINS setting includes ' + location.origin + '.');
+      failure.network = true;
+      throw failure;
+    }).finally(function () { clearTimeout(timer); });
+  }
+
+  function safePublishMessage(message, token) {
+    let text = String(message || '');
+    if (token) text = text.split(token).join('[token]');
+    return text;
+  }
+
+  function publishFailure(result, token) {
+    if (result.status === 401) return 'The token was not accepted. Check it and try again.';
+    if (result.status === 503) return 'Publishing is not set up on the site yet.';
+    if (result.status === 404) return 'The site doesn’t offer this yet. Ask the site’s maintainer to update it.';
+    return safePublishMessage(result.data && result.data.error, token) || ('The site answered with an error (' + result.status + ').');
+  }
+
+  function matchPublishTag(tag) {
+    const wanted = String(tag || '').trim().toLowerCase();
+    const match = { section: '', area: '' };
+    if (!wanted || !publishSections) return match;
+    const same = function (item) { return String(item.key).toLowerCase() === wanted || String(item.label).toLowerCase() === wanted; };
+    const section = publishSections.find(same);
+    if (section) { match.section = section.key; return match; }
+    for (let i = 0; i < publishSections.length; i += 1) {
+      const area = (publishSections[i].areas || []).find(same);
+      if (area) { match.section = publishSections[i].key; match.area = area.key; return match; }
+    }
+    return match;
+  }
+
+  function publishSectionOptions(selected) {
+    return '<option value="">Choose a section</option>' + publishSections.map(function (section) {
+      return '<option value="' + U.escapeAttr(section.key) + '"' + (section.key === selected ? ' selected' : '') + '>' + U.escapeHtml(section.label) + '</option>';
+    }).join('');
+  }
+
+  function publishAreaOptions(sectionKey, selected) {
+    const section = publishSections.find(function (item) { return item.key === sectionKey; });
+    return '<option value="">Choose a category</option>' + ((section && section.areas) || []).map(function (area) {
+      return '<option value="' + U.escapeAttr(area.key) + '"' + (area.key === selected ? ' selected' : '') + '>' + U.escapeHtml(area.label) + '</option>';
+    }).join('');
+  }
+
+  function syncPublishRowAreas(row) {
+    const section = publishSections.find(function (item) { return item.key === row.querySelector('[data-pub="section"]').value; });
+    const field = row.querySelector('[data-pub-area-field]');
+    const select = row.querySelector('[data-pub="area"]');
+    const has = !!(section && section.areas && section.areas.length);
+    field.hidden = !has;
+    select.innerHTML = publishAreaOptions(section ? section.key : '', '');
+  }
+
+  function renderPublishRows(siteUrl) {
+    const settings = readPublishSettings();
+    const doc = Store.getDocument();
+    const fallbackAuthor = settings.author || (doc.brand && doc.brand.organizationName) || '';
+    const stories = doc.blocks.filter(function (block) { return block.type === 'story'; });
+    publishEl('publishList').hidden = false;
+    publishEl('publishRows').innerHTML = stories.length ? stories.map(function (block, index) {
+      const link = String(block.link || '').trim();
+      let checked = !link;
+      if (link) { try { checked = new URL(link).origin === new URL(siteUrl).origin; } catch (error) { checked = false; } }
+      const match = matchPublishTag(block.tag);
+      const section = publishSections.find(function (item) { return item.key === match.section; });
+      const hasAreas = !!(section && section.areas && section.areas.length);
+      const idBase = 'pub' + index;
+      return '<div class="publish-row" data-pub-ref="' + U.escapeAttr(block.id) + '">'
+        + '<label class="publish-tick"><input type="checkbox" data-pub="tick"' + (checked ? ' checked' : '') + '><span>Publish to website: ' + U.escapeHtml(block.title || 'Untitled story') + '</span></label>'
+        + '<div class="field-row">'
+        + '<div class="field"><label for="' + idBase + 's">Section</label><select id="' + idBase + 's" data-pub="section">' + publishSectionOptions(match.section) + '</select></div>'
+        + '<div class="field" data-pub-area-field' + (hasAreas ? '' : ' hidden') + '><label for="' + idBase + 'a">Category</label><select id="' + idBase + 'a" data-pub="area">' + publishAreaOptions(match.section, match.area) + '</select></div>'
+        + '<div class="field"><label for="' + idBase + 'u">Author</label><input id="' + idBase + 'u" type="text" data-pub="author" value="' + U.escapeAttr(fallbackAuthor) + '"></div>'
+        + '</div><div class="publish-row-message" data-pub-message style="font-size:11px;color:var(--danger);" role="alert"></div></div>';
+    }).join('') : '<div class="inspector-empty">This newsletter has no story sections yet.</div>';
+    publishEl('publishSendBtn').disabled = !stories.length;
+  }
+
+  function markPublishRow(ref, message) {
+    publishEl('publishRows').querySelectorAll('.publish-row').forEach(function (row) {
+      const hit = !!ref && row.dataset.pubRef === ref;
+      row.classList.toggle('has-error', hit);
+      row.querySelector('[data-pub-message]').textContent = hit ? message : '';
+      if (hit) row.scrollIntoView({ block: 'center' });
+    });
+  }
+
+  function focusPublishRow(ref) {
+    const row = Array.from(publishEl('publishRows').querySelectorAll('.publish-row')).find(function (item) { return item.dataset.pubRef === ref; });
+    if (!row) return;
+    const fields = Array.from(row.querySelectorAll('select, input[data-pub="author"]')).filter(function (field) { return !field.closest('[hidden]'); });
+    const target = fields.find(function (field) { return !field.value.trim(); }) || fields[0];
+    if (target) target.focus();
+  }
+
+  function openPublish() {
+    publishTestGen += 1;
+    const settings = readPublishSettings();
+    publishEl('publishSiteUrl').value = settings.siteUrl;
+    publishEl('publishToken').value = settings.token;
+    publishEl('publishList').hidden = true;
+    publishEl('publishRows').innerHTML = '';
+    publishEl('publishResult').innerHTML = '';
+    publishSections = null;
+    testedOrigin = '';
+    setPublishStatus(settings.token ? 'Press Test connection to load the website sections.' : 'Enter the site URL and publish token, then press Test connection.');
+    elements.publishDialog.showModal();
+  }
+
+  async function testPublishConnection() {
+    if (publishBusy) return;
+    const token = publishEl('publishToken').value.trim();
+    publishEl('publishResult').innerHTML = '';
+    let siteUrl;
+    try {
+      siteUrl = normalizePublishSite(publishEl('publishSiteUrl').value);
+      if (!token) throw new Error('Enter the publish token.');
+    } catch (error) { setPublishStatus(error.message, 'error'); return; }
+    publishBusy = true; syncForgetButtons();
+    const gen = ++publishTestGen;
+    publishEl('publishTestBtn').disabled = true;
+    setPublishStatus('Checking the site…');
+    try {
+      const result = await publishRequest('GET', siteUrl, token);
+      if (gen !== publishTestGen) return;
+      if (result.status !== 200 || !result.data.ok || !Array.isArray(result.data.sections)) {
+        publishSections = null;
+        publishEl('publishList').hidden = true;
+        setPublishStatus(publishFailure(result, token), 'error');
+        return;
+      }
+      publishSections = result.data.sections.map(function (section) {
+        return { key: String(section.key), label: String(section.label || section.key), areas: Array.isArray(section.areas) && section.areas.length ? section.areas.map(function (area) { return { key: String(area.key), label: String(area.label || area.key) }; }) : null };
+      });
+      testedOrigin = siteUrl;
+      writePublishSettings({ siteUrl: siteUrl, token: token });
+      renderValidationBadge();
+      setPublishStatus('Connected to ' + siteUrl + '. ' + publishSections.length + ' sections available.', 'success');
+      renderPublishRows(siteUrl);
+    } catch (error) {
+      if (gen !== publishTestGen) return;
+      publishSections = null;
+      publishEl('publishList').hidden = true;
+      setPublishStatus(safePublishMessage(error.message, token), 'error');
+    } finally {
+      publishBusy = false; syncForgetButtons();
+      publishEl('publishTestBtn').disabled = false;
+    }
+  }
+
+  function forgetPublishToken() {
+    try { sessionStorage.removeItem(PUBLISH_SESSION_KEY); } catch (error) {}
+    publishEl('publishToken').value = '';
+    publishEl('importToken').value = '';
+    publishTestGen += 1;
+    cancelImportLoad();
+    resetImportList();
+    testedOrigin = '';
+    publishEl('publishList').hidden = true;
+    publishEl('publishResult').innerHTML = '';
+    publishSections = null;
+    setPublishStatus('Token forgotten.');
+    setPublishStatus('Token forgotten.', '', 'importStatus');
+    renderValidationBadge();
+  }
+
+  function resetPublishList(message) {
+    publishSections = null;
+    testedOrigin = '';
+    publishEl('publishList').hidden = true;
+    publishEl('publishRows').innerHTML = '';
+    publishEl('publishResult').innerHTML = '';
+    if (message) setPublishStatus(message);
+  }
+
+  async function sendPublish() {
+    if (publishBusy || !publishSections) return;
+    const token = publishEl('publishToken').value.trim();
+    let siteUrl;
+    try { siteUrl = normalizePublishSite(publishEl('publishSiteUrl').value); } catch (error) { setPublishStatus(error.message, 'error'); return; }
+    if (siteUrl !== testedOrigin) { resetPublishList('The site URL changed. Press Test connection before publishing.'); return; }
+    if (!token) { setPublishStatus('Enter the publish token.', 'error'); return; }
+    const doc = Store.getDocument();
+    const stories = [];
+    markPublishRow('');
+    publishEl('publishResult').innerHTML = '';
+    const rows = Array.from(publishEl('publishRows').querySelectorAll('.publish-row'));
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i];
+      if (!row.querySelector('[data-pub="tick"]').checked) continue;
+      const block = Store.getBlock(row.dataset.pubRef);
+      if (!block) continue;
+      const section = publishSections.find(function (item) { return item.key === row.querySelector('[data-pub="section"]').value; });
+      const area = row.querySelector('[data-pub="area"]').value;
+      const author = row.querySelector('[data-pub="author"]').value.trim();
+      let problem = '';
+      if (!section) problem = 'Choose a section.';
+      else if (section.areas && !area) problem = 'Choose a category.';
+      else if (!author) problem = 'Enter an author.';
+      if (problem) { setPublishStatus('Nothing was sent. ' + problem, 'error'); markPublishRow(block.id, problem); focusPublishRow(block.id); return; }
+      const story = {
+        ref: block.id,
+        title: String(block.title || ''),
+        section: section.key,
+        author: author,
+        body: String(block.body || ''),
+        quote: String(block.quote || ''),
+        attribution: String(block.attribution || ''),
+        photos: (block.photos || []).filter(function (item) { return item && item.url; }).map(function (item) { return { url: item.url, alt: item.alt || '', caption: item.caption || '' }; })
+      };
+      if (section.areas) story.area = area;
+      stories.push(story);
+    }
+    if (!stories.length) { setPublishStatus('Tick at least one story to publish.', 'error'); return; }
+    publishBusy = true; syncForgetButtons();
+    publishEl('publishSendBtn').disabled = true;
+    publishEl('publishTestBtn').disabled = true;
+    setPublishStatus('Publishing ' + stories.length + (stories.length === 1 ? ' story…' : ' stories…'));
+    try {
+      const result = await publishRequest('POST', siteUrl, token, { newsletter: { name: doc.meta.name, issueDate: doc.meta.issueDate }, stories: stories });
+      if (result.status !== 200 || !result.data.ok || !Array.isArray(result.data.stories)) {
+        const message = publishFailure(result, token);
+        setPublishStatus('Nothing was published. ' + message, 'error');
+        if (result.data && result.data.ref) markPublishRow(String(result.data.ref), message);
+        return;
+      }
+      const urlOk = function (value) {
+        try { const parsed = new URL(value); return /^https?:$/.test(parsed.protocol) && parsed.origin === new URL(siteUrl).origin; } catch (error) { return false; }
+      };
+      const published = result.data.stories.filter(function (item) { return item && Store.getBlock(item.ref); });
+      if (!published.length || result.data.stories.length !== published.length || !published.every(function (item) { return typeof item.url === 'string' && urlOk(item.url); })) {
+        setPublishStatus('The site sent back story links that don’t belong to ' + siteUrl + '. No links were filled in. Check that the story pages were published, then try again.', 'error');
+        return;
+      }
+      const changes = [];
+      published.forEach(function (item) {
+        changes.push({ id: item.ref, path: 'link', value: item.url });
+        if (!String(Store.getBlock(item.ref).buttonLabel || '').trim()) changes.push({ id: item.ref, path: 'buttonLabel', value: 'Read full story' });
+      });
+      Store.patchBlocks(changes, { source: 'publish' });
+      const firstRow = rows.find(function (row) { return row.querySelector('[data-pub="tick"]').checked; });
+      if (firstRow) writePublishSettings({ author: firstRow.querySelector('[data-pub="author"]').value.trim() });
+      const created = published.filter(function (item) { return item.status === 'created'; }).length;
+      const updated = published.filter(function (item) { return item.status === 'updated'; }).length;
+      setPublishStatus('Published: ' + created + ' created, ' + updated + ' updated.', 'success');
+      const list = document.createElement('ul');
+      list.className = 'publish-result';
+      published.forEach(function (item) {
+        const li = document.createElement('li');
+        const block = Store.getBlock(item.ref);
+        li.appendChild(document.createTextNode((block && block.title ? block.title : 'Story') + ' (' + item.status + '): '));
+        const anchor = document.createElement('a');
+        anchor.href = item.url; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer'; anchor.textContent = item.url;
+        li.appendChild(anchor);
+        list.appendChild(li);
+      });
+      const note = document.createElement('p');
+      note.className = 'publish-status';
+      note.textContent = 'Live in about 3–5 minutes. Send the email after that so the links work.';
+      publishEl('publishResult').innerHTML = '';
+      publishEl('publishResult').appendChild(list);
+      publishEl('publishResult').appendChild(note);
+    } catch (error) {
+      setPublishStatus('Nothing was confirmed. ' + safePublishMessage(error.message, token), 'error');
+    } finally {
+      publishBusy = false; syncForgetButtons();
+      publishEl('publishSendBtn').disabled = false;
+      publishEl('publishTestBtn').disabled = false;
+    }
+  }
+
+
+  // ---- Import from IMConnected (GET /api/stories; reuses the publish settings, token, request and URL checks) ----
+  const IMPORT_PATH = '/api/stories?limit=50';
+  const IMPORT_IMAGE_HOSTS = ['https://stories.imadventist.org']; // extra https image origins accepted besides the site itself
+  const IMPORT_STATUS = { 'new': 'New', 'in_review': 'In review' };
+  let importStories = [];
+  let importTestedSite = '';
+  let importBusy = false;
+  let importGen = 0;
+  let importController = null;
+  const importTicks = new Set();
+
+  function importText(value, max) {
+    return String(value == null || typeof value === 'object' ? '' : value).replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim().slice(0, max || 500);
+  }
+
+  function importSameOrigin(value, siteUrl) {
+    try { const parsed = new URL(value); if (parsed.username || parsed.password) return false; return /^https?:$/.test(parsed.protocol) && parsed.origin === new URL(siteUrl).origin; } catch (error) { return false; }
+  }
+
+  function importImageOk(value, siteUrl) {
+    try {
+      const parsed = new URL(value);
+      if (parsed.username || parsed.password) return false;
+      return importSameOrigin(value, siteUrl) || (parsed.protocol === 'https:' && IMPORT_IMAGE_HOSTS.indexOf(parsed.origin) >= 0);
+    } catch (error) { return false; }
+  }
+
+  function importNormalize(item, siteUrl, isDraft) {
+    if (!item || typeof item !== 'object') return null;
+    const title = importText(item.title, 300);
+    if (!title) return null;
+    const story = {
+      draft: !!isDraft,
+      title: title,
+      dek: importText(item.dek, 1000),
+      section: importText(item.section, 80),
+      sectionLabel: importText(item.sectionLabel || item.section, 80),
+      areaLabel: importText(item.areaLabel, 80),
+      date: /^\d{4}-\d{2}-\d{2}/.test(String(item.date || '')) ? String(item.date).slice(0, 10) : '',
+      status: isDraft ? (IMPORT_STATUS[item.status] ? item.status : '') : '',
+      agent: !!isDraft && item.source === 'agent',
+      url: '', linkDropped: false, image: '', imageAlt: importText(item.imageAlt, 300), credit: importText(item.photoCredit, 200), imageDropped: false
+    };
+    if (!isDraft) {
+      const url = importText(item.url, 2000);
+      if (url && importSameOrigin(url, siteUrl)) story.url = new URL(url).href;
+      else story.linkDropped = true;
+    }
+    const image = importText(item.image, 2000);
+    if (image) {
+      if (importImageOk(image, siteUrl)) story.image = new URL(image).href;
+      else story.imageDropped = true;
+    }
+    return story;
+  }
+
+  function importEl(id) { return document.getElementById(id); }
+
+  // Invalidates any load in flight (dialog reopened or closed, token forgotten) so a stale response is ignored.
+  function cancelImportLoad() {
+    importGen += 1;
+    if (importController) { try { importController.abort(); } catch (error) {} importController = null; }
+    importBusy = false; syncForgetButtons();
+    const test = document.getElementById('importTestBtn');
+    if (test) test.disabled = false;
+  }
+
+  function updateImportCount() {
+    importEl('importAddBtn').textContent = importTicks.size ? 'Add ' + importTicks.size + ' ticked ' + (importTicks.size === 1 ? 'story' : 'stories') : 'Add ticked stories';
+  }
+
+  function resetImportList(message) {
+    importTicks.clear();
+    updateImportCount();
+    importStories = [];
+    importTestedSite = '';
+    importEl('importList').hidden = true;
+    importEl('importRows').innerHTML = '';
+    if (message) setPublishStatus(message, '', 'importStatus');
+  }
+
+  function openImport() {
+    cancelImportLoad();
+    const settings = readPublishSettings();
+    importEl('importSiteUrl').value = settings.siteUrl;
+    importEl('importToken').value = settings.token;
+    resetImportList();
+    setPublishStatus(settings.token ? 'Press Test connection to load the stories.' : 'Enter the site URL and publish token, then press Test connection.', '', 'importStatus');
+    elements.importDialog.showModal();
+  }
+
+  function importLinkedUrls() {
+    const urls = new Set();
+    Store.getDocument().blocks.forEach(function (block) {
+      if (block.type !== 'story' || !block.link) return;
+      try { urls.add(new URL(String(block.link).trim()).href); } catch (error) {}
+    });
+    return urls;
+  }
+
+  function importShortDate(value) {
+    if (!value) return '';
+    try { return U.formatDate(value); } catch (error) { return value; }
+  }
+
+  function renderImportRows() {
+    const filter = importEl('importSection').value;
+    const host = importEl('importRows');
+    host.innerHTML = '';
+    const linked = importLinkedUrls();
+    let shown = 0;
+    [['Live on the site', false], ['Waiting for review', true]].forEach(function (group) {
+      const list = importStories.map(function (story, index) { return { story: story, index: index }; }).filter(function (entry) {
+        return entry.story.draft === group[1] && (!filter || entry.story.sectionLabel === filter);
+      });
+      if (!list.length) return;
+      const heading = document.createElement('h3');
+      heading.className = 'import-group';
+      heading.textContent = group[0] + ' (' + list.length + ')';
+      host.appendChild(heading);
+      list.forEach(function (entry) {
+        shown += 1;
+        const story = entry.story;
+        const label = document.createElement('label');
+        label.className = 'import-row';
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.dataset.importIndex = String(entry.index);
+        box.checked = importTicks.has(entry.index);
+        label.appendChild(box);
+        if (story.image) {
+          const img = document.createElement('img');
+          img.alt = '';
+          img.loading = 'lazy';
+          img.referrerPolicy = 'no-referrer';
+          img.src = story.image;
+          label.appendChild(img);
+        }
+        const text = document.createElement('span');
+        text.className = 'import-text';
+        const title = document.createElement('span');
+        title.className = 'import-title';
+        title.textContent = story.title;
+        const meta = document.createElement('span');
+        meta.className = 'import-meta';
+        meta.textContent = [story.sectionLabel, importShortDate(story.date)].filter(Boolean).join(' · ');
+        text.appendChild(title);
+        text.appendChild(meta);
+        const flags = [];
+        if (story.draft) flags.push([IMPORT_STATUS[story.status] || 'Draft', false]);
+        if (story.agent) flags.push(['From AI agent', false]);
+        if (story.draft) flags.push(['Not published yet: no link', false]);
+        if (story.url && linked.has(story.url)) flags.push(['Already in this newsletter', true]);
+        if (story.linkDropped) flags.push(['Link not accepted', true]);
+        if (story.imageDropped) flags.push(['Photo not accepted', true]);
+        flags.forEach(function (flag) {
+          const chip = document.createElement('span');
+          chip.className = 'import-flag' + (flag[1] ? ' warn' : '');
+          chip.textContent = flag[0];
+          text.appendChild(chip);
+        });
+        label.appendChild(text);
+        host.appendChild(label);
+      });
+    });
+    if (!shown) {
+      const empty = document.createElement('p');
+      empty.className = 'publish-status';
+      empty.textContent = importStories.length ? 'No stories in this section.' : 'The site has no stories to import yet.';
+      host.appendChild(empty);
+    }
+    importEl('importAddBtn').disabled = !importStories.length;
+    updateImportCount();
+  }
+
+  async function testImportConnection() {
+    if (importBusy) return;
+    const token = importEl('importToken').value.trim();
+    let siteUrl;
+    try {
+      siteUrl = normalizePublishSite(importEl('importSiteUrl').value);
+      if (!token) throw new Error('Enter the publish token.');
+    } catch (error) { setPublishStatus(error.message, 'error', 'importStatus'); return; }
+    importBusy = true; syncForgetButtons();
+    const gen = ++importGen;
+    importEl('importTestBtn').disabled = true;
+    setPublishStatus('Loading stories…', '', 'importStatus');
+    try {
+      const result = await publishRequest('GET', siteUrl, token, null, IMPORT_PATH, function (controller) { importController = controller; });
+      if (gen !== importGen) return;
+      if (result.status !== 200 || !result.data.ok || !Array.isArray(result.data.stories)) {
+        resetImportList();
+        setPublishStatus(publishFailure(result, token), 'error', 'importStatus');
+        return;
+      }
+      const live = result.data.stories.map(function (item) { return importNormalize(item, siteUrl, false); }).filter(Boolean)
+        .sort(function (a, b) { return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
+      const drafts = (Array.isArray(result.data.drafts) ? result.data.drafts : []).map(function (item) { return importNormalize(item, siteUrl, true); }).filter(Boolean);
+      // Ticks are list positions, so a fresh list starts with none.
+      importTicks.clear();
+      importStories = live.concat(drafts);
+      importTestedSite = siteUrl;
+      writePublishSettings({ siteUrl: siteUrl, token: token });
+      renderValidationBadge();
+      const labels = Array.from(new Set(importStories.map(function (story) { return story.sectionLabel; }).filter(Boolean))).sort();
+      const select = importEl('importSection');
+      select.innerHTML = '';
+      const all = document.createElement('option');
+      all.value = ''; all.textContent = 'All sections';
+      select.appendChild(all);
+      labels.forEach(function (label) { const option = document.createElement('option'); option.value = label; option.textContent = label; select.appendChild(option); });
+      importEl('importList').hidden = false;
+      renderImportRows();
+      setPublishStatus('Connected to ' + siteUrl + '. ' + live.length + ' live and ' + drafts.length + ' waiting for review. Tick the stories to add.', 'success', 'importStatus');
+    } catch (error) {
+      if (gen !== importGen) return;
+      resetImportList();
+      setPublishStatus(safePublishMessage(error.message, token), 'error', 'importStatus');
+    } finally {
+      if (gen === importGen) {
+        importController = null;
+        importBusy = false; syncForgetButtons();
+        importEl('importTestBtn').disabled = false;
+      }
+    }
+  }
+
+  function addImportedStories() {
+    if (importBusy || !importTestedSite) return;
+    let siteUrl;
+    try { siteUrl = normalizePublishSite(importEl('importSiteUrl').value); } catch (error) { setPublishStatus(error.message, 'error', 'importStatus'); return; }
+    if (siteUrl !== importTestedSite) { resetImportList('The site URL changed. Press Test connection to load its stories.'); return; }
+    const picked = Array.from(importTicks).sort(function (a, b) { return a - b; }).map(function (index) { return importStories[index]; }).filter(Boolean);
+    if (!picked.length) { setPublishStatus('Tick at least one story to add.', 'error', 'importStatus'); return; }
+    const specs = picked.map(function (story) {
+      const initial = {
+        tag: (story.areaLabel || story.sectionLabel).toUpperCase(),
+        title: story.title,
+        body: story.dek,
+        link: story.draft ? '' : story.url,
+        buttonLabel: story.draft ? '' : 'Read full story',
+        photos: story.image ? [Templates.photo({ url: story.image, alt: story.imageAlt, caption: story.credit ? 'Photo: ' + story.credit : '' })] : []
+      };
+      return { type: 'story', initial: initial };
+    });
+    const blocks = Store.addBlocks(specs, Store.getSelectedId());
+    elements.importDialog.close();
+    toast('Added ' + blocks.length + (blocks.length === 1 ? ' story.' : ' stories.') + (picked.some(function (story) { return story.draft; }) ? ' Drafts have no link yet; Send Check will flag them.' : ''), 'success');
+  }
+
+  function bindImportEvents() {
+    importEl('importCloseBtn').addEventListener('click', function () { elements.importDialog.close(); });
+    importEl('importTestBtn').addEventListener('click', testImportConnection);
+    importEl('importForgetBtn').addEventListener('click', forgetPublishToken);
+    importEl('importAddBtn').addEventListener('click', addImportedStories);
+    importEl('importSection').addEventListener('change', renderImportRows);
+    importEl('importRows').addEventListener('change', function (event) {
+      const box = event.target;
+      if (!box || !box.dataset || box.dataset.importIndex === undefined) return;
+      const index = Number(box.dataset.importIndex);
+      if (box.checked) importTicks.add(index); else importTicks.delete(index);
+      updateImportCount();
+    });
+    elements.importDialog.addEventListener('close', cancelImportLoad);
+    ['importSiteUrl', 'importToken'].forEach(function (id) {
+      importEl(id).addEventListener('keydown', function (event) { if (event.key === 'Enter') { event.preventDefault(); testImportConnection(); } });
+    });
+    importEl('importSiteUrl').addEventListener('input', function () {
+      if (!importTestedSite || importBusy) return;
+      let current = '';
+      try { current = normalizePublishSite(importEl('importSiteUrl').value); } catch (error) { current = ''; }
+      if (current !== importTestedSite) resetImportList('The site URL changed. Press Test connection to load its stories.');
+    });
+    elements.importDialog.addEventListener('cancel', function (event) { if (importBusy) event.preventDefault(); });
+  }
+
+  function bindPublishEvents() {
+    renderConnectionFields();
+    bindImportEvents();
+    purgeLegacyPublishToken();
+    publishEl('publishCloseBtn').addEventListener('click', function () { elements.publishDialog.close(); });
+    publishEl('publishTestBtn').addEventListener('click', testPublishConnection);
+    publishEl('publishForgetBtn').addEventListener('click', forgetPublishToken);
+    publishEl('publishSendBtn').addEventListener('click', sendPublish);
+    ['publishSiteUrl', 'publishToken'].forEach(function (id) {
+      publishEl(id).addEventListener('keydown', function (event) { if (event.key === 'Enter') { event.preventDefault(); testPublishConnection(); } });
+    });
+    publishEl('publishSiteUrl').addEventListener('input', function () {
+      if (!testedOrigin || publishBusy) return;
+      let current = '';
+      try { current = normalizePublishSite(publishEl('publishSiteUrl').value); } catch (error) { current = ''; }
+      if (current !== testedOrigin) resetPublishList('The site URL changed. Press Test connection to load its sections.');
+    });
+    elements.publishDialog.addEventListener('cancel', function (event) { if (publishBusy) event.preventDefault(); });
+    publishEl('publishRows').addEventListener('change', function (event) {
+      if (event.target.dataset.pub === 'section') syncPublishRowAreas(event.target.closest('.publish-row'));
+    });
+  }
+
   function bindEvents() {
+    bindPublishEvents();
     elements.documentNameInput.addEventListener('input', function () {
       const old = Store.getDocument().meta.name;
       Store.patchDocument('meta.name', elements.documentNameInput.value, { source: 'topbar-name', record: false, renderInspector: false });
@@ -4079,6 +5060,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         } catch (error) { toast('Could not recover the previous draft: ' + error.message, 'error'); }
       }
       if (action === 'command') openCommandPalette();
+      if (action === 'publish-site') openPublish();
+      if (action === 'import-site') openImport();
       if (action === 'reset') resetDocument();
     });
 
@@ -4407,6 +5390,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
 })();
 
   </script>
+  <script defer src="tools-nav.js"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"3c36f8ef966a4152b7b096f8437baee2","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
