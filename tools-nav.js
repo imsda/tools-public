@@ -31,7 +31,8 @@
       ['security-camera-quote-generator.html','Security Camera Quote Request']
     ]},
     { section: 'Special Tools', items: [
-      ['imconnected.html','Email Newsletter Builder']
+      ['imconnected.html','Email Newsletter Builder'],
+      ['id-card-generator.html','ID Card Generator']
     ]}
   ];
 

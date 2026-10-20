@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - fonts/AdventSans-Beta.otf  (optional - "Advent Sans" font choice for Template 1 lines; loaded only when chosen)
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    - PDF.js - optional, loaded only when a PDF template is uploaded (PNG/JPG templates work offline):
+        https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js
+        https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ID Card Generator</title>
+  <style>
+    /* Single regular weight; Medium/Bold and italic are synthesized by the browser. */
+    @font-face {
+      font-family: 'Advent Sans';
+      src: url('fonts/AdventSans-Beta.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: block;
+    }
+    :root {
+      --bg: #f4f7f9;
+      --surface: #ffffff;
+      --border: #d6e0e8;
+      --text: #1a2b3c;
+      --muted: #5e7185;
+      --primary: #087E8B;
+      --primary-dark: #0B3954;
+      --error: #a12a3a;
+      --error-bg: #fff1f3;
+      --warn: #7a5300;
+      --warn-bg: #fff8e6;
+      --ok: #1f6b3a;
+      --ok-bg: #ebf8ef;
+      --radius: 14px;
+      --shadow: 0 10px 24px rgba(11, 57, 84, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .app { max-width: 1440px; margin: 0 auto; padding: 1rem; }
+    .hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1rem 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .hero h1 { margin: 0; font-size: clamp(1.3rem, 2.4vw, 1.8rem); color: var(--primary-dark); }
+    .hero p { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.92rem; }
+    .layout { display: grid; gap: 1rem; grid-template-columns: minmax(320px, 420px) 1fr; align-items: start; }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 0.9rem 1rem;
+    }
+    .controls { display: grid; gap: 0.85rem; }
+    .step { border: 1px solid #dfe8ee; border-radius: 12px; padding: 0.7rem 0.75rem; background: #fbfdfe; }
+    .step > h2 { margin: 0 0 0.55rem; font-size: 0.95rem; color: var(--primary-dark); display: flex; gap: 0.45rem; align-items: center; }
+    .step-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 1.45rem; height: 1.45rem; border-radius: 999px;
+      background: var(--primary-dark); color: #fff; font-size: 0.78rem;
+    }
+    .field { margin-bottom: 0.55rem; }
+    .field:last-child { margin-bottom: 0; }
+    label, .label { display: block; font-size: 0.8rem; font-weight: 700; color: #2d4659; margin-bottom: 0.25rem; }
+    .hint { font-size: 0.76rem; color: var(--muted); margin: 0.25rem 0 0; line-height: 1.35; }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      border: 1px solid #bfd0dc;
+      border-radius: 9px;
+      font: inherit;
+      font-size: 0.9rem;
+      padding: 0.45rem 0.55rem;
+      background: #fff;
+      color: var(--text);
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    input[type="color"] { width: 100%; height: 2.1rem; border: 1px solid #bfd0dc; border-radius: 9px; padding: 0.15rem; background: #fff; }
+    input[type="file"] { font-size: 0.82rem; max-width: 100%; }
+    .type-switch { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 0.45rem; }
+    .type-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .type-option span {
+      display: block; text-align: center; padding: 0.55rem 0.4rem; border-radius: 10px;
+      border: 1px solid #c9d8e3; background: #fff; font-weight: 700; font-size: 0.86rem; cursor: pointer;
+    }
+    .type-option span small { display: block; font-weight: 600; color: var(--muted); font-size: 0.72rem; }
+    .type-option input:checked + span { border-color: var(--primary); background: #e6f4f5; color: var(--primary-dark); box-shadow: inset 0 0 0 1px var(--primary); }
+    .type-option input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .btn {
+      border: 1px solid #c9d8e3; border-radius: 999px; padding: 0.45rem 0.85rem; font: inherit;
+      font-size: 0.82rem; font-weight: 700; background: #fff; color: #1f4960; cursor: pointer;
+    }
+    .btn:hover { background: #f1f7fa; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.45rem; }
+    details.advanced summary { cursor: pointer; font-weight: 700; font-size: 0.85rem; color: var(--primary-dark); }
+    details.advanced[open] summary { margin-bottom: 0.5rem; }
+    .file-status { font-size: 0.78rem; color: var(--muted); margin-top: 0.25rem; }
+    .file-status.bad { color: var(--error); font-weight: 700; }
+
+    .results { display: grid; gap: 1rem; }
+    .summary { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; }
+    .chip { display: inline-block; border-radius: 999px; padding: 0.18rem 0.55rem; font-size: 0.74rem; font-weight: 700; border: 1px solid transparent; white-space: nowrap; }
+    .chip.error { background: var(--error-bg); color: var(--error); border-color: #efc3cb; }
+    .chip.warn { background: var(--warn-bg); color: var(--warn); border-color: #ecd59b; }
+    .chip.ok { background: var(--ok-bg); color: var(--ok); border-color: #b9e2c6; }
+    .chip.info { background: #eef4f8; color: #2d4659; border-color: #d3e0e9; }
+    .issues { margin: 0.6rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.3rem; }
+    .issues li { font-size: 0.84rem; padding: 0.4rem 0.55rem; border-radius: 9px; }
+    .issues li.error { background: var(--error-bg); color: var(--error); }
+    .issues li.warn { background: var(--warn-bg); color: var(--warn); }
+    .issues li.info { background: #eef4f8; color: #2d4659; }
+
+    .preview-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; align-items: center; margin-bottom: 0.6rem; }
+    .preview-head h2 { margin: 0; font-size: 1rem; color: var(--primary-dark); }
+    .preview-cards { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; justify-content: center; }
+    .card-face { margin: 0; text-align: center; }
+    .card-face figcaption { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 0.35rem; }
+    .card-face canvas {
+      display: block; border-radius: 12px; background: #fff;
+      box-shadow: 0 6px 18px rgba(11, 57, 84, 0.2), 0 0 0 1px rgba(11, 57, 84, 0.12);
+    }
+    .card-face.landscape { width: min(100%, 405px); }
+    .card-face.portrait { width: min(100%, 255px); }
+    .card-face canvas { width: 100%; height: auto; }
+    .preview-note { font-size: 0.8rem; color: var(--muted); text-align: center; margin: 0.6rem 0 0; }
+    #frontCanvas.can-drag { cursor: grab; touch-action: none; }
+    #frontCanvas.dragging { cursor: grabbing; }
+    .crop-tools { display: none; max-width: 520px; margin: 0.7rem auto 0; padding: 0.55rem 0.7rem; border: 1px solid var(--border, #d6dee5); border-radius: 10px; }
+    .crop-tools.show { display: block; }
+    .crop-tools .grid-3 { align-items: end; }
+    .crop-tools input[type="range"] { width: 100%; }
+    .crop-tools .hint { margin: 0 0 0.4rem; }
+    .preview-issues { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3rem; margin-top: 0.55rem; }
+
+    .table-tools { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+    .table-tools h2 { margin: 0; font-size: 1rem; color: var(--primary-dark); }
+    .check-inline { display: inline-flex; gap: 0.35rem; align-items: center; font-size: 0.82rem; font-weight: 700; color: #2d4659; }
+    .table-wrap { overflow: auto; max-height: 460px; border: 1px solid #e1e9ef; border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th, td { text-align: left; padding: 0.42rem 0.55rem; border-bottom: 1px solid #edf2f6; vertical-align: top; }
+    th { position: sticky; top: 0; background: #f4f8fb; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px; color: #3d566a; z-index: 1; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: #f6fafc; }
+    tbody tr.selected { background: #e6f4f5; }
+    tbody tr.row-error td:first-child { box-shadow: inset 3px 0 0 var(--error); }
+    tbody tr.row-warn td:first-child { box-shadow: inset 3px 0 0 #d9a520; }
+    td .chip { margin: 0 0.2rem 0.2rem 0; }
+    .empty-cell { color: #b0bcc6; font-style: italic; }
+    .empty-state { padding: 1.2rem; text-align: center; color: var(--muted); font-size: 0.9rem; }
+
+    /* Side-by-side layout: the settings column scrolls on its own and stays in view, so the
+       card preview on the right stays visible while settings change. Clears the fixed tools nav. */
+    @media (min-width: 981px) {
+      .controls {
+        position: sticky;
+        top: calc(var(--imsda-nav-h, 0px) + 0.75rem);
+        max-height: calc(100vh - var(--imsda-nav-h, 0px) - 1.5rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+      }
+    }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <h1>ID Card Generator</h1>
+      <p>Merge a CSV and photos onto a CR80 ID card template (3.375&Prime; &times; 2.125&Prime;, 300 dpi), check for missing information, and preview the front and barcode back of every card. Everything stays in this browser; nothing is uploaded.</p>
+    </section>
+
+    <div class="layout">
+      <aside class="panel controls" aria-label="Card setup">
+        <section class="step">
+          <h2><span class="step-num">1</span> Card type</h2>
+          <div class="type-switch" role="radiogroup" aria-label="Card type">
+            <label class="type-option"><input type="radio" name="cardType" value="staff" /><span>Staff<small>Vertical &middot; Name, ID#</small></span></label>
+            <label class="type-option"><input type="radio" name="cardType" value="student" /><span>Student<small>Horizontal &middot; Name, ID#, DoB, Grade</small></span></label>
+            <label class="type-option"><input type="radio" name="cardType" value="template1" /><span>Template 1<small>Horizontal &middot; Name + 3 lines from the CSV + year</small></span></label>
+          </div>
+        </section>
+
+        <section class="step">
+          <h2><span class="step-num">2</span> Data &amp; photos</h2>
+          <div class="field">
+            <label for="csvInput">CSV file</label>
+            <input id="csvInput" type="file" accept=".csv,text/csv" />
+            <div class="file-status" id="csvStatus">No CSV loaded.</div>
+            <p class="hint" id="csvHint"></p>
+            <div class="btn-row"><button class="btn" type="button" id="sampleCsvBtn">Download sample CSV</button><button class="btn" type="button" id="clearCsvBtn">Clear CSV</button></div>
+          </div>
+          <div class="field">
+            <label for="photoInput">Photos</label>
+            <input id="photoInput" type="file" accept="image/*" multiple />
+            <div class="file-status" id="photoStatus">No photos loaded.</div>
+            <p class="hint">Name each photo with the person's ID# (<code>100001.jpg</code>) or name (<code>John Doe.jpg</code>; order, case and punctuation don't matter). ID# is checked first. Select them all at once (you can add more later). JPG or PNG.</p>
+            <div class="btn-row"><button class="btn" type="button" id="clearPhotosBtn">Clear photos</button></div>
+          </div>
+        </section>
+
+        <section class="step">
+          <h2><span class="step-num">3</span> Templates</h2>
+          <div class="field">
+            <label for="frontTemplateInput">Front template (image or PDF)</label>
+            <input id="frontTemplateInput" type="file" accept="image/*,application/pdf,.pdf" />
+            <div class="file-status" id="frontTemplateStatus">Using the built-in template.</div>
+          </div>
+          <div class="field">
+            <label for="backTemplateInput">Back template (image or PDF, optional)</label>
+            <input id="backTemplateInput" type="file" accept="image/*,application/pdf,.pdf" />
+            <div class="file-status" id="backTemplateStatus">Using the built-in back.</div>
+          </div>
+          <p class="hint">PDF templates: page 1 is used. A 2-page PDF uploaded as the front also sets the back from page 2. Reading PDFs needs an internet connection the first time; PNG/JPG work offline.</p>
+          <div class="btn-row">
+            <button class="btn" type="button" id="downloadFrontTemplateBtn">Download front template</button>
+            <button class="btn" type="button" id="downloadBackTemplateBtn">Download back template</button>
+            <button class="btn" type="button" id="resetTemplatesBtn">Use built-in templates</button>
+          </div>
+          <p class="hint" id="templateHint"></p>
+        </section>
+
+        <section class="step">
+          <h2><span class="step-num">4</span> Card text</h2>
+          <div class="field" id="roleField">
+            <label for="roleLine">Line under staff name (optional)</label>
+            <input id="roleLine" type="text" placeholder="e.g. STAFF or FACULTY" />
+          </div>
+          <div class="grid-2">
+            <div class="field"><label for="textColor">Text color</label><input id="textColor" type="color" /></div>
+            <div class="field"><label for="labelColor">Label color</label><input id="labelColor" type="color" /></div>
+          </div>
+          <div class="field">
+            <label for="yearText">School year</label>
+            <input id="yearText" type="text" placeholder="e.g. 2026–2027" />
+          </div>
+          <div id="yearPlacement">
+          <div class="grid-3">
+            <div class="field"><label for="yearX">Year X %</label><input id="yearX" type="number" min="0" max="100" step="0.5" /></div>
+            <div class="field"><label for="yearY">Year Y %</label><input id="yearY" type="number" min="0" max="100" step="0.5" /></div>
+            <div class="field"><label for="yearSize">Year size</label><input id="yearSize" type="number" min="10" max="160" step="1" title="Pixels at 300 dpi" /></div>
+          </div>
+          <div class="grid-3">
+            <div class="field"><label for="yearAlign">Align</label>
+              <select id="yearAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+            </div>
+            <div class="field"><label for="yearColor">Year color</label><input id="yearColor" type="color" /></div>
+            <div class="field"><label for="yearBold">Weight</label>
+              <select id="yearBold"><option value="700">Bold</option><option value="400">Regular</option></select>
+            </div>
+          </div>
+          <p class="hint">X/Y are percentages of the card (0 = left/top). Leave the year blank to hide it.</p>
+          </div>
+          <details class="advanced" id="lineStyleDetails" open>
+            <summary>Text lines: font, size &amp; position</summary>
+            <div class="field"><label for="lsField">Line to adjust</label><select id="lsField"></select></div>
+            <div class="grid-3">
+              <div class="field"><label for="lsFont">Font</label><select id="lsFont"></select></div>
+              <div class="field"><label for="lsSize">Size (pt)</label><input id="lsSize" type="number" min="3" max="30" step="0.25" /></div>
+              <div class="field"><label for="lsWeight">Weight</label>
+                <select id="lsWeight"><option value="400">Regular</option><option value="500">Medium</option><option value="700">Bold</option></select>
+              </div>
+            </div>
+            <div class="grid-3">
+              <div class="field"><label for="lsX">X %</label><input id="lsX" type="number" min="0" max="100" step="0.25" /></div>
+              <div class="field"><label for="lsY">Y % (baseline)</label><input id="lsY" type="number" min="0" max="100" step="0.25" /></div>
+              <div class="field"><label for="lsWidth">Max width %</label><input id="lsWidth" type="number" min="5" max="100" step="0.5" /></div>
+            </div>
+            <div class="grid-3">
+              <div class="field"><label for="lsAlign">Align</label>
+                <select id="lsAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+              </div>
+              <label class="check-inline"><input type="checkbox" id="lsItalic" /> Italic</label>
+              <label class="check-inline" title="Long text breaks onto more lines instead of shrinking"><input type="checkbox" id="lsWrap" /> Wrap</label>
+            </div>
+            <div class="btn-row"><button class="btn" type="button" id="lsResetBtn">Reset this line</button><button class="btn" type="button" id="lsResetAllBtn">Reset all lines</button></div>
+            <p class="hint">X is where the line is anchored (its center when centered), Y is the text baseline, both in % of the card. Text wider than Max width shrinks to fit, or wraps if Wrap is on.</p>
+          </details>
+          <details class="advanced" id="backDetails">
+            <summary>Back of card: barcode &amp; text</summary>
+            <p class="hint" style="margin-top:0;">Barcode placement in % of the card. The ID# prints under the barcode.</p>
+            <div class="grid-2">
+              <div class="field"><label for="barX">Barcode center X %</label><input id="barX" type="number" min="0" max="100" step="0.5" /></div>
+              <div class="field"><label for="barY">Barcode top Y %</label><input id="barY" type="number" min="0" max="100" step="0.5" /></div>
+              <div class="field"><label for="barW">Barcode width %</label><input id="barW" type="number" min="10" max="100" step="1" /></div>
+              <div class="field"><label for="barH">Barcode height %</label><input id="barH" type="number" min="3" max="80" step="0.5" /></div>
+            </div>
+            <div id="staffBackTextFields">
+              <div class="field">
+                <label for="staffBackText">Staff back text (optional)</label>
+                <textarea id="staffBackText" placeholder="e.g. This card is the property of the school. If found, please return to the main office."></textarea>
+              </div>
+              <div class="grid-3">
+                <div class="field"><label for="sbtX">Text X %</label><input id="sbtX" type="number" min="0" max="100" step="0.5" /></div>
+                <div class="field"><label for="sbtY">Text Y %</label><input id="sbtY" type="number" min="0" max="100" step="0.5" /></div>
+                <div class="field"><label for="sbtSize">Text size</label><input id="sbtSize" type="number" min="10" max="120" step="1" title="Pixels at 300 dpi" /></div>
+              </div>
+              <div class="grid-3">
+                <div class="field"><label for="sbtAlign">Align</label>
+                  <select id="sbtAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+                </div>
+                <div class="field"><label for="sbtColor">Color</label><input id="sbtColor" type="color" /></div>
+                <div class="field"><label for="sbtWeight">Weight</label>
+                  <select id="sbtWeight"><option value="400">Regular</option><option value="500">Medium</option><option value="700">Bold</option></select>
+                </div>
+              </div>
+            </div>
+            <div class="btn-row"><button class="btn" type="button" id="resetBackBtn">Reset back placement</button></div>
+          </details>
+          <details class="advanced">
+            <summary>Adjust photo &amp; text placement</summary>
+            <p class="hint" style="margin-top:0;">Only needed if your uploaded template moves the photo frame or text area. Offsets are % of the card.</p>
+            <div class="grid-3">
+              <div class="field"><label for="photoDx">Photo X</label><input id="photoDx" type="number" step="0.25" /></div>
+              <div class="field"><label for="photoDy">Photo Y</label><input id="photoDy" type="number" step="0.25" /></div>
+              <div class="field"><label for="photoScale">Photo size %</label><input id="photoScale" type="number" min="50" max="150" step="1" /></div>
+            </div>
+            <div class="grid-3">
+              <div class="field"><label for="textDx">Text X</label><input id="textDx" type="number" step="0.25" /></div>
+              <div class="field"><label for="textDy">Text Y</label><input id="textDy" type="number" step="0.25" /></div>
+              <div class="field"><label for="textScale">Text size %</label><input id="textScale" type="number" min="50" max="200" step="1" /></div>
+            </div>
+            <div class="field"><label for="photoFocus">Default photo crop (vertical focus %)</label><input id="photoFocus" type="number" min="0" max="100" step="5" title="0 = keep top of photo, 50 = center, 100 = bottom" /></div>
+            <div class="btn-row"><button class="btn" type="button" id="resetLayoutBtn">Reset placement</button></div>
+          </details>
+        </section>
+      </aside>
+
+      <section class="results">
+        <section class="panel" aria-labelledby="checkHeading">
+          <div class="table-tools">
+            <h2 id="checkHeading">Data check</h2>
+            <div class="summary" id="summaryChips"></div>
+          </div>
+          <ul class="issues" id="globalIssues"></ul>
+        </section>
+
+        <section class="panel" aria-labelledby="previewHeading">
+          <div class="preview-head">
+            <h2 id="previewHeading">Preview</h2>
+            <div class="btn-row" style="margin:0;">
+              <button class="btn" type="button" id="prevBtn">&larr; Previous</button>
+              <span class="chip info" id="previewPosition">Sample card</span>
+              <button class="btn" type="button" id="nextBtn">Next &rarr;</button>
+            </div>
+          </div>
+          <div class="preview-cards">
+            <figure class="card-face" id="frontFigure"><canvas id="frontCanvas" aria-label="Card front preview"></canvas><figcaption>Front</figcaption></figure>
+            <figure class="card-face" id="backFigure"><canvas id="backCanvas" aria-label="Card back preview"></canvas><figcaption>Back</figcaption></figure>
+          </div>
+          <div class="crop-tools" id="cropTools">
+            <p class="hint"><strong>Photo in frame:</strong> drag the photo on the front preview to reposition it inside the frame, or use the sliders. Applies to this person's photo only.</p>
+            <div class="grid-3">
+              <div class="field"><label for="cropZoom">Zoom</label><input id="cropZoom" type="range" min="100" max="300" step="1" /></div>
+              <div class="field"><label for="cropX">Left / right</label><input id="cropX" type="range" min="0" max="100" step="0.5" /></div>
+              <div class="field"><label for="cropY">Up / down</label><input id="cropY" type="range" min="0" max="100" step="0.5" /></div>
+            </div>
+            <div class="btn-row" style="margin-bottom:0;"><button class="btn" type="button" id="cropResetBtn">Reset this photo</button></div>
+          </div>
+          <div class="preview-issues" id="previewIssues"></div>
+          <p class="preview-note">Preview renders at CR80 size (1012 &times; 638 px at 300 dpi), the native resolution of Zebra card printers.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="printHeading">
+          <div class="table-tools">
+            <h2 id="printHeading">Print to Zebra card printer</h2>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="printWhich">Cards to print</label>
+              <select id="printWhich">
+                <option value="noErrors">All cards without errors</option>
+                <option value="all">All cards (including errors)</option>
+                <option value="current">Only the card in the preview</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="printSides">Sides</label>
+              <select id="printSides">
+                <option value="both">Front and back (2-sided)</option>
+                <option value="front">Front only</option>
+                <option value="back">Back only</option>
+              </select>
+            </div>
+          </div>
+          <label class="check-inline" style="margin:0.2rem 0 0.3rem;"><input type="checkbox" id="flipBack" /> Flip back side 180&deg; (turn on/off if the back prints upside down relative to the front)</label>
+          <div class="btn-row">
+            <button class="btn" type="button" id="printBtn" style="background:var(--primary-dark);color:#fff;border-color:transparent;">Print cards&hellip;</button>
+            <span class="file-status" id="printStatus" role="status" aria-live="polite"></span>
+          </div>
+          <p class="hint">Opens the print dialog with one CR80 page per card side, in order (front, back, front, back&hellip;). Choose the <strong>ZC300</strong> printer, Paper Size <strong>CR80</strong>, the orientation whose preview shows <strong>wide pages, one per card side</strong> (on the ZC300 Mac driver that is <strong>Portrait</strong>; staff cards are rotated automatically), Scale <strong>100%</strong>, and Margins <strong>None</strong> if your browser shows it.</p>
+          <details class="advanced" style="margin-top:0.5rem;">
+            <summary>Printer setup (Windows &amp; macOS)</summary>
+            <p class="hint" style="margin-top:0;"><strong>One-time setup on each computer:</strong></p>
+            <ol class="hint" style="padding-left:1.1rem;">
+              <li>Download the ZC300 driver from <a href="https://www.zebra.com/zc300-info" target="_blank" rel="noopener">zebra.com/zc300-info</a> (Windows driver, or the ZC100/300 macOS driver).</li>
+              <li><strong>Windows:</strong> run the installer and choose Ethernet/network, then enter the printer's IP address (port 9100 if asked). <strong>macOS:</strong> run the .pkg, then add the printer in System Settings &rarr; Printers &amp; Scanners using its IP address and the Zebra ZC300 driver.</li>
+              <li>In the driver's printing preferences, set <strong>2-sided printing</strong> on if you print fronts and backs (2-sided ZC300 models), and pick the card orientation that keeps each card side on one wide page in the print preview (the ZC300 Mac driver calls this <strong>Portrait</strong>). Staff (vertical) cards are sent already rotated, so the same <span id="orientationHint">setting</span> works for both card types. If the back comes out upside down relative to the front, toggle <strong>Flip back side 180&deg;</strong> above (saved separately for staff and student).</li>
+              <li>Print a test card. If the image is shifted, scaled, or split across two sheets, check Paper Size = CR80, the orientation that shows one wide page per side, Scale = 100%, and Margins = None in the print dialog.</li>
+            </ol>
+            <p class="hint">The browser prints through the installed driver, which talks to the printer at its IP address; the web page itself never connects to the printer.</p>
+          </details>
+        </section>
+
+        <section class="panel" aria-labelledby="recordsHeading">
+          <div class="table-tools">
+            <h2 id="recordsHeading">Cards</h2>
+            <label class="check-inline"><input type="checkbox" id="problemsOnly" /> Show only cards with problems</label>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead id="recordsHead"></thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      /* ---------- Card geometry (CR80 at 300 dpi) ----------
+         Photo and text positions are fractions of the card and match the conference
+         templates (staff circle photo, student rectangle photo), so those templates and
+         the downloadable ones line up without adjustment. */
+      const DPI = 300;
+      const CR80_LONG = Math.round(3.375 * DPI);  // 1013 -> use 1012 for even pixels
+      const CR80_SHORT = Math.round(2.125 * DPI); // 638
+      const SIZES = {
+        staff: { w: CR80_SHORT, h: CR80_LONG - 1 },   // portrait 638 x 1012
+        student: { w: CR80_LONG - 1, h: CR80_SHORT }, // landscape 1012 x 638
+        template1: { w: CR80_LONG - 1, h: CR80_SHORT }
+      };
+      const LAYOUTS = {
+        staff: {
+          photo: { shape: "circle", cx: 0.4924, cy: 0.3775, r: 0.2875 }, // r is a fraction of width
+          name: { x: 0.5, y: 0.655, size: 0.078, align: "center", maxW: 0.9 },
+          role: { y: 0.705, size: 0.046 },
+          id: { y: 0.752, size: 0.044 },
+          year: { x: 50, y: 81.5, size: 34, align: "center" }
+        },
+        student: {
+          photo: { shape: "rect", x: 0.632, y: 0.3224, w: 0.2819, h: 0.5399 },
+          name: { x: 0.063, y: 0.505, size: 0.05, align: "left", maxW: 0.53 },
+          lines: { y: 0.605, step: 0.08, size: 0.031 },
+          year: { x: 6.3, y: 88.5, size: 32, align: "left" }
+        },
+        template1: {
+          // Bottom-left, running to the card edge; a cut-out PNG (transparent background) blends into the template.
+          photo: { shape: "rect", x: 0.004, y: 0.49, w: 0.251, h: 0.51 }
+        }
+      };
+
+      /* ---------- Numbered templates (placement only) ----------
+         General-purpose layouts that hold no wording of their own: the name comes from the
+         CSV name column, line 1, 2, 3... come from the CSV's other columns in column order
+         (whatever their headers), and "year" is the shared school year from step 4. ID#
+         columns are used only to match photos, never printed. To add Template 2: add an entry
+         here, plus SIZES and LAYOUTS entries and a radio option.
+         Positions are fractions of the card (x = anchor, y = text baseline); pt is the font size in
+         points. These are only the defaults: each line's font, size and position can be changed in
+         step 4 ("Text lines") and is saved per template. */
+      const FONT = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+      const SERIF = 'Georgia, "Times New Roman", serif';
+      /* Fonts offered for numbered-template lines (installed on Windows and macOS; others fall back). */
+      const FONT_CHOICES = [
+        { id: "sans", label: "Sans (system)", css: FONT },
+        { id: "advent", label: "Advent Sans", css: '"Advent Sans", ' + FONT, face: "Advent Sans" },
+        { id: "serif", label: "Serif (Georgia)", css: SERIF },
+        { id: "arial", label: "Arial", css: "Arial, Helvetica, sans-serif" },
+        { id: "verdana", label: "Verdana", css: "Verdana, Geneva, sans-serif" },
+        { id: "trebuchet", label: "Trebuchet MS", css: '"Trebuchet MS", "Segoe UI", sans-serif' },
+        { id: "times", label: "Times New Roman", css: '"Times New Roman", Times, serif' },
+        { id: "garamond", label: "Garamond", css: 'Garamond, "Adobe Garamond Pro", "EB Garamond", Georgia, serif' },
+        { id: "palatino", label: "Palatino", css: '"Palatino Linotype", Palatino, "Book Antiqua", serif' },
+        { id: "courier", label: "Courier New", css: '"Courier New", Courier, monospace' }
+      ];
+      const PT_TO_PX = DPI / 72;
+      const FIELD_TYPES = {
+        template1: {
+          label: "Template 1",
+          back: "template", // the back is only the uploaded back template (no barcode)
+          fields: [
+            { key: "name", label: "Name", source: "name", x: 0.5, y: 0.459, pt: 9, weight: 700, family: "sans", maxW: 0.52 },
+            { key: "line1", label: "Line 1", source: "line", index: 0, x: 0.5, y: 0.525, pt: 8.75, weight: 700, family: "serif", maxW: 0.52 },
+            { key: "line2", label: "Line 2", source: "line", index: 1, x: 0.5, y: 0.59, pt: 7.75, weight: 700, family: "serif", maxW: 0.52 },
+            { key: "line3", label: "Line 3", source: "line", index: 2, x: 0.5, y: 0.649, pt: 6, weight: 700, italic: true, family: "sans", maxW: 0.46, wrap: true, lineHeight: 1.5 },
+            { key: "year", label: "Year", source: "year", x: 0.5, y: 0.76, pt: 8, weight: 400, family: "serif", maxW: 0.52 }
+          ],
+          sampleCsv: "Name,Line 1,Line 2,Line 3\nJohn Doe,Line 1 Text,Line 2 Text,Line 3 Text\nJane Doe,Line 1 Text,Line 2 Text,Line 3 Text\n"
+        }
+      };
+      function lineSlots(type) { return FIELD_TYPES[type].fields.filter(f => f.source === "line"); }
+      const CARD_TYPES = ["staff", "student", "template1"];
+      function isFieldType(type) { return !!FIELD_TYPES[type]; }
+      const SETTINGS_KEY = "imsda.idCards.v2"; // v2: blank templates, black text defaults
+
+      const DEFAULT_SETTINGS = {
+        cardType: "student",
+        textColor: "#000000",
+        labelColor: "#000000",
+        roleLine: "",
+        yearText: "",
+        yearColor: "#000000",
+        yearBold: "700",
+        year: { staff: { ...LAYOUTS.staff.year }, student: { ...LAYOUTS.student.year }, template1: { ...LAYOUTS.student.year } },
+        nudge: { staff: defaultNudge(), student: defaultNudge(), template1: defaultNudge() },
+        back: { staff: defaultBack("staff"), student: defaultBack("student"), template1: defaultBack("student") },
+        staffBackText: "",
+        // Rotate the back 180° relative to the front when printing (duplex flip direction).
+        flipBack: { staff: true, student: false, template1: false },
+        staffBackTextStyle: defaultBackTextStyle(),
+        // Numbered templates: font, size and position of each text line (placement only).
+        lineStyle: { template1: defaultLineStyles("template1") }
+      };
+      /* Barcode placement on the back, in % of the card: center X, top Y, width, height. */
+      function defaultBack(type) {
+        return type === "student" ? { barX: 50, barY: 36, barW: 62, barH: 20 } : { barX: 50, barY: 42, barW: 86, barH: 12 };
+      }
+      function defaultBackTextStyle() { return { x: 50, y: 14, size: 30, align: "center", color: "#000000", weight: "500" }; }
+      /* Per-line style for numbered templates: x/y/width in % of the card, size in points. */
+      function defaultLineStyle(field) {
+        return {
+          x: +(field.x * 100).toFixed(2), y: +(field.y * 100).toFixed(2), width: +(field.maxW * 100).toFixed(2),
+          size: field.pt, font: field.family, weight: String(field.weight), italic: !!field.italic,
+          align: field.align || "center", wrap: !!field.wrap
+        };
+      }
+      function defaultLineStyles(type) {
+        const out = {};
+        FIELD_TYPES[type].fields.forEach(f => { out[f.key] = defaultLineStyle(f); });
+        return out;
+      }
+      function defaultNudge() { return { photoDx: 0, photoDy: 0, photoScale: 100, textDx: 0, textDy: 0, textScale: 100, photoFocus: 35 }; }
+
+      /* Only placement, colors and options are remembered; card wording (year, role line,
+         back text) is entered each session and never stored. */
+      const UNSAVED_TEXT = ["roleLine", "yearText", "staffBackText"];
+
+      /* ---------- State ---------- */
+      let settings = loadSettings();
+      const csvByType = { staff: null, student: null, template1: null };   // { fileName, headers, rows, mapping, missingColumns }
+      const photos = new Map();                            // normalized ID -> { file, url, name, image, failed }
+      const templates = { front: { staff: null, student: null, template1: null }, back: { staff: null, student: null, template1: null } }; // Image objects
+      let records = [];
+      let selectedIndex = -1;
+
+      const $ = id => document.getElementById(id);
+      const frontCanvas = $("frontCanvas");
+      const backCanvas = $("backCanvas");
+
+      /* ---------- Settings persistence (no CSV data or photos are stored) ---------- */
+      function loadSettings() {
+        let saved = null;
+        try { saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null"); } catch (_) { saved = null; }
+        const base = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+        if (!saved || typeof saved !== "object") return base;
+        Object.keys(base).forEach(key => {
+          if (["year", "nudge", "back", "staffBackTextStyle", "flipBack", "lineStyle"].includes(key) || UNSAVED_TEXT.includes(key)) return;
+          if (typeof saved[key] === typeof base[key]) base[key] = saved[key];
+        });
+        CARD_TYPES.forEach(type => {
+          if (saved.year && saved.year[type]) Object.assign(base.year[type], pickNumbers(saved.year[type], ["x", "y", "size"]), saved.year[type].align ? { align: String(saved.year[type].align) } : {});
+          if (saved.nudge && saved.nudge[type]) Object.assign(base.nudge[type], pickNumbers(saved.nudge[type], Object.keys(defaultNudge())));
+          if (saved.flipBack && typeof saved.flipBack[type] === "boolean") base.flipBack[type] = saved.flipBack[type];
+          if (saved.back && saved.back[type]) Object.assign(base.back[type], pickNumbers(saved.back[type], ["barX", "barY", "barW", "barH"]));
+        });
+        if (saved.staffBackTextStyle && typeof saved.staffBackTextStyle === "object") {
+          const s = saved.staffBackTextStyle;
+          Object.assign(base.staffBackTextStyle, pickNumbers(s, ["x", "y", "size"]));
+          if (["left", "center", "right"].includes(s.align)) base.staffBackTextStyle.align = s.align;
+          if (/^#[0-9a-f]{6}$/i.test(s.color)) base.staffBackTextStyle.color = s.color;
+          if (["400", "500", "700"].includes(s.weight)) base.staffBackTextStyle.weight = s.weight;
+        }
+        Object.keys(base.lineStyle).forEach(type => {
+          const savedType = saved.lineStyle && saved.lineStyle[type];
+          if (!savedType || typeof savedType !== "object") return;
+          Object.keys(base.lineStyle[type]).forEach(key => {
+            const v = savedType[key];
+            if (!v || typeof v !== "object") return;
+            const st = base.lineStyle[type][key];
+            Object.assign(st, pickNumbers(v, ["x", "y", "width", "size"]));
+            if (FONT_CHOICES.some(f => f.id === v.font)) st.font = v.font;
+            if (["400", "500", "700"].includes(v.weight)) st.weight = v.weight;
+            if (["left", "center", "right"].includes(v.align)) st.align = v.align;
+            if (typeof v.italic === "boolean") st.italic = v.italic;
+            if (typeof v.wrap === "boolean") st.wrap = v.wrap;
+          });
+        });
+        if (!CARD_TYPES.includes(base.cardType)) base.cardType = "student";
+        return base;
+      }
+      function pickNumbers(obj, keys) {
+        const out = {};
+        keys.forEach(k => { const n = Number(obj[k]); if (Number.isFinite(n)) out[k] = n; });
+        return out;
+      }
+      function saveSettings() {
+        const stored = { ...settings };
+        UNSAVED_TEXT.forEach(key => delete stored[key]);
+        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(stored)); } catch (_) { /* storage unavailable */ }
+      }
+
+      /* ---------- CSV ---------- */
+      function parseCsv(text) {
+        const rows = [];
+        let row = [];
+        let field = "";
+        let inQuotes = false;
+        const src = text.replace(/^﻿/, "");
+        for (let i = 0; i < src.length; i += 1) {
+          const ch = src[i];
+          if (inQuotes) {
+            if (ch === '"') {
+              if (src[i + 1] === '"') { field += '"'; i += 1; } else inQuotes = false;
+            } else field += ch;
+          } else if (ch === '"') inQuotes = true;
+          else if (ch === ",") { row.push(field); field = ""; }
+          else if (ch === "\n" || ch === "\r") {
+            if (ch === "\r" && src[i + 1] === "\n") i += 1;
+            row.push(field); rows.push(row); row = []; field = "";
+          } else field += ch;
+        }
+        if (field !== "" || row.length) { row.push(field); rows.push(row); }
+        return rows;
+      }
+
+      const COLUMN_ALIASES = {
+        name: ["name", "fullname", "studentname", "staffname", "employeename", "displayname", "personname"],
+        first: ["firstname", "first", "fname", "givenname", "preferredname"],
+        last: ["lastname", "last", "lname", "surname", "familyname"],
+        id: ["id", "idnumber", "idno", "idnum", "studentid", "staffid", "employeeid", "employeenumber", "studentnumber", "badgeid", "badgenumber", "number"],
+        dob: ["dob", "dateofbirth", "birthdate", "birthday", "birth"],
+        grade: ["grade", "gradelevel", "gr", "class"]
+      };
+      function normalizeHeader(h) { return String(h || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+      function detectColumns(headers) {
+        const norm = headers.map(normalizeHeader);
+        const find = key => norm.findIndex(h => COLUMN_ALIASES[key].includes(h));
+        const mapping = { name: find("name"), first: find("first"), last: find("last"), id: find("id"), dob: find("dob"), grade: find("grade") };
+        // Numbered templates: every other non-empty column, in order, fills line 1, 2, 3...
+        const used = [mapping.name, mapping.first, mapping.last, mapping.id];
+        mapping.lines = headers.map((h, i) => i).filter(i => !used.includes(i) && String(headers[i]).trim() !== "");
+        return mapping;
+      }
+
+      function loadCsvText(text, fileName, type) {
+        const rows = parseCsv(text).filter(r => r.some(cell => String(cell).trim() !== ""));
+        if (!rows.length) {
+          csvByType[type] = { fileName, headers: [], rows: [], mapping: null, error: "The CSV file is empty." };
+          return;
+        }
+        const headers = rows[0].map(h => String(h).trim());
+        const mapping = detectColumns(headers);
+        csvByType[type] = { fileName, headers, rows: rows.slice(1), mapping, error: "" };
+      }
+
+      function cell(row, idx) { return idx >= 0 ? String(row[idx] == null ? "" : row[idx]).trim() : ""; }
+
+      function buildRecords() {
+        const type = settings.cardType;
+        const csv = csvByType[type];
+        if (!csv || !csv.mapping) return [];
+        const m = csv.mapping;
+        return csv.rows.map((row, i) => {
+          const fullName = m.name >= 0 ? cell(row, m.name) : [cell(row, m.first), cell(row, m.last)].filter(Boolean).join(" ");
+          return {
+            rowNumber: i + 2, // header is row 1
+            name: fullName.replace(/\s+/g, " "),
+            id: cell(row, m.id),
+            dob: type === "student" ? cell(row, m.dob) : "",
+            grade: type === "student" ? cell(row, m.grade) : "",
+            lines: isFieldType(type) ? m.lines.map(idx => cell(row, idx)) : [],
+            issues: []
+          };
+        });
+      }
+
+      /* ---------- Photos ---------- */
+      function photoKey(value) { return String(value || "").trim().toLowerCase(); }
+      function strippedKey(value) { return photoKey(value).replace(/^0+(?=\d)/, ""); }
+      /* Photo matching: by ID# (file named with the ID#, or containing it as a separate
+         token, e.g. "100001_John.jpg"), otherwise by name ("John Doe.jpg",
+         "doe_john.jpg", "Doe, John.jpg"; order, case, punctuation and accents
+         are ignored, and a CSV middle name may be missing from the file name). */
+      function nameTokens(value) {
+        return String(value || "")
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .split(/[^a-z]+/)
+          .filter(Boolean);
+      }
+      function idTokens(value) {
+        return String(value || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+      }
+      function photoMatchesId(photo, id) {
+        if (!id) return false;
+        const idKey = photoKey(id);
+        if (photo.key === idKey || strippedKey(photo.key) === strippedKey(idKey)) return true;
+        return idTokens(photo.key).some(token => /\d/.test(token) && (token === idKey || strippedKey(token) === strippedKey(idKey)));
+      }
+      function photoMatchesName(photo, name) {
+        const person = nameTokens(name);
+        if (person.length < 2) return false; // a single word is too ambiguous to match on
+        const file = new Set(nameTokens(photo.key));
+        if (!file.size) return false;
+        const sameSet = file.size === new Set(person).size && person.every(token => file.has(token));
+        const firstLast = file.size === 2 && file.has(person[0]) && file.has(person[person.length - 1]);
+        return sameSet || firstLast;
+      }
+      function addPhotos(fileList) {
+        Array.from(fileList || []).forEach(file => {
+          const base = file.name.replace(/\.[^.]+$/, "");
+          const key = photoKey(base);
+          const existing = photos.get(key);
+          if (existing) URL.revokeObjectURL(existing.url);
+          const unsupported = /\.(heic|heif|tif|tiff)$/i.test(file.name);
+          photos.set(key, { key, file, name: file.name, url: URL.createObjectURL(file), image: null, failed: unsupported, unsupported, loading: null });
+        });
+      }
+      function loadPhotoImage(photo) {
+        if (photo.image || photo.failed) return Promise.resolve(photo);
+        if (!photo.loading) {
+          photo.loading = new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => { photo.image = img; resolve(photo); };
+            img.onerror = () => { photo.failed = true; resolve(photo); };
+            img.src = photo.url;
+          });
+        }
+        return photo.loading;
+      }
+
+      /* ---------- Validation ---------- */
+      function issue(level, text) { return { level, text }; }
+      function canEncode(id) { return /^[\x20-\x7E]+$/.test(id); }
+
+      function validate() {
+        const type = settings.cardType;
+        const csv = csvByType[type];
+        const global = [];
+        records = buildRecords();
+
+        if (!csv) {
+          global.push(issue("warn", `Load a ${type} CSV to create cards. Until then the preview shows a sample card.`));
+        } else if (csv.error) {
+          global.push(issue("error", csv.error));
+        } else {
+          const m = csv.mapping;
+          if (m.id < 0 && !isFieldType(type)) global.push(issue("error", `No ID# column found. Add a column named "ID" or "ID#". Columns found: ${csv.headers.join(", ") || "(none)"}.`));
+          if (m.name < 0 && m.first < 0 && m.last < 0) global.push(issue("error", `No Name column found. Add a column named "Name" (or "First Name" and "Last Name"). Columns found: ${csv.headers.join(", ") || "(none)"}.`));
+          if (type === "student" && m.dob < 0) global.push(issue("warn", 'No date of birth column found (expected "DoB" or "Date of Birth").'));
+          if (type === "student" && m.grade < 0) global.push(issue("warn", 'No Grade column found.'));
+          if (isFieldType(type)) {
+            const slots = lineSlots(type).length;
+            const lineCols = m.lines.map(idx => csv.headers[idx]);
+            if (lineCols.length) global.push(issue("info", `Lines from the CSV, in order: ${lineCols.slice(0, slots).map((h, i) => `${i + 1} = ${h}`).join(", ")}.`));
+            if (lineCols.length > slots) global.push(issue("warn", `${FIELD_TYPES[type].label} has ${slots} lines; these columns are not printed: ${lineCols.slice(slots).join(", ")}.`));
+          }
+        }
+
+        const idCounts = new Map();
+        records.forEach(r => { if (r.id) idCounts.set(photoKey(r.id), (idCounts.get(photoKey(r.id)) || 0) + 1); });
+        const matchedPhotoKeys = new Set();
+        const allPhotos = [...photos.values()];
+        // How many people each photo's file name matches by name (to catch ambiguous names).
+        const nameClaims = new Map();
+        records.forEach(r => allPhotos.forEach(p => {
+          if (photoMatchesName(p, r.name)) nameClaims.set(p.key, (nameClaims.get(p.key) || 0) + 1);
+        }));
+
+        records.forEach(r => {
+          if (isFieldType(type)) {
+            // Numbered templates don't need an ID# (photos can still be named by ID# if the CSV has one).
+            if (!r.name) r.issues.push(issue("error", "Missing name"));
+            const headers = csv ? csv.headers : [];
+            lineSlots(type).forEach(f => {
+              const idx = csv && csv.mapping ? csv.mapping.lines[f.index] : undefined;
+              if (idx !== undefined && !r.lines[f.index]) r.issues.push(issue("warn", `Blank ${headers[idx]}`));
+            });
+          } else {
+            if (!r.name && r.id) r.issues.push(issue("error", "Missing name"));
+            if (r.name && !r.id) r.issues.push(issue("warn", "Missing ID# (no barcode)"));
+            if (!r.name && !r.id) r.issues.push(issue("error", "Missing name and ID#"));
+          }
+          if (r.id && idCounts.get(photoKey(r.id)) > 1) r.issues.push(issue("error", "Duplicate ID#"));
+          if (r.id && !isFieldType(type) && !canEncode(r.id)) r.issues.push(issue("error", "ID# has characters a barcode can't encode"));
+          if (type === "student") {
+            if (!r.dob && csv && csv.mapping && csv.mapping.dob >= 0) r.issues.push(issue("warn", "Missing DoB"));
+            if (!r.grade && csv && csv.mapping && csv.mapping.grade >= 0) r.issues.push(issue("warn", "Missing grade"));
+          }
+          let photo = null;
+          r.photoMatch = "";
+          const byId = r.id ? allPhotos.filter(p => photoMatchesId(p, r.id)) : [];
+          const byName = byId.length ? [] : allPhotos.filter(p => photoMatchesName(p, r.name));
+          if (byId.length) {
+            photo = byId.find(p => p.key === photoKey(r.id)) || byId[0];
+            r.photoMatch = "ID#";
+            if (byId.length > 1) r.issues.push(issue("warn", `${byId.length} photos match this ID#; using ${photo.name}`));
+          } else if (byName.length === 1 && nameClaims.get(byName[0].key) === 1) {
+            photo = byName[0];
+            r.photoMatch = "name";
+          } else if (byName.length > 1) {
+            r.issues.push(issue("error", `${byName.length} photos match this name (${byName.map(p => p.name).join(", ")}); rename one with the ID#`));
+            byName.forEach(p => matchedPhotoKeys.add(p.key));
+          } else if (byName.length === 1) {
+            r.issues.push(issue("error", `Photo ${byName[0].name} matches more than one person's name; rename it with the ID#`));
+            matchedPhotoKeys.add(byName[0].key);
+          }
+          r.photo = photo;
+          if (photo) {
+            matchedPhotoKeys.add(photo.key);
+            if (photo.unsupported) r.issues.push(issue("error", "Photo format not supported (convert to JPG)"));
+            else if (photo.failed) r.issues.push(issue("error", "Photo could not be read"));
+          } else if ((r.id || r.name) && !r.issues.some(i => i.text.includes("photos match") || i.text.includes("matches more than one"))) {
+            r.issues.push(issue("warn", "No photo"));
+          }
+        });
+
+        const orphanPhotos = [...photos.values()].filter(p => !matchedPhotoKeys.has(p.key));
+        if (records.length && orphanPhotos.length) {
+          global.push(issue("warn", `${orphanPhotos.length} photo${orphanPhotos.length === 1 ? "" : "s"} with no matching ID# or name in the CSV: ${orphanPhotos.slice(0, 12).map(p => p.name).join(", ")}${orphanPhotos.length > 12 ? ", …" : ""}`));
+        }
+        return global;
+      }
+
+      function recordLevel(r) {
+        if (r.issues.some(i => i.level === "error")) return "error";
+        if (r.issues.some(i => i.level === "warn")) return "warn";
+        return "ok";
+      }
+
+      /* ---------- Code 128 barcode ---------- */
+      const CODE128_PATTERNS = [
+        "212222", "222122", "222221", "121223", "121322", "131222", "122213", "122312", "132212", "221213",
+        "221312", "231212", "112232", "122132", "122231", "113222", "123122", "123221", "223211", "221132",
+        "221231", "213212", "223112", "312131", "311222", "321122", "321221", "312212", "322112", "322211",
+        "212123", "212321", "232121", "111323", "131123", "131321", "112313", "132113", "132311", "211313",
+        "231113", "231311", "112133", "112331", "132131", "113123", "113321", "133121", "313121", "211331",
+        "231131", "213113", "213311", "213131", "311123", "311321", "331121", "312113", "312311", "332111",
+        "314111", "221411", "431111", "111224", "111422", "121124", "121421", "141122", "141221", "112214",
+        "112412", "122114", "122411", "142112", "142211", "241211", "221114", "413111", "241112", "134111",
+        "111242", "121142", "121241", "114212", "124112", "124211", "411212", "421112", "421211", "212141",
+        "214121", "412121", "111143", "111341", "131141", "114113", "114311", "411113", "411311", "113141",
+        "114131", "311141", "411131", "211412", "211214", "211232", "2331112"
+      ];
+      const START_B = 104, START_C = 105, CODE_B = 100, CODE_C = 99, STOP = 106;
+
+      /* Encode with Code Set C for runs of digits (denser) and Code Set B otherwise. */
+      function encodeCode128(text) {
+        const values = [];
+        const isDigitRun = (s, i, len) => i + len <= s.length && /^\d+$/.test(s.slice(i, i + len));
+        let i = 0;
+        let set = null;
+        const startC = isDigitRun(text, 0, 4) || (text.length === 2 && isDigitRun(text, 0, 2));
+        if (startC) { values.push(START_C); set = "C"; } else { values.push(START_B); set = "B"; }
+        while (i < text.length) {
+          if (set === "C") {
+            if (isDigitRun(text, i, 2)) { values.push(Number(text.slice(i, i + 2))); i += 2; continue; }
+            values.push(CODE_B); set = "B"; continue;
+          }
+          // Switch to C when a run of 4+ digits starts (and covers an even count) to save space.
+          let run = 0;
+          while (i + run < text.length && /\d/.test(text[i + run])) run += 1;
+          if (run >= 4 && (run % 2 === 0 || i + run === text.length)) {
+            if (run % 2 === 1) { values.push(text.charCodeAt(i) - 32); i += 1; }
+            values.push(CODE_C); set = "C"; continue;
+          }
+          const code = text.charCodeAt(i);
+          if (code < 32 || code > 126) throw new Error("Unsupported character in barcode value");
+          values.push(code - 32);
+          i += 1;
+        }
+        let checksum = values[0];
+        for (let k = 1; k < values.length; k += 1) checksum += values[k] * k;
+        values.push(checksum % 103);
+        values.push(STOP);
+        return values.map(v => CODE128_PATTERNS[v]).join("");
+      }
+
+      /* Draws bars (with 10-module quiet zones on a white box) centered at cx. */
+      function drawBarcode(ctx, text, cx, top, maxWidth, height) {
+        let pattern;
+        try { pattern = encodeCode128(text); } catch (_) { return false; }
+        const modules = pattern.split("").reduce((sum, d) => sum + Number(d), 0);
+        const quiet = 10;
+        const moduleWidth = Math.max(2, Math.floor(maxWidth / (modules + quiet * 2)));
+        const totalWidth = (modules + quiet * 2) * moduleWidth;
+        const left = Math.round(cx - totalWidth / 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(left, top, totalWidth, height);
+        ctx.fillStyle = "#000000";
+        let x = left + quiet * moduleWidth;
+        pattern.split("").forEach((digit, index) => {
+          const w = Number(digit) * moduleWidth;
+          if (index % 2 === 0) ctx.fillRect(x, top, w, height);
+          x += w;
+        });
+        return true;
+      }
+
+      /* ---------- Drawing helpers ---------- */
+      function font(weight, size, style) { return `${style || ""} ${weight} ${Math.round(size)}px ${FONT}`.trim(); }
+      function fitText(ctx, text, weight, size, maxWidth, minScale) {
+        let s = size;
+        const floor = size * (minScale || 0.55);
+        ctx.font = font(weight, s);
+        while (s > floor && ctx.measureText(text).width > maxWidth) { s -= 1; ctx.font = font(weight, s); }
+        return s;
+      }
+      /* Fill the frame with the photo (never stretched). focusX/focusY (0-100) pick which part
+         of the photo shows when it overflows the frame; zoom (>= 100) enlarges it inside the frame. */
+      function coverScale(img, w, h, zoom) {
+        return Math.max(w / img.naturalWidth, h / img.naturalHeight) * Math.max(1, (zoom || 100) / 100);
+      }
+      function drawImageCover(ctx, img, x, y, w, h, focusX, focusY, zoom) {
+        const scale = coverScale(img, w, h, zoom);
+        const sw = w / scale;
+        const sh = h / scale;
+        const clamp = v => Math.max(0, Math.min(100, v));
+        const sx = (img.naturalWidth - sw) * (clamp(focusX) / 100);
+        const sy = (img.naturalHeight - sh) * (clamp(focusY) / 100);
+        ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+      }
+      /* Per-photo position/zoom inside the frame (kept with the photo in memory). */
+      function photoCrop(type, photo) {
+        const c = (photo && photo.crop) || {};
+        return { x: c.x != null ? c.x : 50, y: c.y != null ? c.y : settings.nudge[type].photoFocus, zoom: c.zoom || 100 };
+      }
+      function drawSilhouette(ctx, x, y, w, h, color) {
+        ctx.save();
+        ctx.fillStyle = color;
+        const cx = x + w / 2;
+        const headR = Math.min(w, h) * 0.19;
+        ctx.beginPath();
+        ctx.arc(cx, y + h * 0.4, headR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx, y + h * 0.4 + headR * 3.1, headR * 2.05, headR * 1.75, 0, Math.PI, 0);
+        ctx.fill();
+        ctx.restore();
+      }
+      function wrapLines(ctx, text, maxWidth) {
+        const out = [];
+        String(text || "").split(/\r?\n/).forEach(paragraph => {
+          const words = paragraph.split(/\s+/).filter(Boolean);
+          let line = "";
+          words.forEach(word => {
+            const test = line ? `${line} ${word}` : word;
+            if (ctx.measureText(test).width > maxWidth && line) { out.push(line); line = word; } else line = test;
+          });
+          out.push(line);
+        });
+        return out;
+      }
+      /* Uploaded templates are never stretched: they are scaled evenly to cover the card
+         and centered (edges trimmed if the proportions differ). Photo placement uses the
+         same mapping so the photo stays inside the template's frame and circles stay round. */
+      function templateBox(type, tpl) {
+        const { w: W, h: H } = SIZES[type];
+        if (!tpl) return { x: 0, y: 0, w: W, h: H };
+        const scale = Math.max(W / tpl.naturalWidth, H / tpl.naturalHeight);
+        const w = tpl.naturalWidth * scale;
+        const h = tpl.naturalHeight * scale;
+        return { x: (W - w) / 2, y: (H - h) / 2, w, h };
+      }
+      function drawTemplate(ctx, type, tpl) {
+        const { w: W, h: H } = SIZES[type];
+        const box = templateBox(type, tpl);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, W, H);
+        ctx.drawImage(tpl, box.x, box.y, box.w, box.h);
+      }
+      function photoRect(type) {
+        const { w: W, h: H } = SIZES[type];
+        const n = settings.nudge[type];
+        const p = LAYOUTS[type].photo;
+        const scale = n.photoScale / 100;
+        const box = templateBox(type, templates.front[type]);
+        const dx = (n.photoDx / 100) * W;
+        const dy = (n.photoDy / 100) * H;
+        if (p.shape === "circle") {
+          const r = p.r * box.w * scale;
+          const cx = box.x + p.cx * box.w + dx;
+          const cy = box.y + p.cy * box.h + dy;
+          return { shape: "circle", cx, cy, rx: r, ry: r, x: cx - r, y: cy - r, w: r * 2, h: r * 2 };
+        }
+        const w = p.w * box.w * scale;
+        const h = p.h * box.h * scale;
+        const x = box.x + p.x * box.w + (p.w * box.w - w) / 2 + dx;
+        const y = box.y + p.y * box.h + (p.h * box.h - h) / 2 + dy;
+        return { shape: "rect", x, y, w, h };
+      }
+
+      /* ---------- Built-in / downloadable templates ----------
+         Intentionally blank: white card with light dashed guides showing where the photo,
+         name/details, year and barcode go. Design on top of the downloaded file (or use your
+         own) and upload it to add color, logos, or text. */
+      const GUIDE = "#b9c3cc";
+      function guideBox(ctx, x, y, w, h, label, round) {
+        ctx.save();
+        ctx.strokeStyle = GUIDE;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([14, 10]);
+        ctx.beginPath();
+        if (round) ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+        else ctx.rect(x, y, w, h);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = GUIDE;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = font(600, Math.max(18, Math.min(w, h) * 0.11));
+        ctx.fillText(label, x + w / 2, y + h / 2);
+        ctx.restore();
+      }
+      function textGuide(type) {
+        const { w: W, h: H } = SIZES[type];
+        const L = LAYOUTS[type];
+        if (type === "staff") {
+          const top = (L.name.y - L.name.size * 1.25 * W / H) * H;
+          return { x: W * 0.05, y: top, w: W * 0.9, h: L.id.y * H + W * 0.02 - top, label: "Name / ID#" };
+        }
+        const top = (L.name.y - L.name.size * 1.2 * W / H) * H;
+        const bottom = (L.lines.y + L.lines.step * 2) * H + W * 0.012;
+        return { x: L.name.x * W - W * 0.012, y: top, w: L.name.maxW * W + W * 0.024, h: bottom - top, label: "Name / ID# / DoB / Grade" };
+      }
+
+      function placeholderRecord(type) {
+        return {
+          sample: true, name: "Name", id: "", dob: "", grade: "",
+          lines: lineSlots(type).map(f => `Text on line ${f.index + 1}${f.wrap ? " (long text wraps onto a second line)" : ""}`), yearText: "School year", issues: []
+        };
+      }
+
+      /* guides: which placement guides to draw (all by default, e.g. for the download).
+         The preview passes only the guides whose area is still empty. */
+      function drawBuiltInFront(ctx, type, guides) {
+        const { w: W, h: H } = SIZES[type];
+        const show = guides || { photo: true, text: true, year: true };
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, W, H);
+        const p = LAYOUTS[type].photo;
+        if (show.photo) {
+          if (p.shape === "circle") guideBox(ctx, (p.cx - p.r) * W, p.cy * H - p.r * W, p.r * 2 * W, p.r * 2 * W, "Photo", true);
+          else guideBox(ctx, p.x * W, p.y * H, p.w * W, p.h * H, "Photo", false);
+        }
+        if (show.text && isFieldType(type)) {
+          // Sample wording in each line's font, size and position so a template can be designed around it.
+          drawFields(ctx, type, placeholderRecord(type), "#8a96a3");
+        } else if (show.text) {
+          const g = textGuide(type);
+          guideBox(ctx, g.x, g.y, g.w, g.h, g.label, false);
+        }
+        if (!show.year || isFieldType(type)) return;
+        const y = LAYOUTS[type].year;
+        const yw = type === "staff" ? W * 0.5 : W * 0.3;
+        const yh = y.size * 1.5;
+        const yx = y.align === "center" ? (y.x / 100) * W - yw / 2 : (y.x / 100) * W - W * 0.012;
+        guideBox(ctx, yx, (y.y / 100) * H - y.size * 1.05, yw, yh, "Year", false);
+      }
+
+      function drawBuiltInBack(ctx, type, withGuides) {
+        const { w: W, h: H } = SIZES[type];
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, W, H);
+        if (withGuides === false) return;
+        if (isFieldType(type) && FIELD_TYPES[type].back === "template") {
+          guideBox(ctx, W * 0.06, H * 0.1, W * 0.88, H * 0.8, "Back template", false);
+          return;
+        }
+        const B = backLayout(type);
+        guideBox(ctx, B.cx - B.barW / 2, B.barTop, B.barW, B.idY - B.barTop + B.idSize * 0.35, "Barcode + ID#", false);
+      }
+
+      function backLayout(type) {
+        const { w: W, h: H } = SIZES[type];
+        const b = settings.back[type];
+        const idSize = type === "student" ? H * 0.055 : W * 0.055;
+        const barTop = (b.barY / 100) * H;
+        const barH = Math.max(20, (b.barH / 100) * H);
+        return { cx: (b.barX / 100) * W, barTop, barH, barW: Math.max(60, (b.barW / 100) * W), idY: barTop + barH + idSize * 1.05, idSize };
+      }
+
+      /* ---------- Card rendering ---------- */
+      function formatDob(value) {
+        const v = String(value || "").trim();
+        const iso = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (iso) return `${iso[2].padStart(2, "0")}/${iso[3].padStart(2, "0")}/${iso[1]}`;
+        return v;
+      }
+
+      /* Numbered templates: the text for one slot (nothing is built in). */
+      function fieldValue(type, field, record) {
+        if (field.source === "name") return record.name || "";
+        if (field.source === "year") return record.yearText != null ? record.yearText : settings.yearText.trim();
+        return (record.lines && record.lines[field.index]) || "";
+      }
+      function fieldFont(field, size) {
+        const choice = FONT_CHOICES.find(f => f.id === field.font) || FONT_CHOICES[0];
+        return `${field.italic ? "italic " : ""}${field.weight} ${Math.round(size)}px ${choice.css}`;
+      }
+      /* A field's definition merged with its saved line style. */
+      function styledField(type, field) {
+        const st = (settings.lineStyle[type] && settings.lineStyle[type][field.key]) || defaultLineStyle(field);
+        return {
+          ...field, x: st.x / 100, y: st.y / 100, maxW: st.width / 100, size: st.size * PT_TO_PX,
+          font: st.font, weight: st.weight, italic: st.italic, align: st.align, wrap: st.wrap, lineHeight: field.lineHeight || 1.3
+        };
+      }
+      function fitFieldLine(ctx, field, text, size, maxWidth) {
+        let s = size;
+        ctx.font = fieldFont(field, s);
+        while (s > size * 0.55 && ctx.measureText(text).width > maxWidth) { s -= 1; ctx.font = fieldFont(field, s); }
+      }
+      /* Web fonts (e.g. Advent Sans) load on first use; redraw the preview once they're ready.
+         Printing waits for them in printCards. */
+      const fontLoads = new Map();
+      function fontsReady(type) {
+        if (!document.fonts || !isFieldType(type)) return Promise.resolve();
+        const faces = new Set(FIELD_TYPES[type].fields
+          .map(f => FONT_CHOICES.find(c => c.id === styledField(type, f).font))
+          .filter(c => c && c.face).map(c => c.face));
+        return Promise.all([...faces].map(face => {
+          if (!fontLoads.has(face)) fontLoads.set(face, document.fonts.load(`400 40px "${face}"`).catch(() => []));
+          return fontLoads.get(face);
+        }));
+      }
+      /* Fonts with a single weight file (Advent Sans) get Medium/Bold by outlining the text. */
+      function fillFieldText(ctx, field, text, x, y, size) {
+        ctx.fillText(text, x, y);
+        const choice = FONT_CHOICES.find(f => f.id === field.font);
+        const extra = choice && choice.face ? { 500: 0.02, 700: 0.045 }[field.weight] : 0;
+        if (!extra) return;
+        ctx.save();
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineJoin = "round";
+        ctx.lineWidth = size * extra;
+        ctx.strokeText(text, x, y);
+        ctx.restore();
+      }
+      function drawFields(ctx, type, record, color) {
+        const { w: W, h: H } = SIZES[type];
+        const n = settings.nudge[type];
+        const scale = n.textScale / 100;
+        const dx = (n.textDx / 100) * W;
+        const dy = (n.textDy / 100) * H;
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = color || settings.textColor;
+        FIELD_TYPES[type].fields.map(f => styledField(type, f)).forEach(field => {
+          const text = fieldValue(type, field, record);
+          if (!text) return;
+          const size = field.size * scale;
+          const maxWidth = field.maxW * W;
+          const x = field.x * W + dx;
+          const y = field.y * H + dy;
+          ctx.textAlign = field.align || "center";
+          if (field.wrap) {
+            ctx.font = fieldFont(field, size);
+            wrapLines(ctx, text, maxWidth).forEach((line, idx) => {
+              fitFieldLine(ctx, field, line, size, maxWidth);
+              fillFieldText(ctx, field, line, x, y + idx * size * field.lineHeight, size);
+            });
+          } else {
+            fitFieldLine(ctx, field, text, size, maxWidth);
+            fillFieldText(ctx, field, text, x, y, size);
+          }
+        });
+      }
+
+      function drawYear(ctx, type) {
+        const text = settings.yearText.trim();
+        if (!text) return;
+        const { w: W, h: H } = SIZES[type];
+        const y = settings.year[type];
+        ctx.fillStyle = settings.yearColor;
+        ctx.textAlign = y.align;
+        ctx.textBaseline = "alphabetic";
+        ctx.font = font(settings.yearBold, y.size);
+        ctx.fillText(text, (y.x / 100) * W, (y.y / 100) * H);
+      }
+
+      function drawPhoto(ctx, type, record, forPrint) {
+        const rect = photoRect(type);
+        const img = record && record.photo && record.photo.image;
+        ctx.save();
+        ctx.beginPath();
+        if (rect.shape === "circle") ctx.ellipse(rect.cx, rect.cy, rect.rx, rect.ry, 0, 0, Math.PI * 2);
+        else ctx.rect(rect.x, rect.y, rect.w, rect.h);
+        ctx.clip();
+        if (img) {
+          const crop = photoCrop(type, record.photo);
+          drawImageCover(ctx, img, rect.x, rect.y, rect.w, rect.h, crop.x, crop.y, crop.zoom);
+        } else if (record && !record.sample && !forPrint) {
+          // Missing photo: neutral placeholder so it is obvious in the preview.
+          ctx.fillStyle = "#eef1f4";
+          ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+          drawSilhouette(ctx, rect.x, rect.y, rect.w, rect.h, "#c9d1d8");
+          ctx.fillStyle = "#a12a3a";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.font = font(700, rect.w * 0.09);
+          ctx.fillText("NO PHOTO", rect.x + rect.w / 2, rect.y + rect.h * 0.88);
+        }
+        ctx.restore();
+      }
+
+      /* forPrint: no placement guides and no "NO PHOTO"/missing-barcode placeholders. */
+      function drawFront(record, canvas, forPrint) {
+        const target = canvas || frontCanvas;
+        const type = settings.cardType;
+        const { w: W, h: H } = SIZES[type];
+        target.width = W;
+        target.height = H;
+        const ctx = target.getContext("2d");
+        const tpl = templates.front[type];
+        if (tpl) {
+          drawTemplate(ctx, type, tpl);
+        } else {
+          const hasPhoto = !!(record.photo && record.photo.image) || !record.sample;
+          drawBuiltInFront(ctx, type, forPrint ? { photo: false, text: false, year: false } : { photo: !hasPhoto, text: !record.name && !record.id, year: !settings.yearText.trim() });
+        }
+        drawPhoto(ctx, type, record, forPrint);
+        if (isFieldType(type)) {
+          drawFields(ctx, type, record);
+          return;
+        }
+
+        const L = LAYOUTS[type];
+        const n = settings.nudge[type];
+        const scale = n.textScale / 100;
+        const dx = (n.textDx / 100) * W;
+        const dy = (n.textDy / 100) * H;
+        const nameText = record.name || "";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = settings.textColor;
+        ctx.textAlign = L.name.align;
+
+        if (type === "staff") {
+          const x = L.name.x * W + dx;
+          if (nameText) {
+            fitText(ctx, nameText, 700, L.name.size * W * scale, L.name.maxW * W, 0.5);
+            ctx.fillText(nameText, x, L.name.y * H + dy);
+          }
+          if (settings.roleLine.trim()) {
+            ctx.fillStyle = settings.labelColor;
+            fitText(ctx, settings.roleLine.trim().toUpperCase(), 700, L.role.size * W * scale, L.name.maxW * W);
+            ctx.fillText(settings.roleLine.trim().toUpperCase(), x, L.role.y * H + dy);
+          }
+          if (record.id) {
+            ctx.fillStyle = settings.textColor;
+            ctx.font = font(500, L.id.size * W * scale);
+            ctx.fillText(`ID# ${record.id}`, x, (settings.roleLine.trim() ? L.id.y : L.role.y) * H + dy);
+          }
+        } else {
+          const x = L.name.x * W + dx;
+          if (nameText) {
+            fitText(ctx, nameText, 700, L.name.size * W * scale, L.name.maxW * W, 0.5);
+            ctx.fillText(nameText, x, L.name.y * H + dy);
+          }
+          const lines = [["ID#", record.id], ["DOB", formatDob(record.dob)], ["Grade", record.grade]].filter(([, v]) => v);
+          const size = L.lines.size * W * scale;
+          lines.forEach(([label, value], idx) => {
+            const y = (L.lines.y + idx * L.lines.step * scale) * H + dy;
+            ctx.textAlign = "left";
+            ctx.fillStyle = settings.labelColor;
+            ctx.font = font(700, size);
+            const labelText = `${label}:`;
+            ctx.fillText(labelText, x, y);
+            const labelW = ctx.measureText(labelText).width + size * 0.4;
+            ctx.fillStyle = settings.textColor;
+            fitText(ctx, value, 500, size, L.name.maxW * W - labelW, 0.6);
+            ctx.fillText(value, x + labelW, y);
+          });
+        }
+        drawYear(ctx, type);
+      }
+
+      function drawBack(record, canvas, forPrint) {
+        const target = canvas || backCanvas;
+        const type = settings.cardType;
+        const { w: W, h: H } = SIZES[type];
+        target.width = W;
+        target.height = H;
+        const ctx = target.getContext("2d");
+        const tpl = templates.back[type];
+        if (tpl) {
+          drawTemplate(ctx, type, tpl);
+        } else drawBuiltInBack(ctx, type, (isFieldType(type) || !record.id) && !forPrint);
+        if (isFieldType(type)) return; // back is the uploaded template only
+        if (type === "staff") drawStaffBackText(ctx);
+        const B = backLayout(type);
+        ctx.textAlign = "center";
+        const value = record.id || "";
+        if (value && drawBarcode(ctx, value, B.cx, B.barTop, B.barW, B.barH)) {
+          ctx.fillStyle = "#000000";
+          ctx.textBaseline = "alphabetic";
+          ctx.font = font(600, B.idSize);
+          ctx.fillText(value, B.cx, B.idY);
+        } else if (!forPrint) {
+          ctx.strokeStyle = "#c9d1d8";
+          ctx.setLineDash([10, 8]);
+          ctx.lineWidth = 3;
+          ctx.strokeRect(B.cx - B.barW / 2, B.barTop, B.barW, B.barH);
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#a12a3a";
+          ctx.textBaseline = "middle";
+          ctx.font = font(700, B.idSize * 0.8);
+          ctx.fillText(value ? "ID# can't be encoded" : "NO ID# — NO BARCODE", B.cx, B.barTop + B.barH / 2);
+        }
+      }
+
+      /* Optional staff back text: multi-line, wrapped to the card width from its anchor. */
+      function drawStaffBackText(ctx) {
+        const text = settings.staffBackText.trim();
+        if (!text) return;
+        const { w: W, h: H } = SIZES.staff;
+        const s = settings.staffBackTextStyle;
+        const x = (s.x / 100) * W;
+        const margin = W * 0.05;
+        const maxWidth = s.align === "center" ? Math.min(x, W - x) * 2 - margin * 2 : (s.align === "left" ? W - x - margin : x - margin);
+        ctx.fillStyle = s.color;
+        ctx.textAlign = s.align;
+        ctx.textBaseline = "top";
+        ctx.font = font(s.weight, s.size);
+        wrapLines(ctx, settings.staffBackText, Math.max(40, maxWidth)).forEach((line, idx) => {
+          ctx.fillText(line, x, (s.y / 100) * H + idx * s.size * 1.3);
+        });
+      }
+
+      /* ---------- UI rendering ---------- */
+      function sampleRecord() {
+        if (isFieldType(settings.cardType)) {
+          return { sample: true, name: "John Doe", id: "", dob: "", grade: "", lines: lineSlots(settings.cardType).map(f => `${f.label} Text`), issues: [] };
+        }
+        return settings.cardType === "student"
+          ? { sample: true, name: "John Doe", id: "100001", dob: "2010-01-01", grade: "9", issues: [] }
+          : { sample: true, name: "John Doe", id: "100001", dob: "", grade: "", issues: [] };
+      }
+
+      function visibleRecordIndexes() {
+        const onlyProblems = $("problemsOnly").checked;
+        return records.map((r, i) => i).filter(i => !onlyProblems || recordLevel(records[i]) !== "ok");
+      }
+
+      function renderTable() {
+        const type = settings.cardType;
+        const extraFields = isFieldType(type) ? lineSlots(type) : [];
+        const csvNow = csvByType[type];
+        const lineHeader = f => (csvNow && csvNow.mapping && csvNow.headers[csvNow.mapping.lines[f.index]]) || f.label;
+        const headCells = isFieldType(type)
+          ? ["Row", "Name", ...extraFields.map(lineHeader), "Photo", "Status"]
+          : ["Row", "Name", "ID#", ...(type === "student" ? ["DoB", "Grade"] : []), "Photo", "Status"];
+        const headRow = document.createElement("tr");
+        headCells.forEach(label => { const th = document.createElement("th"); th.textContent = label; headRow.appendChild(th); });
+        $("recordsHead").textContent = "";
+        $("recordsHead").appendChild(headRow);
+        const body = $("recordsBody");
+        body.textContent = "";
+        const indexes = visibleRecordIndexes();
+        if (!indexes.length) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = headCells.length;
+          td.className = "empty-state";
+          td.textContent = records.length ? "No cards with problems." : `Load a ${type} CSV to list cards here.`;
+          tr.appendChild(td);
+          body.appendChild(tr);
+          return;
+        }
+        indexes.forEach(i => {
+          const r = records[i];
+          const tr = document.createElement("tr");
+          const level = recordLevel(r);
+          tr.className = `row-${level}${i === selectedIndex ? " selected" : ""}`;
+          tr.dataset.index = String(i);
+          const cells = isFieldType(type)
+            ? [String(r.rowNumber), r.name, ...extraFields.map(f => fieldValue(type, f, r))]
+            : [String(r.rowNumber), r.name, r.id];
+          if (type === "student") cells.push(formatDob(r.dob), r.grade);
+          cells.forEach(value => {
+            const td = document.createElement("td");
+            if (value) td.textContent = value; else { td.textContent = "—"; td.className = "empty-cell"; }
+            tr.appendChild(td);
+          });
+          const photoTd = document.createElement("td");
+          photoTd.textContent = r.photo ? (r.photo.failed ? "Unreadable" : (r.photoMatch === "name" ? "Yes (by name)" : "Yes")) : "—";
+          if (r.photo) photoTd.title = r.photo.name;
+          if (!r.photo) photoTd.className = "empty-cell";
+          tr.appendChild(photoTd);
+          const statusTd = document.createElement("td");
+          if (!r.issues.length) statusTd.appendChild(chip("ok", "Ready"));
+          r.issues.forEach(item => statusTd.appendChild(chip(item.level, item.text)));
+          tr.appendChild(statusTd);
+          body.appendChild(tr);
+        });
+      }
+
+      function chip(level, text) {
+        const span = document.createElement("span");
+        span.className = `chip ${level}`;
+        span.textContent = text;
+        return span;
+      }
+
+      function renderSummary(globalIssues) {
+        const wrap = $("summaryChips");
+        wrap.textContent = "";
+        if (records.length) {
+          const counts = { ok: 0, warn: 0, error: 0 };
+          records.forEach(r => { counts[recordLevel(r)] += 1; });
+          wrap.appendChild(chip("info", `${records.length} card${records.length === 1 ? "" : "s"}`));
+          wrap.appendChild(chip("ok", `${counts.ok} ready`));
+          if (counts.warn) wrap.appendChild(chip("warn", `${counts.warn} with warnings`));
+          if (counts.error) wrap.appendChild(chip("error", `${counts.error} with errors`));
+          wrap.appendChild(chip("info", `${photos.size} photo${photos.size === 1 ? "" : "s"} loaded`));
+        }
+        const list = $("globalIssues");
+        list.textContent = "";
+        globalIssues.forEach(item => {
+          const li = document.createElement("li");
+          li.className = item.level;
+          li.textContent = item.text;
+          list.appendChild(li);
+        });
+      }
+
+      let renderToken = 0;
+      async function renderPreview() {
+        const token = ++renderToken;
+        const type = settings.cardType;
+        const record = selectedIndex >= 0 && records[selectedIndex] ? records[selectedIndex] : sampleRecord();
+        if (record.photo) await loadPhotoImage(record.photo);
+        await fontsReady(type);
+        if (token !== renderToken) return;
+        if (record.photo && record.photo.failed && !record.issues.some(i => i.text.startsWith("Photo"))) {
+          record.issues.push(issue("error", "Photo could not be read"));
+          renderTable();
+        }
+        $("frontFigure").className = `card-face ${type === "staff" ? "portrait" : "landscape"}`;
+        $("backFigure").className = `card-face ${type === "staff" ? "portrait" : "landscape"}`;
+        drawFront(record);
+        drawBack(record);
+        const pos = $("previewPosition");
+        pos.textContent = record.sample ? "Sample card" : `Card ${selectedIndex + 1} of ${records.length}${record.name ? ` · ${record.name}` : ""}`;
+        $("prevBtn").disabled = !records.length;
+        $("nextBtn").disabled = !records.length;
+        syncCropTools(record);
+        const issuesWrap = $("previewIssues");
+        issuesWrap.textContent = "";
+        (record.issues || []).forEach(item => issuesWrap.appendChild(chip(item.level, item.text)));
+      }
+
+      /* ---------- Per-photo position inside the frame ---------- */
+      function previewRecord() {
+        return selectedIndex >= 0 && records[selectedIndex] ? records[selectedIndex] : null;
+      }
+      function previewPhoto() {
+        const record = previewRecord();
+        return record && record.photo && record.photo.image ? record.photo : null;
+      }
+      function syncCropTools(record) {
+        const photo = record && record.photo && record.photo.image ? record.photo : null;
+        $("cropTools").classList.toggle("show", !!photo);
+        frontCanvas.classList.toggle("can-drag", !!photo);
+        if (!photo) return;
+        const crop = photoCrop(settings.cardType, photo);
+        $("cropZoom").value = crop.zoom; $("cropX").value = crop.x; $("cropY").value = crop.y;
+      }
+      function setCrop(photo, changes) {
+        photo.crop = { ...photoCrop(settings.cardType, photo), ...changes };
+        syncCropTools(previewRecord());
+        drawFront(previewRecord());
+      }
+      function bindCropTools() {
+        [["cropZoom", "zoom"], ["cropX", "x"], ["cropY", "y"]].forEach(([id, key]) => {
+          $(id).addEventListener("input", () => {
+            const photo = previewPhoto();
+            if (photo) setCrop(photo, { [key]: Number($(id).value) });
+          });
+        });
+        $("cropResetBtn").addEventListener("click", () => {
+          const photo = previewPhoto();
+          if (!photo) return;
+          photo.crop = null;
+          syncCropTools(previewRecord());
+          drawFront(previewRecord());
+        });
+        // Drag the photo inside its frame on the front preview.
+        let drag = null;
+        const toCanvas = event => {
+          const box = frontCanvas.getBoundingClientRect();
+          return { x: (event.clientX - box.left) * (frontCanvas.width / box.width), y: (event.clientY - box.top) * (frontCanvas.height / box.height) };
+        };
+        frontCanvas.addEventListener("pointerdown", event => {
+          const photo = previewPhoto();
+          if (!photo) return;
+          const rect = photoRect(settings.cardType);
+          const pt = toCanvas(event);
+          if (pt.x < rect.x || pt.x > rect.x + rect.w || pt.y < rect.y || pt.y > rect.y + rect.h) return;
+          event.preventDefault();
+          frontCanvas.setPointerCapture(event.pointerId);
+          frontCanvas.classList.add("dragging");
+          drag = { photo, rect, last: pt };
+        });
+        frontCanvas.addEventListener("pointermove", event => {
+          if (!drag) return;
+          const pt = toCanvas(event);
+          const { photo, rect } = drag;
+          const img = photo.image;
+          const crop = photoCrop(settings.cardType, photo);
+          const scale = coverScale(img, rect.w, rect.h, crop.zoom);
+          // How far (in canvas px) the photo can slide in each direction; dragging right shows more of the left side.
+          const spanX = img.naturalWidth * scale - rect.w;
+          const spanY = img.naturalHeight * scale - rect.h;
+          const changes = {};
+          if (spanX > 0.5) changes.x = Math.max(0, Math.min(100, crop.x - ((pt.x - drag.last.x) / spanX) * 100));
+          if (spanY > 0.5) changes.y = Math.max(0, Math.min(100, crop.y - ((pt.y - drag.last.y) / spanY) * 100));
+          drag.last = pt;
+          setCrop(photo, changes);
+        });
+        const endDrag = () => { drag = null; frontCanvas.classList.remove("dragging"); };
+        frontCanvas.addEventListener("pointerup", endDrag);
+        frontCanvas.addEventListener("pointercancel", endDrag);
+      }
+
+      function refreshAll() {
+        const globalIssues = validate();
+        if (selectedIndex >= records.length) selectedIndex = records.length ? 0 : -1;
+        if (selectedIndex < 0 && records.length) selectedIndex = 0;
+        renderSummary(globalIssues);
+        renderTable();
+        renderPreview();
+        renderTypeDependentUi();
+      }
+
+      function renderTypeDependentUi() {
+        const type = settings.cardType;
+        const { w: W, h: H } = SIZES[type];
+        $("roleField").style.display = type === "staff" ? "" : "none";
+        $("yearPlacement").style.display = isFieldType(type) ? "none" : "";
+        $("lineStyleDetails").style.display = isFieldType(type) ? "" : "none";
+        $("backDetails").style.display = isFieldType(type) && FIELD_TYPES[type].back === "template" ? "none" : "";
+        $("labelColor").closest(".field").style.display = isFieldType(type) ? "none" : "";
+        $("orientationHint").textContent = "setting";
+        $("csvHint").innerHTML = isFieldType(type)
+          ? `${FIELD_TYPES[type].label} CSV: a <strong>Name</strong> column, then up to ${lineSlots(type).length} more columns (any headers) that print as lines 1&ndash;${lineSlots(type).length} in column order. An ID# column is optional and only used to match photos. The year comes from the School year field.`
+          : type === "staff"
+          ? "Staff CSV columns: <strong>Name</strong> and <strong>ID#</strong>. First/Last Name columns also work."
+          : "Student CSV columns: <strong>Name</strong>, <strong>ID#</strong>, <strong>DoB</strong>, <strong>Grade</strong>. First/Last Name columns also work.";
+        const csv = csvByType[type];
+        const status = $("csvStatus");
+        status.classList.toggle("bad", !!(csv && csv.error));
+        status.textContent = csv ? (csv.error || `${csv.fileName}: ${csv.rows.length} row${csv.rows.length === 1 ? "" : "s"}`) : "No CSV loaded.";
+        $("photoStatus").textContent = photos.size ? `${photos.size} photo${photos.size === 1 ? "" : "s"} loaded.` : "No photos loaded.";
+        $("templateHint").textContent = `Make templates ${W} × ${H} px (CR80 ${type === "staff" ? "portrait" : "landscape"} at 300 dpi). The downloaded template is blank with dashed guides for the photo, text, and year; design around them, then upload. The guides are only for placement.`;
+        ["front", "back"].forEach(side => {
+          const tpl = templates[side][type];
+          const el = $(`${side}TemplateStatus`);
+          el.classList.remove("bad");
+          if (!tpl) { el.textContent = side === "front" ? "Using the built-in template." : "Using the built-in back."; return; }
+          const ratio = (tpl.naturalWidth / tpl.naturalHeight) / (W / H);
+          const name = tpl.dataset.fileName || "Uploaded image";
+          if (Math.abs(ratio - 1) > 0.04) {
+            el.classList.add("bad");
+            el.textContent = `${name}: ${tpl.naturalWidth} × ${tpl.naturalHeight} px is not CR80 ${type === "staff" ? "portrait" : "landscape"} proportions, so it is scaled evenly and its edges are trimmed to fit (not stretched). Use ${W} × ${H} px for an exact fit.`;
+          } else el.textContent = `${name} (${tpl.naturalWidth} × ${tpl.naturalHeight} px)`;
+        });
+      }
+
+      /* ---------- Controls binding ---------- */
+      function syncControlsFromSettings() {
+        const type = settings.cardType;
+        document.querySelectorAll('input[name="cardType"]').forEach(input => { input.checked = input.value === type; });
+        ["textColor", "labelColor", "roleLine", "yearText", "yearColor", "yearBold"].forEach(key => { $(key).value = settings[key]; });
+        const y = settings.year[type];
+        $("yearX").value = y.x; $("yearY").value = y.y; $("yearSize").value = y.size; $("yearAlign").value = y.align;
+        const n = settings.nudge[type];
+        Object.keys(defaultNudge()).forEach(key => { $(key).value = n[key]; });
+        const b = settings.back[type];
+        ["barX", "barY", "barW", "barH"].forEach(key => { $(key).value = b[key]; });
+        $("staffBackTextFields").style.display = type === "staff" ? "" : "none";
+        syncLineStyleControls();
+        $("flipBack").checked = !!settings.flipBack[type];
+        $("staffBackText").value = settings.staffBackText;
+        const s = settings.staffBackTextStyle;
+        $("sbtX").value = s.x; $("sbtY").value = s.y; $("sbtSize").value = s.size;
+        $("sbtAlign").value = s.align; $("sbtColor").value = s.color; $("sbtWeight").value = s.weight;
+      }
+
+      /* ---------- Numbered templates: per-line font/size/position controls ---------- */
+      const LINE_STYLE_INPUTS = { lsFont: "font", lsSize: "size", lsWeight: "weight", lsX: "x", lsY: "y", lsWidth: "width", lsAlign: "align", lsItalic: "italic", lsWrap: "wrap" };
+      function syncLineStyleControls() {
+        const type = settings.cardType;
+        if (!isFieldType(type)) return;
+        const select = $("lsField");
+        const fields = FIELD_TYPES[type].fields;
+        const current = fields.some(f => f.key === select.value) ? select.value : fields[0].key;
+        select.textContent = "";
+        fields.forEach(f => select.appendChild(new Option(f.label, f.key)));
+        select.value = current;
+        const st = settings.lineStyle[type][current];
+        Object.entries(LINE_STYLE_INPUTS).forEach(([id, key]) => {
+          if (typeof st[key] === "boolean") $(id).checked = st[key]; else $(id).value = st[key];
+        });
+      }
+      function bindLineStyleControls() {
+        const fontSelect = $("lsFont");
+        FONT_CHOICES.forEach(f => fontSelect.appendChild(new Option(f.label, f.id)));
+        $("lsField").addEventListener("change", syncLineStyleControls);
+        Object.entries(LINE_STYLE_INPUTS).forEach(([id, key]) => {
+          $(id).addEventListener($(id).type === "checkbox" || $(id).tagName === "SELECT" ? "change" : "input", () => {
+            const type = settings.cardType;
+            if (!isFieldType(type)) return;
+            const st = settings.lineStyle[type][$("lsField").value];
+            const el = $(id);
+            if (el.type === "checkbox") st[key] = el.checked;
+            else if (el.type === "number") { const n = Number(el.value); if (!Number.isFinite(n) || el.value === "") return; st[key] = n; }
+            else st[key] = el.value;
+            saveSettings();
+            renderPreview();
+          });
+        });
+        $("lsResetBtn").addEventListener("click", () => {
+          const type = settings.cardType;
+          const field = FIELD_TYPES[type].fields.find(f => f.key === $("lsField").value);
+          settings.lineStyle[type][field.key] = defaultLineStyle(field);
+          saveSettings();
+          syncLineStyleControls();
+          renderPreview();
+        });
+        $("lsResetAllBtn").addEventListener("click", () => {
+          const type = settings.cardType;
+          settings.lineStyle[type] = defaultLineStyles(type);
+          saveSettings();
+          syncLineStyleControls();
+          renderPreview();
+        });
+        syncLineStyleControls();
+      }
+
+      function readImageFile(file) {
+        return new Promise((resolve, reject) => {
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => { img.dataset.fileName = file.name; resolve(img); };
+          img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`${file.name} could not be read as an image.`)); };
+          img.src = url;
+        });
+      }
+
+      /* PDF templates: rendered with PDF.js (loaded on first use) to an image covering the card at 300 dpi. */
+      const PDFJS_BASE = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+      let pdfJsLoading = null;
+      function loadPdfJs() {
+        if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+        if (!pdfJsLoading) {
+          pdfJsLoading = new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = `${PDFJS_BASE}pdf.min.js`;
+            script.crossOrigin = "anonymous";
+            script.referrerPolicy = "no-referrer";
+            script.onload = () => {
+              if (!window.pdfjsLib) { reject(new Error("The PDF reader did not load.")); return; }
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.min.js`;
+              resolve(window.pdfjsLib);
+            };
+            script.onerror = () => reject(new Error("Could not load the PDF reader (it needs an internet connection). Save the template as PNG or JPG instead."));
+            document.head.appendChild(script);
+          }).catch(error => { pdfJsLoading = null; throw error; });
+        }
+        return pdfJsLoading;
+      }
+      function isPdfFile(file) { return file.type === "application/pdf" || /\.pdf$/i.test(file.name); }
+      async function readPdfPages(file, type, maxPages) {
+        const pdfjs = await loadPdfJs();
+        let doc;
+        try {
+          doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+        } catch (_) {
+          throw new Error(`${file.name} could not be read as a PDF.`);
+        }
+        const { w: W, h: H } = SIZES[type];
+        const pages = [];
+        try {
+          for (let n = 1; n <= Math.min(doc.numPages, maxPages); n += 1) {
+            const page = await doc.getPage(n);
+            const base = page.getViewport({ scale: 1 });
+            const viewport = page.getViewport({ scale: Math.max(W / base.width, H / base.height) });
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(viewport.width);
+            canvas.height = Math.round(viewport.height);
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+            const img = await readImageFile(new File([blob], `${file.name}${doc.numPages > 1 ? ` (page ${n})` : ""}`, { type: "image/png" }));
+            pages.push(img);
+          }
+        } finally {
+          doc.destroy();
+        }
+        return pages;
+      }
+
+      function downloadCanvas(canvas, fileName) {
+        canvas.toBlob(blob => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }, "image/png");
+      }
+
+      function downloadText(text, fileName, mime) {
+        const url = URL.createObjectURL(new Blob([text], { type: mime }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+
+      function bind() {
+        document.querySelectorAll('input[name="cardType"]').forEach(input => input.addEventListener("change", () => {
+          if (!input.checked) return;
+          settings.cardType = input.value;
+          selectedIndex = -1;
+          saveSettings();
+          syncControlsFromSettings();
+          refreshAll();
+        }));
+
+        $("csvInput").addEventListener("change", async event => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+          try {
+            loadCsvText(await file.text(), file.name, settings.cardType);
+          } catch (_) {
+            csvByType[settings.cardType] = { fileName: file.name, headers: [], rows: [], mapping: null, error: "Could not read that file." };
+          }
+          selectedIndex = -1;
+          event.target.value = "";
+          refreshAll();
+        });
+
+        $("photoInput").addEventListener("change", event => {
+          addPhotos(event.target.files);
+          event.target.value = "";
+          refreshAll();
+        });
+        $("clearCsvBtn").addEventListener("click", () => {
+          csvByType[settings.cardType] = null;
+          selectedIndex = -1;
+          refreshAll();
+        });
+        $("clearPhotosBtn").addEventListener("click", () => {
+          photos.forEach(p => URL.revokeObjectURL(p.url));
+          photos.clear();
+          refreshAll();
+        });
+
+        $("sampleCsvBtn").addEventListener("click", () => {
+          const csv = isFieldType(settings.cardType) ? FIELD_TYPES[settings.cardType].sampleCsv : settings.cardType === "staff"
+            ? "Name,ID#\nJohn Doe,100001\nJane Doe,100002\n"
+            : "Name,ID#,DoB,Grade\nJohn Doe,100001,2010-01-01,9\nJane Doe,100002,2010-01-01,10\n";
+          downloadText(csv, `${settings.cardType}-id-cards-sample.csv`, "text/csv");
+        });
+
+        ["front", "back"].forEach(side => {
+          $(`${side}TemplateInput`).addEventListener("change", async event => {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const type = settings.cardType;
+            const status = $(`${side}TemplateStatus`);
+            try {
+              if (isPdfFile(file)) {
+                status.classList.remove("bad");
+                status.textContent = `Reading ${file.name}…`;
+                const pages = await readPdfPages(file, type, side === "front" ? 2 : 1);
+                templates[side][type] = pages[0];
+                if (side === "front" && pages[1]) templates.back[type] = pages[1];
+              } else {
+                templates[side][type] = await readImageFile(file);
+              }
+            } catch (error) {
+              alert(error.message);
+            }
+            event.target.value = "";
+            refreshAll();
+          });
+        });
+        $("resetTemplatesBtn").addEventListener("click", () => {
+          templates.front[settings.cardType] = null;
+          templates.back[settings.cardType] = null;
+          refreshAll();
+        });
+        $("downloadFrontTemplateBtn").addEventListener("click", async () => {
+          const type = settings.cardType;
+          await fontsReady(type);
+          const c = document.createElement("canvas");
+          c.width = SIZES[type].w; c.height = SIZES[type].h;
+          drawBuiltInFront(c.getContext("2d"), type);
+          downloadCanvas(c, `${type}-id-front-template-${c.width}x${c.height}.png`);
+        });
+        $("downloadBackTemplateBtn").addEventListener("click", () => {
+          const type = settings.cardType;
+          const c = document.createElement("canvas");
+          c.width = SIZES[type].w; c.height = SIZES[type].h;
+          drawBuiltInBack(c.getContext("2d"), type);
+          downloadCanvas(c, `${type}-id-back-template-${c.width}x${c.height}.png`);
+        });
+
+        const textKeys = ["textColor", "labelColor", "roleLine", "yearText", "yearColor", "yearBold"];
+        textKeys.forEach(key => $(key).addEventListener("input", () => {
+          settings[key] = $(key).value;
+          saveSettings();
+          renderPreview();
+        }));
+        $("yearAlign").addEventListener("change", () => {
+          settings.year[settings.cardType].align = $("yearAlign").value;
+          saveSettings();
+          renderPreview();
+        });
+        [["yearX", "x"], ["yearY", "y"], ["yearSize", "size"]].forEach(([id, key]) => $(id).addEventListener("input", () => {
+          const n = Number($(id).value);
+          if (!Number.isFinite(n)) return;
+          settings.year[settings.cardType][key] = n;
+          saveSettings();
+          renderPreview();
+        }));
+        Object.keys(defaultNudge()).forEach(key => $(key).addEventListener("input", () => {
+          const n = Number($(key).value);
+          if (!Number.isFinite(n)) return;
+          settings.nudge[settings.cardType][key] = n;
+          saveSettings();
+          renderPreview();
+        }));
+        ["barX", "barY", "barW", "barH"].forEach(key => $(key).addEventListener("input", () => {
+          const n = Number($(key).value);
+          if (!Number.isFinite(n)) return;
+          settings.back[settings.cardType][key] = n;
+          saveSettings();
+          renderPreview();
+        }));
+        $("staffBackText").addEventListener("input", () => {
+          settings.staffBackText = $("staffBackText").value;
+          saveSettings();
+          renderPreview();
+        });
+        [["sbtX", "x"], ["sbtY", "y"], ["sbtSize", "size"]].forEach(([id, key]) => $(id).addEventListener("input", () => {
+          const n = Number($(id).value);
+          if (!Number.isFinite(n)) return;
+          settings.staffBackTextStyle[key] = n;
+          saveSettings();
+          renderPreview();
+        }));
+        [["sbtAlign", "align"], ["sbtColor", "color"], ["sbtWeight", "weight"]].forEach(([id, key]) => $(id).addEventListener("input", () => {
+          settings.staffBackTextStyle[key] = $(id).value;
+          saveSettings();
+          renderPreview();
+        }));
+        $("resetBackBtn").addEventListener("click", () => {
+          const type = settings.cardType;
+          settings.back[type] = defaultBack(type);
+          if (type === "staff") settings.staffBackTextStyle = defaultBackTextStyle();
+          saveSettings();
+          syncControlsFromSettings();
+          renderPreview();
+        });
+        $("resetLayoutBtn").addEventListener("click", () => {
+          const type = settings.cardType;
+          settings.nudge[type] = defaultNudge();
+          if (LAYOUTS[type].year) settings.year[type] = { ...LAYOUTS[type].year };
+          saveSettings();
+          syncControlsFromSettings();
+          renderPreview();
+        });
+
+        bindCropTools();
+        bindLineStyleControls();
+        $("problemsOnly").addEventListener("change", renderTable);
+        $("printBtn").addEventListener("click", printCards);
+        $("flipBack").addEventListener("change", () => {
+          settings.flipBack[settings.cardType] = $("flipBack").checked;
+          saveSettings();
+        });
+        $("recordsBody").addEventListener("click", event => {
+          const tr = event.target.closest("tr[data-index]");
+          if (!tr) return;
+          selectedIndex = Number(tr.dataset.index);
+          renderTable();
+          renderPreview();
+        });
+        const step = delta => {
+          const indexes = visibleRecordIndexes();
+          if (!indexes.length) return;
+          const pos = indexes.indexOf(selectedIndex);
+          const next = indexes[(pos + delta + indexes.length) % indexes.length];
+          selectedIndex = next === undefined ? indexes[0] : next;
+          renderTable();
+          renderPreview();
+        };
+        $("prevBtn").addEventListener("click", () => step(-1));
+        $("nextBtn").addEventListener("click", () => step(1));
+      }
+
+      /* ---------- Printing (through the OS printer driver) ----------
+         Each side is rendered at 300 dpi and placed on its own CR80-sized page with no
+         margins. The ZC300 driver (Windows or macOS) handles duplex and the network
+         connection to the printer's IP address. */
+      let printObjectUrls = [];
+      function canvasToUrl(canvas, mime, quality) {
+        return new Promise(resolve => canvas.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : canvas.toDataURL(mime, quality)), mime, quality));
+      }
+      function cardsToPrint() {
+        const which = $("printWhich").value;
+        if (which === "current") {
+          const rec = selectedIndex >= 0 ? records[selectedIndex] : null;
+          return rec ? [rec] : [];
+        }
+        return records.filter(r => which === "all" || recordLevel(r) !== "error");
+      }
+      async function printCards() {
+        const status = $("printStatus");
+        const list = cardsToPrint();
+        if (!list.length) {
+          status.textContent = records.length ? "No cards match that selection." : "Load a CSV first.";
+          return;
+        }
+        // Open synchronously (inside the click) so pop-up blockers allow it.
+        const win = window.open("", "_blank");
+        if (!win) { status.textContent = "Allow pop-ups for this site to print."; return; }
+        win.document.write('<!DOCTYPE html><title>Preparing cards…</title><p style="font:16px system-ui,sans-serif;padding:1.5rem">Preparing cards for printing…</p>');
+        printObjectUrls.forEach(url => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
+        printObjectUrls = [];
+        const type = settings.cardType;
+        const sides = $("printSides").value;
+        // Every page is a landscape CR80 card (ISO 85.6 x 54 mm, what the ZC300 driver
+        // reports). Safari ignores CSS page sizes and uses the driver's landscape CR80
+        // paper, so portrait (staff) cards are rotated 90° onto that page instead of
+        // asking for a portrait page. The card itself comes out the same.
+        const portrait = type === "staff";
+        const pageW = "85.6mm";
+        const pageH = "54mm";
+        const canvas = document.createElement("canvas");
+        const rotated = document.createElement("canvas");
+        // Fronts: staff rotate 90° clockwise. Backs: same, plus 180° when "Flip back side"
+        // is on, so the back reads upright after the printer flips the card.
+        const flipBack = !!settings.flipBack[type];
+        const orient = (source, isBack) => {
+          const extra = isBack && flipBack ? Math.PI : 0;
+          const angle = (portrait ? Math.PI / 2 : 0) + extra;
+          if (!angle) return source;
+          rotated.width = portrait ? source.height : source.width;
+          rotated.height = portrait ? source.width : source.height;
+          const rctx = rotated.getContext("2d");
+          rctx.save();
+          rctx.translate(rotated.width / 2, rotated.height / 2);
+          rctx.rotate(angle);
+          rctx.drawImage(source, -source.width / 2, -source.height / 2);
+          rctx.restore();
+          return rotated;
+        };
+        await fontsReady(type);
+        const pages = [];
+        try {
+          for (let i = 0; i < list.length; i += 1) {
+            if (win.closed) return;
+            status.textContent = `Preparing card ${i + 1} of ${list.length}…`;
+            const rec = list[i];
+            if (rec.photo) await loadPhotoImage(rec.photo);
+            if (sides !== "back") {
+              drawFront(rec, canvas, true);
+              pages.push(await canvasToUrl(orient(canvas, false), "image/jpeg", 0.95));
+            }
+            if (sides !== "front") {
+              drawBack(rec, canvas, true);
+              pages.push(await canvasToUrl(orient(canvas, true), "image/png"));
+            }
+          }
+        } catch (error) {
+          win.close();
+          status.textContent = "Could not prepare the cards.";
+          return;
+        }
+        printObjectUrls = pages;
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>ID cards (${list.length})</title><style>
+          @page { size: ${pageW} ${pageH} landscape; margin: 0; }
+          html, body { margin: 0; padding: 0; background: #fff; }
+          .page { width: ${pageW}; height: calc(${pageH} - 0.3mm); overflow: hidden; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
+          .page:last-child { page-break-after: auto; break-after: auto; }
+          .page img { display: block; width: 100%; height: 100%; }
+          @media screen { body { background: #888; } .page { margin: 12px auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); } }
+        </style></head><body>${pages.map(src => `<div class="page"><img src="${src}" alt=""></div>`).join("")}<scr` + `ipt>
+          (function () {
+            var imgs = Array.prototype.slice.call(document.images);
+            var waits = imgs.map(function (img) {
+              if (img.complete) return Promise.resolve();
+              return new Promise(function (res) { img.onload = img.onerror = res; });
+            });
+            Promise.all(waits).then(function () { setTimeout(function () { window.focus(); window.print(); }, 250); });
+          })();
+        </scr` + `ipt></body></html>`;
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        const sideCount = sides === "both" ? 2 : 1;
+        status.textContent = `Sent ${list.length} card${list.length === 1 ? "" : "s"} (${list.length * sideCount} page${list.length * sideCount === 1 ? "" : "s"}) to the print dialog.`;
+      }
+
+      // Exposed for automated checks of the barcode encoder.
+      window.__idCardTest = { encodeCode128 };
+
+      syncControlsFromSettings();
+      bind();
+      refreshAll();
+    })();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>
