@@ -416,7 +416,7 @@ function adjustNudge(axis, delta){
 }
 $('csvFile').addEventListener('change', async (e)=>{ const file=e.target.files[0]; if(!file) return; const text=await file.text(); state.rows=normalizeRows(parseCSV(text)); render(); });
 $('rowsBody').addEventListener('input',(e)=>{ const t=e.target; if(!t.classList.contains('row-input')) return; state.rows[+t.dataset.i][t.dataset.k]=t.value; render(); });
-$('downloadTemplate').addEventListener('click',()=>{ const csv='Name,School\nJane Student,Example School\n'; const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='name-tag-template.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); });
+$('downloadTemplate').addEventListener('click',()=>{ const csv='Name,School\nJohn Doe,School Name\nJane Doe,School Name\n'; const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='name-tag-template.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); });
 $('frontImage').addEventListener('change',(e)=>readImage(e.target.files[0],'frontImageSrc'));
 $('backImage').addEventListener('change',(e)=>readImage(e.target.files[0],'backImageSrc'));
 $('bgFit').addEventListener('change',(e)=>{ state.fit=e.target.value; render(); });
