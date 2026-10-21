@@ -4692,7 +4692,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         body: String(block.body || ''),
         quote: String(block.quote || ''),
         attribution: String(block.attribution || ''),
-        photos: (block.photos || []).filter(function (item) { return item && item.url; }).map(function (item) { return { url: item.url, alt: item.alt || '', caption: item.caption || '' }; })
+        photos: (block.photos || []).filter(function (item) { return item && item.url; }).map(function (item) { return { url: item.url, alt: item.alt || '', caption: item.caption || '' }; }),
+        photoLayout: publishPhotoLayout(block.layout)
       };
       if (section.areas) story.area = area;
       stories.push(story);
@@ -4786,6 +4787,13 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       if (parsed.username || parsed.password) return false;
       return importSameOrigin(value, siteUrl) || (parsed.protocol === 'https:' && (IMPORT_IMAGE_HOSTS.indexOf(parsed.origin) >= 0 || importOnWordPress(value)));
     } catch (error) { return false; }
+  }
+
+  // The site accepts exactly these story photo layouts and answers 400 for anything else,
+  // so older documents' layout names are mapped and unknown ones fall back to 'one'.
+  const PUBLISH_PHOTO_LAYOUTS = { one: 'one', twoUp: 'twoUp', twoup: 'twoUp', heroGrid: 'heroGrid', mosaic: 'mosaic', stack: 'stack', filmstrip: 'stack' };
+  function publishPhotoLayout(value) {
+    return Object.prototype.hasOwnProperty.call(PUBLISH_PHOTO_LAYOUTS, value) ? PUBLISH_PHOTO_LAYOUTS[value] : 'one';
   }
 
   function importNormalize(item, siteUrl, isDraft) {
