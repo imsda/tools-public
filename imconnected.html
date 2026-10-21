@@ -2733,6 +2733,21 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     });
 
     if (!visibleBlocks.some(function (block) { return block.type === 'footer'; })) issues.push(issue('error', 'No footer is visible.', 'Add or show a footer with contact and subscription information.', 'document', 'blocks'));
+    // Emails are sent from WordPress, so every photo must be in its media library.
+    const wpHost = root.Media && root.Media.photoHost ? root.Media.photoHost() : '';
+    let unchecked = false;
+    function checkHost(url, blockId, path) {
+      if (/^data:/i.test(url) || !U.isLikelyUrl(url)) return;
+      if (!wpHost) { unchecked = true; return; }
+      let host = '';
+      try { host = new URL(U.normalizeUrl(url)).hostname.replace(/^www\./i, '').toLowerCase(); } catch (error) { return; }
+      if (host === wpHost) return;
+      const fromSite = /(^|\.)stories\.imadventist\.org$/i.test(host);
+      issues.push(issue('error', 'A photo isn’t in the WordPress media library.', fromSite
+        ? 'This photo is on the IMConnected website. Import the story again with WordPress connected, or choose the photo under Browse → WordPress.'
+        : 'Emails are sent from WordPress. Choose this photo under Browse → WordPress.', blockId, path));
+    }
+    if (doc.brand.logoUrl) checkHost(doc.brand.logoUrl, 'document', 'brand.logoUrl');
     visibleBlocks.forEach(function (block) {
       const images = [];
       ['heroImageUrl', 'photoUrl', 'logoUrl'].forEach(function (key) { if (block[key]) images.push({ path: key, url: block[key] }); });
@@ -2742,8 +2757,10 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         if (/\.avif(?:[?#]|$)/i.test(image.url)) issues.push(issue('warning', 'An image uses AVIF.', 'Keep your original; add a JPEG or PNG version for broader email compatibility.', block.id, image.path));
         if (!U.isLikelyUrl(image.url, { allowData: true })) issues.push(issue('error', 'An image URL is invalid.', 'Choose a public HTTPS image or a local image preview.', block.id, image.path));
         if (/^data:/i.test(image.url) && !issues.some(function (item) { return item.blockId === block.id && item.path === image.path; })) issues.push(issue('warning', 'An image is stored only in this draft.', 'Upload it to WordPress or use a public image URL before sending.', block.id, image.path));
+        checkHost(image.url, block.id, image.path);
       });
     });
+    if (unchecked) issues.push(issue('warning', 'Connect WordPress so photos can be checked.', 'Emails are sent from WordPress. Connect it under Browse → WordPress and Send Check will confirm every photo comes from its media library.', 'document', 'blocks'));
     const emailBytes = new Blob([root.Renderer.renderEmail(doc)]).size;
     if (emailBytes >= 90000) issues.push(issue('warning', 'Email HTML is ' + Math.round(emailBytes / 1024) + ' KB.', 'Sender processing adds more markup. Send a test and check for clipping; your newsletter length and photo count can stay unchanged.', 'document', 'blocks'));
     if (delivery.platform === 'generic' && !String(delivery.unsubscribeUrl || '').trim()) issues.push(issue('warning', 'Add your sending platform’s unsubscribe link.', 'For marketing email, set the Other email platform subscription URL before exporting.', 'document', 'delivery.unsubscribeUrl'));
@@ -3643,7 +3660,34 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     });
   }
 
-  root.Media = { init: init, open: open, setTab: setTab };
+  // Site that email photos must come from: this session's connection, else the last connected site.
+  function photoHost() {
+    let site = wpAuth && wpAuth.siteUrl;
+    if (!site) { try { site = (JSON.parse(localStorage.getItem('imconnected_studio_wp_site') || '{}') || {}).siteUrl; } catch (error) { site = ''; } }
+    try { return site ? new URL(normalizeSite(site)).hostname.replace(/^www\./i, '').toLowerCase() : ''; } catch (error) { return ''; }
+  }
+
+  function canUpload() { return !!(wpAuth && wpAuth.canUpload); }
+
+  // Uploads a photo fetched elsewhere (Import from IMConnected) to the media library and returns its URL.
+  async function uploadPhoto(blob, name) {
+    const auth = wpAuth;
+    if (!auth || !auth.canUpload) throw new Error('Connect WordPress with an account that can upload media.');
+    const file = await shrinkImage(new File([blob], name, { type: blob.type, lastModified: Date.now() }));
+    if (wpAuth !== auth) throw new Error('WordPress was disconnected.');
+    const form = new FormData(); form.append('file', file);
+    try {
+      const result = await wpRequest(auth, 'media', { method: 'POST', body: form });
+      const url = result.data && result.data.source_url;
+      if (typeof url !== 'string' || !/^https:\/\//i.test(url)) throw new Error('WordPress did not return a photo address.');
+      return url;
+    } catch (error) {
+      if (error.status === 401 && wpAuth === auth) disconnectWordPress();
+      throw error;
+    }
+  }
+
+  root.Media = { init: init, open: open, setTab: setTab, photoHost: photoHost, canUpload: canUpload, uploadPhoto: uploadPhoto };
 })();
 
   </script>
@@ -4499,14 +4543,16 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     publishEl('publishList').hidden = false;
     publishEl('publishRows').innerHTML = stories.length ? stories.map(function (block, index) {
       const link = String(block.link || '').trim();
-      let checked = !link;
-      if (link) { try { checked = new URL(link).origin === new URL(siteUrl).origin; } catch (error) { checked = false; } }
+      const imported = !!block.importedFrom;
+      let checked = !link && !imported;
+      if (link && !imported) { try { checked = new URL(link).origin === new URL(siteUrl).origin; } catch (error) { checked = false; } }
       const match = matchPublishTag(block.tag);
       const section = publishSections.find(function (item) { return item.key === match.section; });
       const hasAreas = !!(section && section.areas && section.areas.length);
       const idBase = 'pub' + index;
       return '<div class="publish-row" data-pub-ref="' + U.escapeAttr(block.id) + '">'
-        + '<label class="publish-tick"><input type="checkbox" data-pub="tick"' + (checked ? ' checked' : '') + '><span>Publish to website: ' + U.escapeHtml(block.title || 'Untitled story') + '</span></label>'
+        + '<label class="publish-tick"><input type="checkbox" data-pub="tick"' + (checked ? ' checked' : '') + (imported ? ' disabled' : '') + '><span>Publish to website: ' + U.escapeHtml(block.title || 'Untitled story') + '</span></label>'
+        + (imported ? '<p class="publish-status" style="margin:0 0 8px;">' + (block.importedFrom === 'draft' ? 'Imported draft. Publish it from the website’s dashboard.' : 'Imported from the website. It is already published there, so it isn’t sent again.') + '</p>' : '')
         + '<div class="field-row">'
         + '<div class="field"><label for="' + idBase + 's">Section</label><select id="' + idBase + 's" data-pub="section">' + publishSectionOptions(match.section) + '</select></div>'
         + '<div class="field" data-pub-area-field' + (hasAreas ? '' : ' hidden') + '><label for="' + idBase + 'a">Category</label><select id="' + idBase + 'a" data-pub="area">' + publishAreaOptions(match.section, match.area) + '</select></div>'
@@ -4629,7 +4675,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       const row = rows[i];
       if (!row.querySelector('[data-pub="tick"]').checked) continue;
       const block = Store.getBlock(row.dataset.pubRef);
-      if (!block) continue;
+      if (!block || block.importedFrom) continue;
       const section = publishSections.find(function (item) { return item.key === row.querySelector('[data-pub="section"]').value; });
       const area = row.querySelector('[data-pub="area"]').value;
       const author = row.querySelector('[data-pub="author"]').value.trim();
@@ -4745,6 +4791,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       draft: !!isDraft,
       title: title,
       dek: importText(item.dek, 1000),
+      excerpt: importText(item.excerpt, 1000),
       section: importText(item.section, 80),
       sectionLabel: importText(item.sectionLabel || item.section, 80),
       areaLabel: importText(item.areaLabel, 80),
@@ -4948,16 +4995,74 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       const initial = {
         tag: (story.areaLabel || story.sectionLabel).toUpperCase(),
         title: story.title,
-        body: story.dek,
+        body: story.dek || story.excerpt,
         link: story.draft ? '' : story.url,
+        // Imported stories are already on the website; Publish must never send this card's short text back.
+        importedFrom: story.draft ? 'draft' : story.url,
         buttonLabel: story.draft ? '' : 'Read full story',
         photos: story.image ? [Templates.photo({ url: story.image, alt: story.imageAlt, caption: story.credit ? 'Photo: ' + story.credit : '' })] : []
       };
       return { type: 'story', initial: initial };
     });
     const blocks = Store.addBlocks(specs, Store.getSelectedId());
+    const token = importEl('importToken').value.trim();
     elements.importDialog.close();
     toast('Added ' + blocks.length + (blocks.length === 1 ? ' story.' : ' stories.') + (picked.some(function (story) { return story.draft; }) ? ' Drafts have no link yet; Send Check will flag them.' : ''), 'success');
+    const copies = [];
+    blocks.forEach(function (block, index) {
+      const story = picked[index];
+      if (block && story && story.image) copies.push({ id: block.id, src: story.image, name: importPhotoName(story) });
+    });
+    if (copies.length) copyImportPhotos(siteUrl, token, copies);
+  }
+  function importPhotoName(story) {
+    let file = 'photo.jpg';
+    try { file = new URL(story.image).pathname.split('/').filter(Boolean).slice(-2).join('-') || file; } catch (error) {}
+    return file.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-120);
+  }
+  async function fetchSitePhoto(siteUrl, token, src) {
+    const controller = new AbortController();
+    const timer = setTimeout(function () { controller.abort(); }, 60000);
+    try {
+      const response = await fetch(siteUrl + '/api/studio-photo?src=' + encodeURIComponent(src), {
+        headers: { Authorization: 'Bearer ' + token }, signal: controller.signal, redirect: 'error', credentials: 'omit', referrerPolicy: 'no-referrer'
+      });
+      if (!response.ok) throw new Error(response.status === 404 ? 'the website couldn’t find it' : 'the website answered HTTP ' + response.status);
+      const blob = await response.blob();
+      if (!/^image\/(jpeg|png|webp)$/i.test(blob.type)) throw new Error('the website didn’t send an image');
+      return blob;
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('the website took too long');
+      if (error instanceof TypeError) throw new Error('the website couldn’t be reached');
+      throw error;
+    } finally { clearTimeout(timer); }
+  }
+  // Emails are sent from WordPress, so imported photos are copied into its media library.
+  async function copyImportPhotos(siteUrl, token, copies) {
+    const Media = root.Media;
+    if (!Media || !Media.canUpload()) {
+      toast('Photos still point to the website. Connect WordPress (Browse → WordPress) and import again to copy them, or choose them from WordPress. Send Check will flag them.', 'warning');
+      return;
+    }
+    const changes = [];
+    let failed = 0;
+    for (let i = 0; i < copies.length; i += 1) {
+      const copy = copies[i];
+      toast('Copying photo ' + (i + 1) + ' of ' + copies.length + ' into WordPress…');
+      try {
+        const blob = await fetchSitePhoto(siteUrl, token, copy.src);
+        const url = await Media.uploadPhoto(blob, copy.name);
+        const block = Store.getBlock(copy.id);
+        // Skip if the story was removed or its photo changed while copying.
+        if (block && block.photos && block.photos[0] && block.photos[0].url === copy.src) changes.push({ id: copy.id, path: 'photos.0.url', value: url });
+      } catch (error) {
+        failed += 1;
+        if (!Media.canUpload()) { failed += copies.length - i - 1; break; }
+      }
+    }
+    if (changes.length) Store.patchBlocks(changes, { source: 'import-photos' });
+    if (failed) toast(changes.length + ' photo(s) copied into WordPress. ' + failed + ' still point to the website; choose them under Browse → WordPress. Send Check will flag them.', 'error');
+    else toast(changes.length + ' photo(s) copied into WordPress.', 'success');
   }
 
   function bindImportEvents() {
