@@ -142,6 +142,10 @@
     .card-face canvas { width: 100%; height: auto; }
     .preview-note { font-size: 0.8rem; color: var(--muted); text-align: center; margin: 0.6rem 0 0; }
     #frontCanvas.can-drag { cursor: grab; touch-action: none; }
+    .layout-drag canvas { touch-action: none; }
+    .layout-drag .card-face canvas { outline: 2px dashed var(--primary); outline-offset: 3px; }
+    .drag-toggle { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 700; color: var(--primary-dark); cursor: pointer; }
+    .drag-toggle input { width: 1.05rem; height: 1.05rem; }
     #frontCanvas.dragging { cursor: grabbing; }
     .crop-tools { display: none; max-width: 520px; margin: 0.7rem auto 0; padding: 0.55rem 0.7rem; border: 1px solid var(--border, #d6dee5); border-radius: 10px; }
     .crop-tools.show { display: block; }
@@ -359,13 +363,15 @@
         <section class="panel" aria-labelledby="previewHeading">
           <div class="preview-head">
             <h2 id="previewHeading">Preview</h2>
+            <label class="drag-toggle" title="On: drag the photo, text, year or barcode on the preview to move it (the placement numbers update). Off: placement stays where it is; edit the numbers in the settings."><input type="checkbox" id="layoutDragToggle" /> Drag to move</label>
             <div class="btn-row" style="margin:0;">
               <button class="btn" type="button" id="prevBtn">&larr; Previous</button>
               <span class="chip info" id="previewPosition">Sample card</span>
               <button class="btn" type="button" id="nextBtn">Next &rarr;</button>
             </div>
           </div>
-          <div class="preview-cards">
+          <p class="hint" id="layoutDragHint" style="display:none;margin:0 0 0.5rem;text-align:center;">Drag mode: drag the photo frame, a text line, the year, or the barcode to move it. The X/Y numbers in the settings update as you drag. Turn it off to keep everything where it is.</p>
+          <div class="preview-cards" id="previewCards">
             <figure class="card-face" id="frontFigure"><canvas id="frontCanvas" aria-label="Card front preview"></canvas><figcaption>Front</figcaption></figure>
             <figure class="card-face" id="backFigure"><canvas id="backCanvas" aria-label="Card back preview"></canvas><figcaption>Back</figcaption></figure>
           </div>
@@ -1153,6 +1159,7 @@
       /* Fonts with a single weight file (Advent Sans) get Medium/Bold by outlining the text. */
       function fillFieldText(ctx, field, text, x, y, size) {
         ctx.fillText(text, x, y);
+        noteText(ctx, "line", field.key, text, x, y);
         const choice = FONT_CHOICES.find(f => f.id === field.font);
         const extra = choice && choice.face ? { 500: 0.02, 700: 0.045 }[field.weight] : 0;
         if (!extra) return;
@@ -1202,6 +1209,7 @@
         ctx.textBaseline = "alphabetic";
         ctx.font = font(settings.yearBold, y.size);
         ctx.fillText(text, (y.x / 100) * W, (y.y / 100) * H);
+        noteText(ctx, "year", "year", text, (y.x / 100) * W, (y.y / 100) * H);
       }
 
       function drawPhoto(ctx, type, record, forPrint) {
@@ -1229,6 +1237,22 @@
         ctx.restore();
       }
 
+      /* ---------- Drag-to-move hit areas (preview canvases only) ---------- */
+      const previewHits = { front: [], back: [] };
+      function hitList(ctx) {
+        return ctx.canvas === frontCanvas ? previewHits.front : ctx.canvas === backCanvas ? previewHits.back : null;
+      }
+      function noteBox(ctx, kind, key, x1, y1, x2, y2) {
+        const list = hitList(ctx);
+        if (list) list.push({ kind, key, x1, y1, x2, y2 });
+      }
+      function noteText(ctx, kind, key, text, x, y) {
+        if (!hitList(ctx) || !text) return;
+        const m = ctx.measureText(text);
+        const pad = 6;
+        noteBox(ctx, kind, key, x - m.actualBoundingBoxLeft - pad, y - m.actualBoundingBoxAscent - pad, x + m.actualBoundingBoxRight + pad, y + m.actualBoundingBoxDescent + pad);
+      }
+
       /* forPrint: no placement guides and no "NO PHOTO"/missing-barcode placeholders. */
       function drawFront(record, canvas, forPrint) {
         const target = canvas || frontCanvas;
@@ -1237,6 +1261,7 @@
         target.width = W;
         target.height = H;
         const ctx = target.getContext("2d");
+        if (target === frontCanvas) previewHits.front = [];
         const tpl = templates.front[type];
         if (tpl) {
           drawTemplate(ctx, type, tpl);
@@ -1245,6 +1270,8 @@
           drawBuiltInFront(ctx, type, forPrint ? { photo: false, text: false, year: false } : { photo: !hasPhoto, text: !record.name && !record.id, year: !settings.yearText.trim() });
         }
         drawPhoto(ctx, type, record, forPrint);
+        const pr = photoRect(type);
+        noteBox(ctx, "photo", "photo", pr.x, pr.y, pr.x + pr.w, pr.y + pr.h);
         if (isFieldType(type)) {
           drawFields(ctx, type, record);
           return;
@@ -1265,22 +1292,26 @@
           if (nameText) {
             fitText(ctx, nameText, 700, L.name.size * W * scale, L.name.maxW * W, 0.5);
             ctx.fillText(nameText, x, L.name.y * H + dy);
+            noteText(ctx, "text", "block", nameText, x, L.name.y * H + dy);
           }
           if (settings.roleLine.trim()) {
             ctx.fillStyle = settings.labelColor;
             fitText(ctx, settings.roleLine.trim().toUpperCase(), 700, L.role.size * W * scale, L.name.maxW * W);
             ctx.fillText(settings.roleLine.trim().toUpperCase(), x, L.role.y * H + dy);
+            noteText(ctx, "text", "block", settings.roleLine.trim().toUpperCase(), x, L.role.y * H + dy);
           }
           if (record.id) {
             ctx.fillStyle = settings.textColor;
             ctx.font = font(500, L.id.size * W * scale);
             ctx.fillText(`ID# ${record.id}`, x, (settings.roleLine.trim() ? L.id.y : L.role.y) * H + dy);
+            noteText(ctx, "text", "block", `ID# ${record.id}`, x, (settings.roleLine.trim() ? L.id.y : L.role.y) * H + dy);
           }
         } else {
           const x = L.name.x * W + dx;
           if (nameText) {
             fitText(ctx, nameText, 700, L.name.size * W * scale, L.name.maxW * W, 0.5);
             ctx.fillText(nameText, x, L.name.y * H + dy);
+            noteText(ctx, "text", "block", nameText, x, L.name.y * H + dy);
           }
           const lines = [["ID#", record.id], ["DOB", formatDob(record.dob)], ["Grade", record.grade]].filter(([, v]) => v);
           const size = L.lines.size * W * scale;
@@ -1291,10 +1322,12 @@
             ctx.font = font(700, size);
             const labelText = `${label}:`;
             ctx.fillText(labelText, x, y);
+            noteText(ctx, "text", "block", labelText, x, y);
             const labelW = ctx.measureText(labelText).width + size * 0.4;
             ctx.fillStyle = settings.textColor;
             fitText(ctx, value, 500, size, L.name.maxW * W - labelW, 0.6);
             ctx.fillText(value, x + labelW, y);
+            noteText(ctx, "text", "block", value, x + labelW, y);
           });
         }
         drawYear(ctx, type);
@@ -1307,6 +1340,7 @@
         target.width = W;
         target.height = H;
         const ctx = target.getContext("2d");
+        if (target === backCanvas) previewHits.back = [];
         const tpl = templates.back[type];
         if (tpl) {
           drawTemplate(ctx, type, tpl);
@@ -1314,6 +1348,7 @@
         if (isFieldType(type)) return; // back is the uploaded template only
         if (type === "staff") drawStaffBackText(ctx);
         const B = backLayout(type);
+        noteBox(ctx, "barcode", "barcode", B.cx - B.barW / 2, B.barTop, B.cx + B.barW / 2, B.idY + B.idSize * 0.35);
         ctx.textAlign = "center";
         const value = record.id || "";
         if (value && drawBarcode(ctx, value, B.cx, B.barTop, B.barW, B.barH)) {
@@ -1349,6 +1384,7 @@
         ctx.font = font(s.weight, s.size);
         wrapLines(ctx, settings.staffBackText, Math.max(40, maxWidth)).forEach((line, idx) => {
           ctx.fillText(line, x, (s.y / 100) * H + idx * s.size * 1.3);
+          noteText(ctx, "backtext", "backtext", line, x, (s.y / 100) * H + idx * s.size * 1.3);
         });
       }
 
@@ -1486,7 +1522,7 @@
       function syncCropTools(record) {
         const photo = record && record.photo && record.photo.image ? record.photo : null;
         $("cropTools").classList.toggle("show", !!photo);
-        frontCanvas.classList.toggle("can-drag", !!photo);
+        frontCanvas.classList.toggle("can-drag", !!photo && !layoutDrag);
         if (!photo) return;
         const crop = photoCrop(settings.cardType, photo);
         $("cropZoom").value = crop.zoom; $("cropX").value = crop.x; $("cropY").value = crop.y;
@@ -1517,6 +1553,7 @@
           return { x: (event.clientX - box.left) * (frontCanvas.width / box.width), y: (event.clientY - box.top) * (frontCanvas.height / box.height) };
         };
         frontCanvas.addEventListener("pointerdown", event => {
+          if (layoutDrag) return; // drag mode moves the layout instead (bindLayoutDrag)
           const photo = previewPhoto();
           if (!photo) return;
           const rect = photoRect(settings.cardType);
@@ -1546,6 +1583,72 @@
         const endDrag = () => { drag = null; frontCanvas.classList.remove("dragging"); };
         frontCanvas.addEventListener("pointerup", endDrag);
         frontCanvas.addEventListener("pointercancel", endDrag);
+      }
+
+      /* ---------- Drag to move (layout placement) ----------
+         With the toggle on, dragging an item on a preview changes its placement settings
+         (the same numbers shown in the settings, which update live). Turning it off just
+         stops dragging; everything stays where it was placed. */
+      let layoutDrag = false;
+      function round2(n) { return Math.round(n * 100) / 100; }
+      function clampPct(n) { return Math.max(0, Math.min(100, n)); }
+      function moveLayoutItem(hit, dx, dy) {
+        const type = settings.cardType;
+        const n = settings.nudge[type];
+        if (hit.kind === "photo") { n.photoDx = round2(n.photoDx + dx); n.photoDy = round2(n.photoDy + dy); }
+        else if (hit.kind === "text") { n.textDx = round2(n.textDx + dx); n.textDy = round2(n.textDy + dy); }
+        else if (hit.kind === "year") { const y = settings.year[type]; y.x = round2(clampPct(y.x + dx)); y.y = round2(clampPct(y.y + dy)); }
+        else if (hit.kind === "line") { const st = settings.lineStyle[type][hit.key]; st.x = round2(clampPct(st.x + dx)); st.y = round2(clampPct(st.y + dy)); }
+        else if (hit.kind === "barcode") { const b = settings.back[type]; b.barX = round2(clampPct(b.barX + dx)); b.barY = round2(clampPct(b.barY + dy)); }
+        else if (hit.kind === "backtext") { const t = settings.staffBackTextStyle; t.x = round2(clampPct(t.x + dx)); t.y = round2(clampPct(t.y + dy)); }
+      }
+      function bindLayoutDrag() {
+        const toggle = $("layoutDragToggle");
+        toggle.addEventListener("change", () => {
+          layoutDrag = toggle.checked;
+          $("previewCards").classList.toggle("layout-drag", layoutDrag);
+          $("layoutDragHint").style.display = layoutDrag ? "" : "none";
+          [frontCanvas, backCanvas].forEach(c => { c.style.cursor = ""; });
+          syncCropTools(previewRecord());
+        });
+        let drag = null;
+        const toCanvas = (canvas, event) => {
+          const box = canvas.getBoundingClientRect();
+          return { x: (event.clientX - box.left) * (canvas.width / box.width), y: (event.clientY - box.top) * (canvas.height / box.height) };
+        };
+        // Items drawn last (text) sit on top of the photo, so search from the end.
+        const hitAt = (side, pt) => [...previewHits[side]].reverse().find(h => pt.x >= h.x1 && pt.x <= h.x2 && pt.y >= h.y1 && pt.y <= h.y2) || null;
+        [["front", frontCanvas], ["back", backCanvas]].forEach(([side, canvas]) => {
+          canvas.addEventListener("pointerdown", event => {
+            if (!layoutDrag) return;
+            const pt = toCanvas(canvas, event);
+            const hit = hitAt(side, pt);
+            if (!hit) return;
+            event.preventDefault();
+            canvas.setPointerCapture(event.pointerId);
+            drag = { canvas, hit, last: pt };
+            if (hit.kind === "line") { $("lsField").value = hit.key; syncLineStyleControls(); }
+          });
+          canvas.addEventListener("pointermove", event => {
+            if (!layoutDrag) return;
+            const pt = toCanvas(canvas, event);
+            if (!drag || drag.canvas !== canvas) {
+              canvas.style.cursor = hitAt(side, pt) ? "move" : "";
+              return;
+            }
+            moveLayoutItem(drag.hit, ((pt.x - drag.last.x) / canvas.width) * 100, ((pt.y - drag.last.y) / canvas.height) * 100);
+            drag.last = pt;
+            syncControlsFromSettings();
+            renderPreview();
+          });
+          const end = () => {
+            if (!drag) return;
+            drag = null;
+            saveSettings();
+          };
+          canvas.addEventListener("pointerup", end);
+          canvas.addEventListener("pointercancel", end);
+        });
       }
 
       function refreshAll() {
@@ -1910,6 +2013,7 @@
         });
 
         bindCropTools();
+        bindLayoutDrag();
         bindLineStyleControls();
         $("problemsOnly").addEventListener("change", renderTable);
         $("printBtn").addEventListener("click", printCards);
