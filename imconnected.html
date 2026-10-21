@@ -4775,11 +4775,16 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     try { const parsed = new URL(value); if (parsed.username || parsed.password) return false; return /^https?:$/.test(parsed.protocol) && parsed.origin === new URL(siteUrl).origin; } catch (error) { return false; }
   }
 
+  // Stories published from Studio may already use WordPress photos; those need no copy.
+  function importOnWordPress(value) {
+    const host = root.Media && root.Media.photoHost ? root.Media.photoHost() : '';
+    try { return !!host && new URL(value).hostname.replace(/^www\./i, '').toLowerCase() === host; } catch (error) { return false; }
+  }
   function importImageOk(value, siteUrl) {
     try {
       const parsed = new URL(value);
       if (parsed.username || parsed.password) return false;
-      return importSameOrigin(value, siteUrl) || (parsed.protocol === 'https:' && IMPORT_IMAGE_HOSTS.indexOf(parsed.origin) >= 0);
+      return importSameOrigin(value, siteUrl) || (parsed.protocol === 'https:' && (IMPORT_IMAGE_HOSTS.indexOf(parsed.origin) >= 0 || importOnWordPress(value)));
     } catch (error) { return false; }
   }
 
@@ -5011,7 +5016,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     const copies = [];
     blocks.forEach(function (block, index) {
       const story = picked[index];
-      if (block && story && story.image) copies.push({ id: block.id, src: story.image, name: importPhotoName(story) });
+      if (block && story && story.image && !importOnWordPress(story.image)) copies.push({ id: block.id, src: story.image, name: importPhotoName(story) });
     });
     if (copies.length) copyImportPhotos(siteUrl, token, copies);
   }
@@ -5027,7 +5032,11 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       const response = await fetch(siteUrl + '/api/studio-photo?src=' + encodeURIComponent(src), {
         headers: { Authorization: 'Bearer ' + token }, signal: controller.signal, redirect: 'error', credentials: 'omit', referrerPolicy: 'no-referrer'
       });
-      if (!response.ok) throw new Error(response.status === 404 ? 'the website couldn’t find it' : 'the website answered HTTP ' + response.status);
+      if (!response.ok) {
+        const data = await response.json().catch(function () { return null; });
+        if (data && data.code === 'not_built') throw new Error('the photo isn’t on the website yet; import again after the site updates (about 3–5 minutes)');
+        throw new Error(response.status === 404 ? 'the website couldn’t find it' : 'the website answered HTTP ' + response.status);
+      }
       const blob = await response.blob();
       if (!/^image\/(jpeg|png|webp)$/i.test(blob.type)) throw new Error('the website didn’t send an image');
       return blob;
@@ -5046,6 +5055,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     }
     const changes = [];
     let failed = 0;
+    let reason = '';
     for (let i = 0; i < copies.length; i += 1) {
       const copy = copies[i];
       toast('Copying photo ' + (i + 1) + ' of ' + copies.length + ' into WordPress…');
@@ -5057,11 +5067,12 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         if (block && block.photos && block.photos[0] && block.photos[0].url === copy.src) changes.push({ id: copy.id, path: 'photos.0.url', value: url });
       } catch (error) {
         failed += 1;
+        if (!reason) reason = safePublishMessage(error.message, token);
         if (!Media.canUpload()) { failed += copies.length - i - 1; break; }
       }
     }
     if (changes.length) Store.patchBlocks(changes, { source: 'import-photos' });
-    if (failed) toast(changes.length + ' photo(s) copied into WordPress. ' + failed + ' still point to the website; choose them under Browse → WordPress. Send Check will flag them.', 'error');
+    if (failed) toast(changes.length + ' photo(s) copied into WordPress. ' + failed + ' still point to the website (' + reason + '). Choose them under Browse → WordPress; Send Check will flag them.', 'error');
     else toast(changes.length + ' photo(s) copied into WordPress.', 'success');
   }
 
