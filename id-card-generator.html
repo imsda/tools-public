@@ -144,6 +144,18 @@
     #frontCanvas.can-drag { cursor: grab; touch-action: none; }
     .layout-drag canvas { touch-action: none; }
     .layout-drag .card-face canvas { outline: 2px dashed var(--primary); outline-offset: 3px; }
+    .custom-options { display: none; margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px dashed #d3dee7; gap: 0.55rem; }
+    .custom-options.show { display: grid; }
+    .opt-row { display: grid; grid-template-columns: 6.2rem 1fr; align-items: center; gap: 0.5rem; }
+    .opt-row > .opt-label { font-size: 0.82rem; font-weight: 700; color: #2d4659; }
+    .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #fff; width: fit-content; }
+    .seg label { position: relative; cursor: pointer; }
+    .seg input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg span { display: block; padding: 0.38rem 0.75rem; font-size: 0.82rem; font-weight: 700; color: #2d4659; border-right: 1px solid var(--border); }
+    .seg label:last-child span { border-right: 0; }
+    .seg input:checked + span { background: var(--primary-dark); color: #fff; }
+    .seg input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: -2px; }
+    .seg input:disabled + span { opacity: 0.45; cursor: not-allowed; }
     .drag-toggle { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 700; color: var(--primary-dark); cursor: pointer; }
     .drag-toggle input { width: 1.05rem; height: 1.05rem; }
     #frontCanvas.dragging { cursor: grabbing; }
@@ -203,6 +215,33 @@
             <label class="type-option"><input type="radio" name="cardType" value="staff" /><span>Staff<small>Vertical &middot; Name, ID#</small></span></label>
             <label class="type-option"><input type="radio" name="cardType" value="student" /><span>Student<small>Horizontal &middot; Name, ID#, DoB, Grade</small></span></label>
             <label class="type-option"><input type="radio" name="cardType" value="template1" /><span>Template 1<small>Horizontal &middot; Name + 3 lines from the CSV + year</small></span></label>
+            <label class="type-option"><input type="radio" name="cardType" value="custom" /><span>Custom Template<small>Any CSV columns &middot; place each on front or back</small></span></label>
+          </div>
+          <div class="custom-options" id="customOptions" aria-label="Custom Template options">
+            <div class="opt-row"><span class="opt-label">Card</span>
+              <div class="seg" role="radiogroup" aria-label="Card orientation">
+                <label><input type="radio" name="customOrient" value="landscape" /><span>Horizontal</span></label>
+                <label><input type="radio" name="customOrient" value="portrait" /><span>Vertical</span></label>
+              </div>
+            </div>
+            <div class="opt-row"><span class="opt-label">Photo</span>
+              <div class="seg" role="radiogroup" aria-label="Photo on or off">
+                <label><input type="radio" name="cpEnabled" value="on" /><span>On</span></label>
+                <label><input type="radio" name="cpEnabled" value="off" /><span>Off (no photos)</span></label>
+              </div>
+            </div>
+            <div class="opt-row"><span class="opt-label">Photo crop</span>
+              <div class="seg" role="radiogroup" aria-label="Photo crop shape">
+                <label><input type="radio" name="cpShape" value="rect" /><span>Square</span></label>
+                <label><input type="radio" name="cpShape" value="circle" /><span>Round</span></label>
+              </div>
+            </div>
+            <div class="opt-row"><span class="opt-label">Photo on</span>
+              <div class="seg" role="radiogroup" aria-label="Photo side">
+                <label><input type="radio" name="cpSide" value="front" /><span>Front</span></label>
+                <label><input type="radio" name="cpSide" value="back" /><span>Back</span></label>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -215,7 +254,7 @@
             <p class="hint" id="csvHint"></p>
             <div class="btn-row"><button class="btn" type="button" id="sampleCsvBtn">Download sample CSV</button><button class="btn" type="button" id="clearCsvBtn">Clear CSV</button></div>
           </div>
-          <div class="field">
+          <div class="field" id="photoField">
             <label for="photoInput">Photos</label>
             <input id="photoInput" type="file" accept="image/*" multiple />
             <div class="file-status" id="photoStatus">No photos loaded.</div>
@@ -255,7 +294,7 @@
             <div class="field"><label for="textColor">Text color</label><input id="textColor" type="color" /></div>
             <div class="field"><label for="labelColor">Label color</label><input id="labelColor" type="color" /></div>
           </div>
-          <div class="field">
+          <div class="field" id="yearTextField">
             <label for="yearText">School year</label>
             <input id="yearText" type="text" placeholder="e.g. 2026–2027" />
           </div>
@@ -276,9 +315,28 @@
           </div>
           <p class="hint">X/Y are percentages of the card (0 = left/top). Leave the year blank to hide it.</p>
           </div>
+          <details class="advanced" id="customDetails" open>
+            <summary>Custom card: photo position &amp; size</summary>
+            <div class="grid-2">
+              <div class="field"><label for="cpX">Photo X %</label><input id="cpX" type="number" min="0" max="100" step="0.25" /></div>
+              <div class="field"><label for="cpY">Photo Y %</label><input id="cpY" type="number" min="0" max="100" step="0.25" /></div>
+              <div class="field"><label for="cpW">Photo width %</label><input id="cpW" type="number" min="5" max="100" step="0.25" /></div>
+              <div class="field"><label for="cpH">Photo height % (square crop)</label><input id="cpH" type="number" min="5" max="100" step="0.25" /></div>
+            </div>
+            <p class="hint" id="cpHint">X/Y are the photo's top-left corner in % of the card. A round crop's size comes from its width. Card orientation, photo on/off, crop shape and side are in step 1.</p>
+          </details>
           <details class="advanced" id="lineStyleDetails" open>
-            <summary>Text lines: font, size &amp; position</summary>
-            <div class="field"><label for="lsField">Line to adjust</label><select id="lsField"></select></div>
+            <summary id="lineStyleSummary">Text lines: font, size &amp; position</summary>
+            <div class="field"><label for="lsField" id="lsFieldLabel">Line to adjust</label><select id="lsField"></select></div>
+            <div class="grid-3" id="lsCustomOnly">
+              <div class="field"><label for="lsSide">Show on</label>
+                <select id="lsSide"><option value="front">Front</option><option value="back">Back</option><option value="hidden">Hidden</option></select>
+              </div>
+              <div class="field"><label for="lsDisplay">Display as</label>
+                <select id="lsDisplay"><option value="text">Text</option><option value="barcode">Barcode (Code 128)</option></select>
+              </div>
+              <label class="check-inline" title="Print the column name before the value, e.g. &quot;Title: Teacher&quot;"><input type="checkbox" id="lsLabel" /> Show column name</label>
+            </div>
             <div class="grid-3">
               <div class="field"><label for="lsFont">Font</label><select id="lsFont"></select></div>
               <div class="field"><label for="lsSize">Size (pt)</label><input id="lsSize" type="number" min="3" max="30" step="0.25" /></div>
@@ -297,6 +355,10 @@
               </div>
               <label class="check-inline"><input type="checkbox" id="lsItalic" /> Italic</label>
               <label class="check-inline" title="Long text breaks onto more lines instead of shrinking"><input type="checkbox" id="lsWrap" /> Wrap</label>
+            </div>
+            <div class="grid-2">
+              <div class="field"><label for="lsColor">Font color</label><input id="lsColor" type="color" /></div>
+              <label class="check-inline" title="On: changing the color changes every field. Off: each field keeps its own color."><input type="checkbox" id="lsColorSync" /> Same color for all fields</label>
             </div>
             <div class="btn-row"><button class="btn" type="button" id="lsResetBtn">Reset this line</button><button class="btn" type="button" id="lsResetAllBtn">Reset all lines</button></div>
             <p class="hint">X is where the line is anchored (its center when centered), Y is the text baseline, both in % of the card. Text wider than Max width shrinks to fit, or wraps if Wrap is on.</p>
@@ -332,7 +394,7 @@
             </div>
             <div class="btn-row"><button class="btn" type="button" id="resetBackBtn">Reset back placement</button></div>
           </details>
-          <details class="advanced">
+          <details class="advanced" id="nudgeDetails">
             <summary>Adjust photo &amp; text placement</summary>
             <p class="hint" style="margin-top:0;">Only needed if your uploaded template moves the photo frame or text area. Offsets are % of the card.</p>
             <div class="grid-3">
@@ -459,8 +521,10 @@
       const SIZES = {
         staff: { w: CR80_SHORT, h: CR80_LONG - 1 },   // portrait 638 x 1012
         student: { w: CR80_LONG - 1, h: CR80_SHORT }, // landscape 1012 x 638
-        template1: { w: CR80_LONG - 1, h: CR80_SHORT }
+        template1: { w: CR80_LONG - 1, h: CR80_SHORT },
+        custom: { w: CR80_LONG - 1, h: CR80_SHORT } // set from settings.custom.orientation
       };
+      function isPortrait(type) { return SIZES[type].h > SIZES[type].w; }
       const LAYOUTS = {
         staff: {
           photo: { shape: "circle", cx: 0.4924, cy: 0.3775, r: 0.2875 }, // r is a fraction of width
@@ -521,7 +585,27 @@
         }
       };
       function lineSlots(type) { return FIELD_TYPES[type].fields.filter(f => f.source === "line"); }
-      const CARD_TYPES = ["staff", "student", "template1"];
+      const CARD_TYPES = ["staff", "student", "template1", "custom"];
+      function isCustom(type) { return type === "custom"; }
+      /* ---------- Custom Template ----------
+         Free-form: every CSV column is a field that can go on the front, the back, or be hidden,
+         shown as text (optionally "Column: value") or as a Code 128 barcode. Only placement is
+         saved, keyed by column name (settings.custom.fields); the data itself is never stored. */
+      const CUSTOM_DEFAULT_HEADERS = ["Name", "ID#", "Title"];
+      const CUSTOM_MAX_FIELDS = 60;
+      function defaultCustomPhoto(orientation) {
+        return orientation === "portrait" ? { side: "front", shape: "rect", x: 25, y: 8, w: 50, h: 45 } : { side: "front", shape: "rect", x: 5, y: 20, w: 27, h: 60 };
+      }
+      function defaultCustomField(index, orientation) {
+        const portrait = orientation === "portrait";
+        const back = index >= 8;
+        const i = back ? index - 8 : index;
+        return {
+          x: portrait ? 50 : 37, y: portrait ? 60 + i * 5 : (back ? 15 : 28) + i * 9, width: portrait ? 90 : 58,
+          size: index === 0 ? 10 : 7.5, font: "sans", weight: index === 0 ? "700" : "400", italic: false,
+          align: portrait ? "center" : "left", wrap: false, side: back ? "back" : "front", display: "text", label: false
+        };
+      }
       function isFieldType(type) { return !!FIELD_TYPES[type]; }
       const SETTINGS_KEY = "imsda.idCards.v2"; // v2: blank templates, black text defaults
 
@@ -533,15 +617,18 @@
         yearText: "",
         yearColor: "#000000",
         yearBold: "700",
-        year: { staff: { ...LAYOUTS.staff.year }, student: { ...LAYOUTS.student.year }, template1: { ...LAYOUTS.student.year } },
-        nudge: { staff: defaultNudge(), student: defaultNudge(), template1: defaultNudge() },
-        back: { staff: defaultBack("staff"), student: defaultBack("student"), template1: defaultBack("student") },
+        year: { staff: { ...LAYOUTS.staff.year }, student: { ...LAYOUTS.student.year }, template1: { ...LAYOUTS.student.year }, custom: { ...LAYOUTS.student.year } },
+        nudge: { staff: defaultNudge(), student: defaultNudge(), template1: defaultNudge(), custom: defaultNudge() },
+        back: { staff: defaultBack("staff"), student: defaultBack("student"), template1: defaultBack("student"), custom: defaultBack("student") },
         staffBackText: "",
         // Rotate the back 180° relative to the front when printing (duplex flip direction).
-        flipBack: { staff: true, student: false, template1: false },
+        flipBack: { staff: true, student: false, template1: false, custom: false },
         staffBackTextStyle: defaultBackTextStyle(),
         // Numbered templates: font, size and position of each text line (placement only).
-        lineStyle: { template1: defaultLineStyles("template1") }
+        lineStyle: { template1: defaultLineStyles("template1") },
+        custom: { orientation: "landscape", photo: defaultCustomPhoto("landscape"), fields: {} },
+        // Per type: whether changing one field's font color changes them all.
+        colorSync: { template1: true, custom: true }
       };
       /* Barcode placement on the back, in % of the card: center X, top Y, width, height. */
       function defaultBack(type) {
@@ -569,9 +656,13 @@
 
       /* ---------- State ---------- */
       let settings = loadSettings();
-      const csvByType = { staff: null, student: null, template1: null };   // { fileName, headers, rows, mapping, missingColumns }
+      function applyCustomOrientation() {
+        SIZES.custom = settings.custom.orientation === "portrait" ? { w: CR80_SHORT, h: CR80_LONG - 1 } : { w: CR80_LONG - 1, h: CR80_SHORT };
+      }
+      applyCustomOrientation();
+      const csvByType = { staff: null, student: null, template1: null, custom: null };   // { fileName, headers, rows, mapping, missingColumns }
       const photos = new Map();                            // normalized ID -> { file, url, name, image, failed }
-      const templates = { front: { staff: null, student: null, template1: null }, back: { staff: null, student: null, template1: null } }; // Image objects
+      const templates = { front: { staff: null, student: null, template1: null, custom: null }, back: { staff: null, student: null, template1: null, custom: null } }; // Image objects
       let records = [];
       let selectedIndex = -1;
 
@@ -586,7 +677,7 @@
         const base = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
         if (!saved || typeof saved !== "object") return base;
         Object.keys(base).forEach(key => {
-          if (["year", "nudge", "back", "staffBackTextStyle", "flipBack", "lineStyle"].includes(key) || UNSAVED_TEXT.includes(key)) return;
+          if (["year", "nudge", "back", "staffBackTextStyle", "flipBack", "lineStyle", "custom", "colorSync"].includes(key) || UNSAVED_TEXT.includes(key)) return;
           if (typeof saved[key] === typeof base[key]) base[key] = saved[key];
         });
         CARD_TYPES.forEach(type => {
@@ -615,8 +706,38 @@
             if (["left", "center", "right"].includes(v.align)) st.align = v.align;
             if (typeof v.italic === "boolean") st.italic = v.italic;
             if (typeof v.wrap === "boolean") st.wrap = v.wrap;
+            if (/^#[0-9a-f]{6}$/i.test(v.color)) st.color = v.color;
           });
         });
+        if (saved.custom && typeof saved.custom === "object") {
+          const c = saved.custom;
+          if (["landscape", "portrait"].includes(c.orientation)) base.custom.orientation = c.orientation;
+          if (c.photo && typeof c.photo === "object") {
+            Object.assign(base.custom.photo, pickNumbers(c.photo, ["x", "y", "w", "h"]));
+            if (["front", "back", "none"].includes(c.photo.side)) base.custom.photo.side = c.photo.side;
+            if (["rect", "circle"].includes(c.photo.shape)) base.custom.photo.shape = c.photo.shape;
+            if (["front", "back"].includes(c.photo.lastSide)) base.custom.photo.lastSide = c.photo.lastSide;
+          }
+          if (c.fields && typeof c.fields === "object") {
+            Object.keys(c.fields).slice(0, CUSTOM_MAX_FIELDS).forEach((key, index) => {
+              const v = c.fields[key];
+              if (!v || typeof v !== "object" || !key || key.length > 80) return;
+              const st = defaultCustomField(index, base.custom.orientation);
+              Object.assign(st, pickNumbers(v, ["x", "y", "width", "size"]));
+              if (FONT_CHOICES.some(f => f.id === v.font)) st.font = v.font;
+              if (["400", "500", "700"].includes(v.weight)) st.weight = v.weight;
+              if (["left", "center", "right"].includes(v.align)) st.align = v.align;
+              if (["front", "back", "hidden"].includes(v.side)) st.side = v.side;
+              if (["text", "barcode"].includes(v.display)) st.display = v.display;
+              ["italic", "wrap", "label"].forEach(k => { if (typeof v[k] === "boolean") st[k] = v[k]; });
+              if (/^#[0-9a-f]{6}$/i.test(v.color)) st.color = v.color;
+              base.custom.fields[key] = st;
+            });
+          }
+        }
+        if (saved.colorSync && typeof saved.colorSync === "object") {
+          Object.keys(base.colorSync).forEach(type => { if (typeof saved.colorSync[type] === "boolean") base.colorSync[type] = saved.colorSync[type]; });
+        }
         if (!CARD_TYPES.includes(base.cardType)) base.cardType = "student";
         return base;
       }
@@ -701,6 +822,7 @@
             dob: type === "student" ? cell(row, m.dob) : "",
             grade: type === "student" ? cell(row, m.grade) : "",
             lines: isFieldType(type) ? m.lines.map(idx => cell(row, idx)) : [],
+            values: isCustom(type) ? Object.fromEntries(csv.headers.map((h, idx) => [h, cell(row, idx)]).filter(([h]) => h)) : {},
             issues: []
           };
         });
@@ -777,8 +899,8 @@
           global.push(issue("error", csv.error));
         } else {
           const m = csv.mapping;
-          if (m.id < 0 && !isFieldType(type)) global.push(issue("error", `No ID# column found. Add a column named "ID" or "ID#". Columns found: ${csv.headers.join(", ") || "(none)"}.`));
-          if (m.name < 0 && m.first < 0 && m.last < 0) global.push(issue("error", `No Name column found. Add a column named "Name" (or "First Name" and "Last Name"). Columns found: ${csv.headers.join(", ") || "(none)"}.`));
+          if (m.id < 0 && !isFieldType(type) && !isCustom(type)) global.push(issue("error", `No ID# column found. Add a column named "ID" or "ID#". Columns found: ${csv.headers.join(", ") || "(none)"}.`));
+          if (m.name < 0 && m.first < 0 && m.last < 0 && !isCustom(type)) global.push(issue("error", `No Name column found. Add a column named "Name" (or "First Name" and "Last Name"). Columns found: ${csv.headers.join(", ") || "(none)"}.`));
           if (type === "student" && m.dob < 0) global.push(issue("warn", 'No date of birth column found (expected "DoB" or "Date of Birth").'));
           if (type === "student" && m.grade < 0) global.push(issue("warn", 'No Grade column found.'));
           if (isFieldType(type)) {
@@ -800,7 +922,15 @@
         }));
 
         records.forEach(r => {
-          if (isFieldType(type)) {
+          if (isCustom(type)) {
+            customHeaders().forEach(h => {
+              const st = customStyle(h);
+              if (st.side === "hidden") return;
+              const v = (r.values || {})[h] || "";
+              if (!v) r.issues.push(issue("warn", `Blank ${h}`));
+              else if (st.display === "barcode" && !canEncode(v)) r.issues.push(issue("error", `${h} has characters a barcode can't encode`));
+            });
+          } else if (isFieldType(type)) {
             // Numbered templates don't need an ID# (photos can still be named by ID# if the CSV has one).
             if (!r.name) r.issues.push(issue("error", "Missing name"));
             const headers = csv ? csv.headers : [];
@@ -813,8 +943,8 @@
             if (r.name && !r.id) r.issues.push(issue("warn", "Missing ID# (no barcode)"));
             if (!r.name && !r.id) r.issues.push(issue("error", "Missing name and ID#"));
           }
-          if (r.id && idCounts.get(photoKey(r.id)) > 1) r.issues.push(issue("error", "Duplicate ID#"));
-          if (r.id && !isFieldType(type) && !canEncode(r.id)) r.issues.push(issue("error", "ID# has characters a barcode can't encode"));
+          if (r.id && !isCustom(type) && idCounts.get(photoKey(r.id)) > 1) r.issues.push(issue("error", "Duplicate ID#"));
+          if (r.id && !isFieldType(type) && !isCustom(type) && !canEncode(r.id)) r.issues.push(issue("error", "ID# has characters a barcode can't encode"));
           if (type === "student") {
             if (!r.dob && csv && csv.mapping && csv.mapping.dob >= 0) r.issues.push(issue("warn", "Missing DoB"));
             if (!r.grade && csv && csv.mapping && csv.mapping.grade >= 0) r.issues.push(issue("warn", "Missing grade"));
@@ -842,13 +972,13 @@
             matchedPhotoKeys.add(photo.key);
             if (photo.unsupported) r.issues.push(issue("error", "Photo format not supported (convert to JPG)"));
             else if (photo.failed) r.issues.push(issue("error", "Photo could not be read"));
-          } else if ((r.id || r.name) && !r.issues.some(i => i.text.includes("photos match") || i.text.includes("matches more than one"))) {
+          } else if ((r.id || r.name) && !(isCustom(type) && settings.custom.photo.side === "none") && !r.issues.some(i => i.text.includes("photos match") || i.text.includes("matches more than one"))) {
             r.issues.push(issue("warn", "No photo"));
           }
         });
 
         const orphanPhotos = [...photos.values()].filter(p => !matchedPhotoKeys.has(p.key));
-        if (records.length && orphanPhotos.length) {
+        if (records.length && orphanPhotos.length && !(isCustom(type) && settings.custom.photo.side === "none")) {
           global.push(issue("warn", `${orphanPhotos.length} photo${orphanPhotos.length === 1 ? "" : "s"} with no matching ID# or name in the CSV: ${orphanPhotos.slice(0, 12).map(p => p.name).join(", ")}${orphanPhotos.length > 12 ? ", …" : ""}`));
         }
         return global;
@@ -1002,6 +1132,15 @@
         ctx.drawImage(tpl, box.x, box.y, box.w, box.h);
       }
       function photoRect(type) {
+        if (isCustom(type)) {
+          const { w: W, h: H } = SIZES[type];
+          const p = settings.custom.photo;
+          const x = (p.x / 100) * W;
+          const y = (p.y / 100) * H;
+          const w = (p.w / 100) * W;
+          if (p.shape === "circle") return { shape: "circle", cx: x + w / 2, cy: y + w / 2, rx: w / 2, ry: w / 2, x, y, w, h: w };
+          return { shape: "rect", x, y, w, h: (p.h / 100) * H };
+        }
         const { w: W, h: H } = SIZES[type];
         const n = settings.nudge[type];
         const p = LAYOUTS[type].photo;
@@ -1070,6 +1209,7 @@
         const show = guides || { photo: true, text: true, year: true };
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, W, H);
+        if (isCustom(type)) { drawBuiltInCustom(ctx, "front", show.photo, show.text); return; }
         const p = LAYOUTS[type].photo;
         if (show.photo) {
           if (p.shape === "circle") guideBox(ctx, (p.cx - p.r) * W, p.cy * H - p.r * W, p.r * 2 * W, p.r * 2 * W, "Photo", true);
@@ -1090,11 +1230,23 @@
         guideBox(ctx, yx, (y.y / 100) * H - y.size * 1.05, yw, yh, "Year", false);
       }
 
+      function drawBuiltInCustom(ctx, side, photoGuide, sampleText) {
+        const p = settings.custom.photo;
+        if (photoGuide && p.side === side) {
+          const r = photoRect("custom");
+          guideBox(ctx, r.x, r.y, r.w, r.h, "Photo", r.shape === "circle");
+        }
+        // Sample text: each column's name in its font, size and position.
+        if (sampleText) drawCustomSide(ctx, side, customPlaceholderRecord(), "#8a96a3");
+      }
+
       function drawBuiltInBack(ctx, type, withGuides) {
         const { w: W, h: H } = SIZES[type];
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, W, H);
         if (withGuides === false) return;
+        // Downloads call this without withGuides and get sample text; the preview passes true (photo guide only).
+        if (isCustom(type)) { drawBuiltInCustom(ctx, "back", true, withGuides === undefined); return; }
         if (isFieldType(type) && FIELD_TYPES[type].back === "template") {
           guideBox(ctx, W * 0.06, H * 0.1, W * 0.88, H * 0.8, "Back template", false);
           return;
@@ -1135,7 +1287,8 @@
         const st = (settings.lineStyle[type] && settings.lineStyle[type][field.key]) || defaultLineStyle(field);
         return {
           ...field, x: st.x / 100, y: st.y / 100, maxW: st.width / 100, size: st.size * PT_TO_PX,
-          font: st.font, weight: st.weight, italic: st.italic, align: st.align, wrap: st.wrap, lineHeight: field.lineHeight || 1.3
+          font: st.font, weight: st.weight, italic: st.italic, align: st.align, wrap: st.wrap, lineHeight: field.lineHeight || 1.3,
+          color: st.color || settings.textColor
         };
       }
       function fitFieldLine(ctx, field, text, size, maxWidth) {
@@ -1143,13 +1296,76 @@
         ctx.font = fieldFont(field, s);
         while (s > size * 0.55 && ctx.measureText(text).width > maxWidth) { s -= 1; ctx.font = fieldFont(field, s); }
       }
+      /* Custom Template: column names (from the CSV, or examples before one is loaded) and
+         each column's saved placement, created on first sight. */
+      function customHeaders() {
+        const csv = csvByType.custom;
+        const headers = csv && csv.headers && csv.headers.length ? csv.headers.filter(Boolean) : CUSTOM_DEFAULT_HEADERS;
+        return [...new Set(headers)].slice(0, CUSTOM_MAX_FIELDS);
+      }
+      function customStyle(header) {
+        const fields = settings.custom.fields;
+        if (!fields[header]) fields[header] = defaultCustomField(Object.keys(fields).length, settings.custom.orientation);
+        return fields[header];
+      }
+      function customField(header) {
+        const st = customStyle(header);
+        return {
+          key: header, x: st.x / 100, y: st.y / 100, maxW: st.width / 100, size: st.size * PT_TO_PX, font: st.font, weight: st.weight,
+          italic: st.italic, align: st.align, wrap: st.wrap, lineHeight: 1.3, side: st.side, display: st.display, label: st.label,
+          color: st.color || settings.textColor
+        };
+      }
+      function customValue(record, header) { return ((record.values || {})[header] || "").trim(); }
+      function drawCustomSide(ctx, side, record, color) {
+        const { w: W, h: H } = SIZES.custom;
+        customHeaders().map(customField).filter(f => f.side === side).forEach(field => {
+          const value = customValue(record, field.key);
+          if (!value) return;
+          const x = field.x * W;
+          const y = field.y * H;
+          const maxWidth = field.maxW * W;
+          ctx.textBaseline = "alphabetic";
+          if (field.display === "barcode") {
+            // x = center, y = top of the bars; height follows the size setting; value printed below.
+            const barH = field.size * 2.6;
+            if (!drawBarcode(ctx, value, x, y, maxWidth, barH)) return;
+            ctx.fillStyle = color || field.color;
+            ctx.textAlign = "center";
+            const textSize = Math.max(14, field.size * 0.75);
+            ctx.font = fieldFont({ ...field, weight: "500", italic: false }, textSize);
+            const label = field.label ? `${field.key}: ${value}` : value;
+            ctx.fillText(label, x, y + barH + textSize * 1.1);
+            noteBox(ctx, "line", field.key, x - maxWidth / 2, y, x + maxWidth / 2, y + barH + textSize * 1.4);
+            return;
+          }
+          const text = field.label ? `${field.key}: ${value}` : value;
+          ctx.fillStyle = color || field.color;
+          ctx.textAlign = field.align;
+          if (field.wrap) {
+            ctx.font = fieldFont(field, field.size);
+            wrapLines(ctx, text, maxWidth).forEach((line, idx) => {
+              fitFieldLine(ctx, field, line, field.size, maxWidth);
+              fillFieldText(ctx, field, line, x, y + idx * field.size * field.lineHeight, field.size);
+            });
+          } else {
+            fitFieldLine(ctx, field, text, field.size, maxWidth);
+            fillFieldText(ctx, field, text, x, y, field.size);
+          }
+        });
+      }
+      function customPlaceholderRecord() {
+        return { sample: true, name: "", id: "", values: Object.fromEntries(customHeaders().map(h => [h, customStyle(h).display === "barcode" ? "123456" : h])), issues: [] };
+      }
+
       /* Web fonts (e.g. Advent Sans) load on first use; redraw the preview once they're ready.
          Printing waits for them in printCards. */
       const fontLoads = new Map();
       function fontsReady(type) {
-        if (!document.fonts || !isFieldType(type)) return Promise.resolve();
-        const faces = new Set(FIELD_TYPES[type].fields
-          .map(f => FONT_CHOICES.find(c => c.id === styledField(type, f).font))
+        if (!document.fonts || !(isFieldType(type) || isCustom(type))) return Promise.resolve();
+        const fontIds = isCustom(type) ? customHeaders().map(h => customStyle(h).font) : FIELD_TYPES[type].fields.map(f => styledField(type, f).font);
+        const faces = new Set(fontIds
+          .map(id => FONT_CHOICES.find(c => c.id === id))
           .filter(c => c && c.face).map(c => c.face));
         return Promise.all([...faces].map(face => {
           if (!fontLoads.has(face)) fontLoads.set(face, document.fonts.load(`400 40px "${face}"`).catch(() => []));
@@ -1177,10 +1393,10 @@
         const dx = (n.textDx / 100) * W;
         const dy = (n.textDy / 100) * H;
         ctx.textBaseline = "alphabetic";
-        ctx.fillStyle = color || settings.textColor;
         FIELD_TYPES[type].fields.map(f => styledField(type, f)).forEach(field => {
           const text = fieldValue(type, field, record);
           if (!text) return;
+          ctx.fillStyle = color || field.color;
           const size = field.size * scale;
           const maxWidth = field.maxW * W;
           const x = field.x * W + dx;
@@ -1267,7 +1483,16 @@
           drawTemplate(ctx, type, tpl);
         } else {
           const hasPhoto = !!(record.photo && record.photo.image) || !record.sample;
-          drawBuiltInFront(ctx, type, forPrint ? { photo: false, text: false, year: false } : { photo: !hasPhoto, text: !record.name && !record.id, year: !settings.yearText.trim() });
+          drawBuiltInFront(ctx, type, forPrint ? { photo: false, text: false, year: false } : { photo: !hasPhoto, text: !isCustom(type) && !record.name && !record.id, year: !settings.yearText.trim() });
+        }
+        if (isCustom(type)) {
+          if (settings.custom.photo.side === "front") {
+            drawPhoto(ctx, type, record, forPrint);
+            const cr = photoRect(type);
+            noteBox(ctx, "photo", "photo", cr.x, cr.y, cr.x + cr.w, cr.y + cr.h);
+          }
+          drawCustomSide(ctx, "front", record);
+          return;
         }
         drawPhoto(ctx, type, record, forPrint);
         const pr = photoRect(type);
@@ -1344,7 +1569,18 @@
         const tpl = templates.back[type];
         if (tpl) {
           drawTemplate(ctx, type, tpl);
+        } else if (isCustom(type)) {
+          drawBuiltInBack(ctx, type, !forPrint && !!record.sample);
         } else drawBuiltInBack(ctx, type, (isFieldType(type) || !record.id) && !forPrint);
+        if (isCustom(type)) {
+          if (settings.custom.photo.side === "back") {
+            drawPhoto(ctx, type, record, forPrint);
+            const cr = photoRect(type);
+            noteBox(ctx, "photo", "photo", cr.x, cr.y, cr.x + cr.w, cr.y + cr.h);
+          }
+          drawCustomSide(ctx, "back", record);
+          return;
+        }
         if (isFieldType(type)) return; // back is the uploaded template only
         if (type === "staff") drawStaffBackText(ctx);
         const B = backLayout(type);
@@ -1390,6 +1626,9 @@
 
       /* ---------- UI rendering ---------- */
       function sampleRecord() {
+        if (isCustom(settings.cardType)) {
+          return { sample: true, name: "", id: "", values: Object.fromEntries(customHeaders().map(h => [h, { Name: "John Doe", "ID#": "100001" }[h] || (customStyle(h).display === "barcode" ? "100001" : `${h} Text`)])), issues: [] };
+        }
         if (isFieldType(settings.cardType)) {
           return { sample: true, name: "John Doe", id: "", dob: "", grade: "", lines: lineSlots(settings.cardType).map(f => `${f.label} Text`), issues: [] };
         }
@@ -1408,7 +1647,11 @@
         const extraFields = isFieldType(type) ? lineSlots(type) : [];
         const csvNow = csvByType[type];
         const lineHeader = f => (csvNow && csvNow.mapping && csvNow.headers[csvNow.mapping.lines[f.index]]) || f.label;
-        const headCells = isFieldType(type)
+        const customCols = isCustom(type) ? customHeaders().slice(0, 4) : [];
+        const showPhotoCol = !(isCustom(type) && settings.custom.photo.side === "none");
+        const headCells = isCustom(type)
+          ? ["Row", ...customCols, ...(showPhotoCol ? ["Photo"] : []), "Status"]
+          : isFieldType(type)
           ? ["Row", "Name", ...extraFields.map(lineHeader), "Photo", "Status"]
           : ["Row", "Name", "ID#", ...(type === "student" ? ["DoB", "Grade"] : []), "Photo", "Status"];
         const headRow = document.createElement("tr");
@@ -1434,7 +1677,9 @@
           const level = recordLevel(r);
           tr.className = `row-${level}${i === selectedIndex ? " selected" : ""}`;
           tr.dataset.index = String(i);
-          const cells = isFieldType(type)
+          const cells = isCustom(type)
+            ? [String(r.rowNumber), ...customCols.map(h => customValue(r, h))]
+            : isFieldType(type)
             ? [String(r.rowNumber), r.name, ...extraFields.map(f => fieldValue(type, f, r))]
             : [String(r.rowNumber), r.name, r.id];
           if (type === "student") cells.push(formatDob(r.dob), r.grade);
@@ -1447,7 +1692,7 @@
           photoTd.textContent = r.photo ? (r.photo.failed ? "Unreadable" : (r.photoMatch === "name" ? "Yes (by name)" : "Yes")) : "—";
           if (r.photo) photoTd.title = r.photo.name;
           if (!r.photo) photoTd.className = "empty-cell";
-          tr.appendChild(photoTd);
+          if (showPhotoCol) tr.appendChild(photoTd);
           const statusTd = document.createElement("td");
           if (!r.issues.length) statusTd.appendChild(chip("ok", "Ready"));
           r.issues.forEach(item => statusTd.appendChild(chip(item.level, item.text)));
@@ -1497,8 +1742,8 @@
           record.issues.push(issue("error", "Photo could not be read"));
           renderTable();
         }
-        $("frontFigure").className = `card-face ${type === "staff" ? "portrait" : "landscape"}`;
-        $("backFigure").className = `card-face ${type === "staff" ? "portrait" : "landscape"}`;
+        $("frontFigure").className = `card-face ${isPortrait(type) ? "portrait" : "landscape"}`;
+        $("backFigure").className = `card-face ${isPortrait(type) ? "portrait" : "landscape"}`;
         drawFront(record);
         drawBack(record);
         const pos = $("previewPosition");
@@ -1554,6 +1799,7 @@
         };
         frontCanvas.addEventListener("pointerdown", event => {
           if (layoutDrag) return; // drag mode moves the layout instead (bindLayoutDrag)
+          if (isCustom(settings.cardType) && settings.custom.photo.side !== "front") return;
           const photo = previewPhoto();
           if (!photo) return;
           const rect = photoRect(settings.cardType);
@@ -1595,6 +1841,8 @@
       function moveLayoutItem(hit, dx, dy) {
         const type = settings.cardType;
         const n = settings.nudge[type];
+        if (isCustom(type) && hit.kind === "photo") { const ph = settings.custom.photo; ph.x = round2(clampPct(ph.x + dx)); ph.y = round2(clampPct(ph.y + dy)); return; }
+        if (isCustom(type) && hit.kind === "line") { const st = customStyle(hit.key); st.x = round2(clampPct(st.x + dx)); st.y = round2(clampPct(st.y + dy)); return; }
         if (hit.kind === "photo") { n.photoDx = round2(n.photoDx + dx); n.photoDy = round2(n.photoDy + dy); }
         else if (hit.kind === "text") { n.textDx = round2(n.textDx + dx); n.textDy = round2(n.textDy + dy); }
         else if (hit.kind === "year") { const y = settings.year[type]; y.x = round2(clampPct(y.x + dx)); y.y = round2(clampPct(y.y + dy)); }
@@ -1665,12 +1913,27 @@
         const type = settings.cardType;
         const { w: W, h: H } = SIZES[type];
         $("roleField").style.display = type === "staff" ? "" : "none";
-        $("yearPlacement").style.display = isFieldType(type) ? "none" : "";
-        $("lineStyleDetails").style.display = isFieldType(type) ? "" : "none";
-        $("backDetails").style.display = isFieldType(type) && FIELD_TYPES[type].back === "template" ? "none" : "";
-        $("labelColor").closest(".field").style.display = isFieldType(type) ? "none" : "";
+        const custom = isCustom(type);
+        const photosOff = custom && settings.custom.photo.side === "none";
+        $("yearPlacement").style.display = isFieldType(type) || custom ? "none" : "";
+        $("yearTextField").style.display = custom ? "none" : "";
+        $("lineStyleDetails").style.display = isFieldType(type) || custom ? "" : "none";
+        if (custom) syncLineStyleControls();
+        $("lsCustomOnly").style.display = custom ? "" : "none";
+        $("lineStyleSummary").textContent = custom ? "Fields: side, font, size & position" : "Text lines: font, size & position";
+        $("lsFieldLabel").textContent = custom ? "Field (CSV column)" : "Line to adjust";
+        $("nudgeDetails").style.display = custom ? "none" : "";
+        $("photoField").style.display = photosOff ? "none" : "";
+        $("customOptions").classList.toggle("show", custom);
+        $("customDetails").style.display = custom && !photosOff ? "" : "none";
+        document.querySelectorAll('input[name="cpShape"], input[name="cpSide"]').forEach(input => { input.disabled = photosOff; });
+        $("backDetails").style.display = (isFieldType(type) && FIELD_TYPES[type].back === "template") || custom ? "none" : "";
+        $("labelColor").closest(".field").style.display = isFieldType(type) || custom ? "none" : "";
+        $("textColor").closest(".field").style.display = isFieldType(type) || custom ? "none" : "";
         $("orientationHint").textContent = "setting";
-        $("csvHint").innerHTML = isFieldType(type)
+        $("csvHint").innerHTML = custom
+          ? "Custom Template CSV: any columns you like. Each column becomes a field; in step 4 choose whether it shows on the front, the back, or not at all, as text or a barcode. If there is a Name or ID# column, it is also used to match photos."
+          : isFieldType(type)
           ? `${FIELD_TYPES[type].label} CSV: a <strong>Name</strong> column, then up to ${lineSlots(type).length} more columns (any headers) that print as lines 1&ndash;${lineSlots(type).length} in column order. An ID# column is optional and only used to match photos. The year comes from the School year field.`
           : type === "staff"
           ? "Staff CSV columns: <strong>Name</strong> and <strong>ID#</strong>. First/Last Name columns also work."
@@ -1680,7 +1943,7 @@
         status.classList.toggle("bad", !!(csv && csv.error));
         status.textContent = csv ? (csv.error || `${csv.fileName}: ${csv.rows.length} row${csv.rows.length === 1 ? "" : "s"}`) : "No CSV loaded.";
         $("photoStatus").textContent = photos.size ? `${photos.size} photo${photos.size === 1 ? "" : "s"} loaded.` : "No photos loaded.";
-        $("templateHint").textContent = `Make templates ${W} × ${H} px (CR80 ${type === "staff" ? "portrait" : "landscape"} at 300 dpi). The downloaded template is blank with dashed guides for the photo, text, and year; design around them, then upload. The guides are only for placement.`;
+        $("templateHint").textContent = `Make templates ${W} × ${H} px (CR80 ${isPortrait(type) ? "portrait" : "landscape"} at 300 dpi). The downloaded template is blank with dashed guides for the photo, text, and year; design around them, then upload. The guides are only for placement.`;
         ["front", "back"].forEach(side => {
           const tpl = templates[side][type];
           const el = $(`${side}TemplateStatus`);
@@ -1690,7 +1953,7 @@
           const name = tpl.dataset.fileName || "Uploaded image";
           if (Math.abs(ratio - 1) > 0.04) {
             el.classList.add("bad");
-            el.textContent = `${name}: ${tpl.naturalWidth} × ${tpl.naturalHeight} px is not CR80 ${type === "staff" ? "portrait" : "landscape"} proportions, so it is scaled evenly and its edges are trimmed to fit (not stretched). Use ${W} × ${H} px for an exact fit.`;
+            el.textContent = `${name}: ${tpl.naturalWidth} × ${tpl.naturalHeight} px is not CR80 ${isPortrait(type) ? "portrait" : "landscape"} proportions, so it is scaled evenly and its edges are trimmed to fit (not stretched). Use ${W} × ${H} px for an exact fit.`;
           } else el.textContent = `${name} (${tpl.naturalWidth} × ${tpl.naturalHeight} px)`;
         });
       }
@@ -1708,6 +1971,7 @@
         ["barX", "barY", "barW", "barH"].forEach(key => { $(key).value = b[key]; });
         $("staffBackTextFields").style.display = type === "staff" ? "" : "none";
         syncLineStyleControls();
+        syncCustomControls();
         $("flipBack").checked = !!settings.flipBack[type];
         $("staffBackText").value = settings.staffBackText;
         const s = settings.staffBackTextStyle;
@@ -1716,54 +1980,161 @@
       }
 
       /* ---------- Numbered templates: per-line font/size/position controls ---------- */
-      const LINE_STYLE_INPUTS = { lsFont: "font", lsSize: "size", lsWeight: "weight", lsX: "x", lsY: "y", lsWidth: "width", lsAlign: "align", lsItalic: "italic", lsWrap: "wrap" };
+      /* The "Text lines" / "Fields" panel edits one style at a time: Template 1's lines, or the
+         Custom Template's CSV columns (which also have side, display and label). */
+      const LINE_STYLE_INPUTS = {
+        lsFont: "font", lsSize: "size", lsWeight: "weight", lsX: "x", lsY: "y", lsWidth: "width", lsAlign: "align", lsItalic: "italic", lsWrap: "wrap",
+        lsSide: "side", lsDisplay: "display", lsLabel: "label"
+      };
+      function styleKeys(type) {
+        if (isCustom(type)) return customHeaders().map(h => ({ key: h, label: h }));
+        if (isFieldType(type)) return FIELD_TYPES[type].fields.map(f => ({ key: f.key, label: f.label }));
+        return [];
+      }
+      function styleOf(type, key) {
+        return isCustom(type) ? customStyle(key) : settings.lineStyle[type][key];
+      }
       function syncLineStyleControls() {
         const type = settings.cardType;
-        if (!isFieldType(type)) return;
+        const keys = styleKeys(type);
+        if (!keys.length) return;
         const select = $("lsField");
-        const fields = FIELD_TYPES[type].fields;
-        const current = fields.some(f => f.key === select.value) ? select.value : fields[0].key;
+        const current = keys.some(k => k.key === select.value) ? select.value : keys[0].key;
         select.textContent = "";
-        fields.forEach(f => select.appendChild(new Option(f.label, f.key)));
+        keys.forEach(k => select.appendChild(new Option(k.label, k.key)));
         select.value = current;
-        const st = settings.lineStyle[type][current];
+        const st = styleOf(type, current);
         Object.entries(LINE_STYLE_INPUTS).forEach(([id, key]) => {
+          if (st[key] === undefined) return;
           if (typeof st[key] === "boolean") $(id).checked = st[key]; else $(id).value = st[key];
         });
+        $("lsColor").value = st.color || settings.textColor;
+        $("lsColorSync").checked = settings.colorSync[type] !== false;
+      }
+      /* Font color: one field, or every field when "Same color for all fields" is on. */
+      function setFieldColor(type, color) {
+        const keys = settings.colorSync[type] !== false ? styleKeys(type).map(k => k.key) : [$("lsField").value];
+        keys.forEach(key => { styleOf(type, key).color = color; });
       }
       function bindLineStyleControls() {
         const fontSelect = $("lsFont");
         FONT_CHOICES.forEach(f => fontSelect.appendChild(new Option(f.label, f.id)));
         $("lsField").addEventListener("change", syncLineStyleControls);
+        $("lsColor").addEventListener("input", () => {
+          const type = settings.cardType;
+          if (!styleKeys(type).length) return;
+          setFieldColor(type, $("lsColor").value);
+          saveSettings();
+          renderPreview();
+        });
+        $("lsColorSync").addEventListener("change", () => {
+          const type = settings.cardType;
+          if (!styleKeys(type).length) return;
+          settings.colorSync[type] = $("lsColorSync").checked;
+          // Turning sync on gives every field the color shown for the current one.
+          if (settings.colorSync[type]) setFieldColor(type, $("lsColor").value);
+          saveSettings();
+          renderPreview();
+        });
         Object.entries(LINE_STYLE_INPUTS).forEach(([id, key]) => {
           $(id).addEventListener($(id).type === "checkbox" || $(id).tagName === "SELECT" ? "change" : "input", () => {
             const type = settings.cardType;
-            if (!isFieldType(type)) return;
-            const st = settings.lineStyle[type][$("lsField").value];
+            if (!styleKeys(type).length) return;
+            const st = styleOf(type, $("lsField").value);
             const el = $(id);
             if (el.type === "checkbox") st[key] = el.checked;
             else if (el.type === "number") { const n = Number(el.value); if (!Number.isFinite(n) || el.value === "") return; st[key] = n; }
             else st[key] = el.value;
             saveSettings();
-            renderPreview();
+            // Side and display change which checks apply, so re-validate; other edits only redraw.
+            if (key === "side" || key === "display") refreshAll(); else renderPreview();
           });
         });
         $("lsResetBtn").addEventListener("click", () => {
           const type = settings.cardType;
-          const field = FIELD_TYPES[type].fields.find(f => f.key === $("lsField").value);
-          settings.lineStyle[type][field.key] = defaultLineStyle(field);
+          const key = $("lsField").value;
+          const color = styleOf(type, key).color; // reset is placement/font; keep the color
+          if (isCustom(type)) {
+            const index = Object.keys(settings.custom.fields).indexOf(key);
+            settings.custom.fields[key] = defaultCustomField(Math.max(0, index), settings.custom.orientation);
+          } else {
+            const field = FIELD_TYPES[type].fields.find(f => f.key === key);
+            settings.lineStyle[type][field.key] = defaultLineStyle(field);
+          }
+          if (color) styleOf(type, key).color = color;
           saveSettings();
           syncLineStyleControls();
-          renderPreview();
+          refreshAll();
         });
         $("lsResetAllBtn").addEventListener("click", () => {
           const type = settings.cardType;
-          settings.lineStyle[type] = defaultLineStyles(type);
+          if (isCustom(type)) {
+            settings.custom.fields = {};
+            settings.custom.photo = { ...defaultCustomPhoto(settings.custom.orientation), side: settings.custom.photo.side };
+            customHeaders().forEach(customStyle);
+          } else settings.lineStyle[type] = defaultLineStyles(type);
           saveSettings();
           syncLineStyleControls();
-          renderPreview();
+          refreshAll();
         });
         syncLineStyleControls();
+      }
+
+      /* Custom Template: orientation and photo controls. */
+      const CUSTOM_PHOTO_INPUTS = { cpX: "x", cpY: "y", cpW: "w", cpH: "h" };
+      const checkRadio = (name, value) => document.querySelectorAll(`input[name="${name}"]`).forEach(input => { input.checked = input.value === value; });
+      function syncCustomControls() {
+        const photo = settings.custom.photo;
+        checkRadio("customOrient", settings.custom.orientation);
+        checkRadio("cpEnabled", photo.side === "none" ? "off" : "on");
+        checkRadio("cpShape", photo.shape);
+        checkRadio("cpSide", photo.side === "none" ? (photo.lastSide || "front") : photo.side);
+        Object.entries(CUSTOM_PHOTO_INPUTS).forEach(([id, key]) => { $(id).value = photo[key]; });
+      }
+      function onRadio(name, handler) {
+        document.querySelectorAll(`input[name="${name}"]`).forEach(input => input.addEventListener("change", () => { if (input.checked) handler(input.value); }));
+      }
+      function bindCustomControls() {
+        onRadio("customOrient", orientation => {
+          // New orientation: lay fields and photo out again for that shape, keeping each field's
+          // side, display, label and font choices (and the photo's on/off, side and crop).
+          settings.custom.orientation = orientation;
+          Object.keys(settings.custom.fields).forEach((key, index) => {
+            const old = settings.custom.fields[key];
+            const fresh = defaultCustomField(index, orientation);
+            settings.custom.fields[key] = { ...old, x: fresh.x, y: fresh.y, width: fresh.width, align: fresh.align };
+          });
+          const old = settings.custom.photo;
+          settings.custom.photo = { ...defaultCustomPhoto(orientation), side: old.side, shape: old.shape, lastSide: old.lastSide };
+          applyCustomOrientation();
+          saveSettings();
+          refreshAll();
+        });
+        onRadio("cpEnabled", value => {
+          const photo = settings.custom.photo;
+          if (value === "off") { if (photo.side !== "none") photo.lastSide = photo.side; photo.side = "none"; }
+          else photo.side = photo.lastSide || "front";
+          saveSettings();
+          refreshAll();
+        });
+        onRadio("cpShape", shape => { settings.custom.photo.shape = shape; saveSettings(); renderPreview(); });
+        onRadio("cpSide", side => {
+          const photo = settings.custom.photo;
+          photo.lastSide = side;
+          if (photo.side !== "none") photo.side = side;
+          saveSettings();
+          refreshAll();
+        });
+        Object.entries(CUSTOM_PHOTO_INPUTS).forEach(([id, key]) => {
+          $(id).addEventListener("input", () => {
+            const n = Number($(id).value);
+            if (!Number.isFinite(n) || $(id).value === "") return;
+            settings.custom.photo[key] = n;
+            saveSettings();
+            renderPreview();
+          });
+        });
+        syncCustomControls();
       }
 
       function readImageFile(file) {
@@ -1896,7 +2267,8 @@
         });
 
         $("sampleCsvBtn").addEventListener("click", () => {
-          const csv = isFieldType(settings.cardType) ? FIELD_TYPES[settings.cardType].sampleCsv : settings.cardType === "staff"
+          const csv = isCustom(settings.cardType) ? "Name,ID#,Title\nJohn Doe,100001,Title Text\nJane Doe,100002,Title Text\n"
+            : isFieldType(settings.cardType) ? FIELD_TYPES[settings.cardType].sampleCsv : settings.cardType === "staff"
             ? "Name,ID#\nJohn Doe,100001\nJane Doe,100002\n"
             : "Name,ID#,DoB,Grade\nJohn Doe,100001,2010-01-01,9\nJane Doe,100002,2010-01-01,10\n";
           downloadText(csv, `${settings.cardType}-id-cards-sample.csv`, "text/csv");
@@ -2015,6 +2387,7 @@
         bindCropTools();
         bindLayoutDrag();
         bindLineStyleControls();
+        bindCustomControls();
         $("problemsOnly").addEventListener("change", renderTable);
         $("printBtn").addEventListener("click", printCards);
         $("flipBack").addEventListener("change", () => {
@@ -2076,7 +2449,7 @@
         // reports). Safari ignores CSS page sizes and uses the driver's landscape CR80
         // paper, so portrait (staff) cards are rotated 90° onto that page instead of
         // asking for a portrait page. The card itself comes out the same.
-        const portrait = type === "staff";
+        const portrait = isPortrait(type);
         const pageW = "85.6mm";
         const pageH = "54mm";
         const canvas = document.createElement("canvas");
