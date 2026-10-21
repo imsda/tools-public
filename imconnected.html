@@ -1012,6 +1012,10 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     download: download,
     copyText: copyText,
     truncate: truncate,
+    photoCrop: function (photo) {
+      const read = function (key, min, max, fallback) { const v = photo && photo[key]; return typeof v === 'number' && Number.isFinite(v) ? Math.round(Math.max(min, Math.min(max, v)) * 100) / 100 : fallback; };
+      return { focalX: read('focalX', 0, 100, 50), focalY: read('focalY', 0, 100, 50), zoom: read('zoom', 1, 3, 1) };
+    },
     blockLabel: blockLabel,
     blockSummary: blockSummary
   };
@@ -1032,7 +1036,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       alt: '',
       caption: '',
       focalX: 50,
-      focalY: 50
+      focalY: 50,
+      zoom: 1
     }, overrides || {});
   }
 
@@ -1578,7 +1583,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
           caption: item.c || item.caption || '',
           alt: item.a || item.alt || '',
           focalX: item.focalX != null ? item.focalX : 50,
-          focalY: item.focalY != null ? item.focalY : 50
+          focalY: item.focalY != null ? item.focalY : 50,
+          zoom: item.zoom != null ? item.zoom : 1
         });
       }).filter(function (item) { return item.url || item.caption || item.alt; });
       const layoutMap = { one: 'one', twoup: 'twoUp', heroGrid: 'heroGrid', mosaic: 'mosaic', filmstrip: 'stack', stack: 'stack' };
@@ -1702,6 +1708,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       if (normalized.type === 'story' || normalized.type === 'gallery') {
         normalized.photos = Array.isArray(normalized.photos) ? normalized.photos.map(function (item, index) {
           const photo = Object.assign(Templates.photo(), item || {});
+          Object.assign(photo, U.photoCrop(photo));
           if (photo.autoAlt) photo.alt = (String(normalized.title || '').trim() || 'Untitled story') + ' — Photo #' + (index + 1);
           return photo;
         }) : [];
@@ -2139,17 +2146,16 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
   function croppedImage(photo, width, height, alt, wrapStyle) {
     const src = U.normalizeUrl(photo && photo.url, { allowBareDomain: false });
     if (!src) return '';
-    const fx = Math.max(0, Math.min(100, Number(photo.focalX ?? 50)));
-    const fy = Math.max(0, Math.min(100, Number(photo.focalY ?? 50)));
+    const crop = U.photoCrop(photo), fx = crop.focalX, fy = crop.focalY, zoom = crop.zoom;
     const size = ImageSizes.get(photo.url);
-    const offset = size ? Math.max(0, Math.round((width * size.h / size.w - height) * fy / 100)) : 0;
+    const offset = size ? Math.max(0, Math.round((width * zoom * size.h / size.w - height) * fy / 100)) : 0;
     return '<div class="em-crop em-h' + height + '" style="max-height:' + height + 'px;overflow:hidden;' + (wrapStyle || '') + '">'
-      + '<img src="' + U.escapeAttr(U.normalizeUrl(src)) + '" width="' + width + '" alt="' + U.escapeAttr(alt || '') + '" style="display:block;width:100%;max-width:' + width + 'px;height:auto;border:0;' + (offset ? 'margin-top:-' + offset + 'px;' : '') + 'object-position:' + fx + '% ' + fy + '%;" />'
+      + '<img src="' + U.escapeAttr(U.normalizeUrl(src)) + '" width="' + Math.round(width * zoom) + '" alt="' + U.escapeAttr(alt || '') + '" style="display:block;width:' + (zoom * 100) + '%;max-width:' + Math.round(width * zoom) + 'px;height:auto;border:0;margin-left:-' + ((zoom - 1) * fx) + '%;' + (offset ? 'margin-top:-' + offset + 'px;' : '') + 'object-position:' + fx + '% ' + fy + '%;--photo-zoom:' + zoom + ';--photo-x:' + fx + '%;--photo-y:' + fy + '%;" />'
       + '</div>';
   }
 
   function cropSupportCss() {
-    return '<style>@supports (object-fit:cover){.em-crop img{height:100%!important;margin-top:0!important;object-fit:cover}'
+    return '<style>@supports (object-fit:cover){.em-crop img{width:100%!important;max-width:none!important;height:100%!important;margin:0!important;object-fit:cover;transform:scale(var(--photo-zoom,1));transform-origin:var(--photo-x,50%) var(--photo-y,50%)}'
       + CROP_HEIGHTS.map(function (h) { return '.em-h' + h + '{height:' + h + 'px}'; }).join('') + '}</style>';
   }
 
@@ -2281,12 +2287,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     };
     const edge = S.position === 'belowHeadline' ? '0' : '16px';
 
-    if (block.layout === 'twoUp' && photos.length > 1) return pairRow(photos.slice(0, 2), edge + ' 20px 4px');
+    const remaining = function (from) {
+      let html = '';
+      for (let i = from; i < photos.length; i += 2) html += pairRow(photos.slice(i, i + 2), '10px 20px 0');
+      return html;
+    };
+    if (block.layout === 'twoUp' && photos.length > 1) return pairRow(photos.slice(0, 2), edge + ' 20px 4px') + remaining(2);
 
     if (block.layout === 'heroGrid' && photos.length > 1) {
       const rest = photos.slice(1, 3);
       return '<tr><td style="padding:0;background:' + C.light + ';">' + bleed(photos[0]) + '</td></tr>'
-        + (rest.length ? pairRow(rest, '9px 20px 4px') : '');
+        + (rest.length ? pairRow(rest, '9px 20px 4px') : '') + remaining(3);
     }
 
     if (block.layout === 'stack' && photos.length > 1) {
@@ -2299,7 +2310,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       return rows.map(function (pair, index) { return pairRow(pair, (index ? '10px' : edge) + ' 20px 0'); }).join('');
     }
 
-    return '<tr><td style="padding:0;background:' + C.light + ';">' + bleed(photos[0]) + '</td></tr>';
+    return '<tr><td style="padding:0;background:' + C.light + ';">' + bleed(photos[0]) + '</td></tr>' + remaining(1);
   }
 
   function storyButton(block, S) {
@@ -2952,16 +2963,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     return commonAdvanced(block);
   }
 
-  function focalPicker(block, url, xPath, yPath, x, y, portrait) {
+  function focalPicker(block, url, xPath, yPath, x, y, portrait, zoom) {
     const src = U.normalizeUrl(url);
     if (!src) return '';
     const clamp = function (value) { return Number.isFinite(Number(value)) ? Math.max(0, Math.min(100, Number(value))) : 50; };
     x = clamp(x ?? 50); y = clamp(y ?? 50);
+    zoom = U.photoCrop({ zoom: zoom }).zoom;
     return '<div class="focal-picker" data-focal-block="' + U.escapeAttr(block.id) + '" data-focal-x-path="' + U.escapeAttr(xPath) + '" data-focal-y-path="' + U.escapeAttr(yPath) + '" data-focal-x="' + x + '" data-focal-y="' + y + '">'
       + '<p class="focal-help">Tap or drag on the photo to choose what stays in view. Arrow keys fine-tune the position.</p>'
       + '<button type="button" class="focal-surface" aria-label="Choose photo focal point. Use arrow keys to adjust."><img src="' + U.escapeAttr(src) + '" alt="Photo for choosing focus" draggable="false"><span class="focal-dot" style="left:' + x + '%;top:' + y + '%;"></span></button>'
       + '<div class="focal-footer"><output aria-live="polite">' + x + '% across · ' + y + '% down</output><button type="button" class="small-button" data-focal-center>Center</button></div>'
-      + '<div class="focal-crop' + (portrait ? ' portrait' : '') + '"><img src="' + U.escapeAttr(src) + '" alt="Crop preview" style="object-position:' + x + '% ' + y + '%;"></div><small class="focal-help">Crop preview. The newsletter updates when you release. Natural-height photos show the whole image.</small></div>';
+      + '<div class="focal-crop' + (portrait ? ' portrait' : '') + '"><img src="' + U.escapeAttr(src) + '" alt="Crop preview" style="object-position:' + x + '% ' + y + '%;transform:scale(' + zoom + ');transform-origin:' + x + '% ' + y + '%;"></div><small class="focal-help">Crop preview. The newsletter updates when you release. Natural-height photos show the whole image.</small></div>';
   }
 
   function photoCards(block, collectionPath) {
@@ -2973,7 +2985,9 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         + '<button type="button" class="small-button" data-array-action="move" data-array-path="' + collectionPath + '" data-array-index="' + index + '" data-array-direction="1"' + (index === photos.length - 1 ? ' disabled' : '') + '>↓</button>'
         + '<button type="button" class="small-button danger" data-array-action="remove" data-array-path="' + collectionPath + '" data-array-index="' + index + '">Remove</button></div></div>'
         + imageField('Image', 'block', base + '.url', photo.url, { hidePreview: true })
-        + focalPicker(block, photo.url, base + '.focalX', base + '.focalY', photo.focalX, photo.focalY)
+        + focalPicker(block, photo.url, base + '.focalX', base + '.focalY', photo.focalX, photo.focalY, false, U.photoCrop(photo).zoom)
+        + field('Zoom (1×–3×)', 'block', base + '.zoom', U.photoCrop(photo).zoom, { type: 'range', min: 1, max: 3, step: 0.01, kind: 'number', help: '100–300%. Natural-height photos show the original framing.' })
+        + '<output data-photo-zoom-path="' + base + '.zoom">' + Math.round(U.photoCrop(photo).zoom * 100) + '%</output>'
         + toggle('Use story title for alt text', 'block', base + '.autoAlt', !!photo.autoAlt, 'Follows the headline and photo order. Typing a description turns this off.')
         + field('Alt text', 'block', base + '.alt', photo.alt, { help: 'Describe the meaningful visual content.' })
         + field('Caption', 'block', base + '.caption', photo.caption)
@@ -4239,6 +4253,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       if (!/^#[0-9a-f]{6}$/i.test(value)) return;
     } else value = input.value;
 
+    const cropField = /^photos\.\d+\.(focalX|focalY|zoom)$/.exec(path);
+    if (scope === 'block' && cropField) { value = U.photoCrop({ [cropField[1]]: value })[cropField[1]]; input.value = value; }
     if (scope === 'document') {
       const doc = Store.getDocument();
       const oldValue = U.getPath(doc, path, '');
@@ -4247,6 +4263,18 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     } else {
       Store.patchBlock(Store.getSelectedId(), path, value, { source: 'input', record: false, renderInspector: false });
       const block = Store.getSelectedBlock();
+      if (cropField) {
+        const prefix = path.replace(/\.(focalX|focalY|zoom)$/, '');
+        const crop = U.photoCrop(U.getPath(block, prefix));
+        Array.from(elements.inspectorBody.querySelectorAll('.focal-picker')).filter(function (picker) { return picker.dataset.focalXPath === prefix + '.focalX'; }).forEach(function (picker) {
+          picker.dataset.focalX = crop.focalX; picker.dataset.focalY = crop.focalY;
+          const image = picker.querySelector('.focal-crop img'); image.style.objectPosition = crop.focalX + '% ' + crop.focalY + '%'; image.style.transform = 'scale(' + crop.zoom + ')'; image.style.transformOrigin = crop.focalX + '% ' + crop.focalY + '%';
+          const dot = picker.querySelector('.focal-dot'); dot.style.left = crop.focalX + '%'; dot.style.top = crop.focalY + '%';
+          picker.querySelector('output').textContent = crop.focalX + '% across · ' + crop.focalY + '% down';
+        });
+        const output = Array.from(elements.inspectorBody.querySelectorAll('[data-photo-zoom-path]')).find(function (node) { return node.dataset.photoZoomPath === prefix + '.zoom'; });
+        if (output) output.textContent = Math.round(crop.zoom * 100) + '%';
+      }
       document.querySelectorAll('[data-bind-scope="block"][data-bind-path]').forEach(function (control) {
         const bound = control.dataset.bindPath;
         if (/^photos\.\d+\.(alt|autoAlt)$/.test(bound) && control !== input) {
@@ -4692,7 +4720,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         body: String(block.body || ''),
         quote: String(block.quote || ''),
         attribution: String(block.attribution || ''),
-        photos: (block.photos || []).filter(function (item) { return item && item.url; }).map(function (item) { return { url: item.url, alt: item.alt || '', caption: item.caption || '' }; }),
+        photos: (block.photos || []).filter(function (item) { return item && item.url; }).map(function (item) { return Object.assign({ url: item.url, alt: item.alt || '', caption: item.caption || '' }, U.photoCrop(item)); }),
         photoLayout: publishPhotoLayout(block.layout)
       };
       if (section.areas) story.area = area;
@@ -4811,18 +4839,23 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       date: /^\d{4}-\d{2}-\d{2}/.test(String(item.date || '')) ? String(item.date).slice(0, 10) : '',
       status: isDraft ? (IMPORT_STATUS[item.status] ? item.status : '') : '',
       agent: !!isDraft && item.source === 'agent',
-      url: '', linkDropped: false, image: '', imageAlt: importText(item.imageAlt, 300), credit: importText(item.photoCredit, 200), imageDropped: false
+      url: '', linkDropped: false, image: '', imageAlt: importText(item.imageAlt, 300), credit: importText(item.photoCredit, 200), imageDropped: false,
+      photos: [], layout: publishPhotoLayout(item.photoLayout)
     };
     if (!isDraft) {
       const url = importText(item.url, 2000);
       if (url && importSameOrigin(url, siteUrl)) story.url = new URL(url).href;
       else story.linkDropped = true;
     }
-    const image = importText(item.image, 2000);
-    if (image) {
-      if (importImageOk(image, siteUrl)) story.image = new URL(image).href;
-      else story.imageDropped = true;
-    }
+    const paths = (item.image ? [item.image] : []).concat(Array.isArray(item.photos) ? item.photos : []);
+    const alts = (item.image ? [item.imageAlt] : []).concat(Array.isArray(item.photoAlts) ? item.photoAlts : []);
+    paths.slice(0, 6).forEach(function (path, index) {
+      const url = importText(path, 2000);
+      if (!url || !importImageOk(url, siteUrl)) { story.imageDropped = true; return; }
+      const crop = U.photoCrop(Array.isArray(item.photoFocus) ? item.photoFocus[index] : null);
+      story.photos.push(Object.assign({ url: new URL(url).href, alt: importText(alts[index], 300), caption: index === 0 && story.credit ? 'Photo: ' + story.credit : '' }, crop));
+    });
+    if (story.photos.length) story.image = story.photos[0].url;
     return story;
   }
 
@@ -5013,7 +5046,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         // Imported stories are already on the website; Publish must never send this card's short text back.
         importedFrom: story.draft ? 'draft' : story.url,
         buttonLabel: story.draft ? '' : 'Read full story',
-        photos: story.image ? [Templates.photo({ url: story.image, alt: story.imageAlt, caption: story.credit ? 'Photo: ' + story.credit : '' })] : []
+        layout: story.layout,
+        photos: story.photos.map(function (photo) { return Templates.photo(photo); })
       };
       return { type: 'story', initial: initial };
     });
@@ -5024,7 +5058,9 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     const copies = [];
     blocks.forEach(function (block, index) {
       const story = picked[index];
-      if (block && story && story.image && !importOnWordPress(story.image)) copies.push({ id: block.id, src: story.image, name: importPhotoName(story) });
+      if (block && story) block.photos.forEach(function (photo, photoIndex) {
+        if (photo.url && !importOnWordPress(photo.url)) copies.push({ id: block.id, photoId: photo.id, src: photo.url, name: importPhotoName({ image: photo.url }) });
+      });
     });
     if (copies.length) copyImportPhotos(siteUrl, token, copies);
   }
@@ -5061,7 +5097,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       toast('Photos still point to the website. Connect WordPress (Browse → WordPress) and import again to copy them, or choose them from WordPress. Send Check will flag them.', 'warning');
       return;
     }
-    const changes = [];
+    let copied = 0;
     let failed = 0;
     let reason = '';
     for (let i = 0; i < copies.length; i += 1) {
@@ -5071,17 +5107,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         const blob = await fetchSitePhoto(siteUrl, token, copy.src);
         const url = await Media.uploadPhoto(blob, copy.name);
         const block = Store.getBlock(copy.id);
-        // Skip if the story was removed or its photo changed while copying.
-        if (block && block.photos && block.photos[0] && block.photos[0].url === copy.src) changes.push({ id: copy.id, path: 'photos.0.url', value: url });
+        // Resolve stable identity now: reorder/delete/replace may have happened during upload.
+        const at = block && block.photos ? block.photos.findIndex(function (photo) { return photo.id === copy.photoId && photo.url === copy.src; }) : -1;
+        if (at >= 0) { Store.patchBlocks([{ id: copy.id, path: 'photos.' + at + '.url', value: url }], { source: 'import-photos' }); copied += 1; }
       } catch (error) {
         failed += 1;
         if (!reason) reason = safePublishMessage(error.message, token);
         if (!Media.canUpload()) { failed += copies.length - i - 1; break; }
       }
     }
-    if (changes.length) Store.patchBlocks(changes, { source: 'import-photos' });
-    if (failed) toast(changes.length + ' photo(s) copied into WordPress. ' + failed + ' still point to the website (' + reason + '). Choose them under Browse → WordPress; Send Check will flag them.', 'error');
-    else toast(changes.length + ' photo(s) copied into WordPress.', 'success');
+    if (failed) toast(copied + ' photo(s) copied into WordPress. ' + failed + ' still point to the website (' + reason + '). Choose them under Browse → WordPress; Send Check will flag them.', 'error');
+    else toast(copied + ' photo(s) copied into WordPress.', 'success');
   }
 
   function bindImportEvents() {
@@ -5366,6 +5402,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       picker.dataset.focalX = x; picker.dataset.focalY = y;
       const dot = picker.querySelector('.focal-dot'); dot.style.left = x + '%'; dot.style.top = y + '%';
       picker.querySelector('.focal-crop img').style.objectPosition = x + '% ' + y + '%';
+      picker.querySelector('.focal-crop img').style.transformOrigin = x + '% ' + y + '%';
       picker.querySelector('output').textContent = x + '% across · ' + y + '% down';
     }
     function commit(picker) {
