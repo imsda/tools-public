@@ -8,6 +8,7 @@
     - WordPress REST API (/wp-json/) - optional, for media library uploads
     - IMConnected website publish API (GET/POST /api/publish, default https://stories.imadventist.org) - optional, for "Publish to IMConnected"
     - IMConnected website story list API (GET /api/stories, same site and token) - optional, for "Import from IMConnected"
+    - IMConnected photo transfer APIs (GET /api/studio-photo and /api/studio-draft-flyer) - optional, same Studio bearer connection
     - Cloudflare Web Analytics beacon (static.cloudflareinsights.com) - optional, page analytics
 -->
 <html lang="en">
@@ -765,7 +766,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     story: { label: 'Story', icon: '▤', description: 'Headline, article copy, photos, quote, and link' },
     gallery: { label: 'Photo gallery', icon: '▦', description: 'A standalone collection of photos and captions' },
     scripture: { label: 'Scripture', icon: '❝', description: 'Verse and reference in a highlighted block' },
-    eventList: { label: 'Events', icon: '◫', description: 'Upcoming dates, flyers, locations, and links' },
+    eventList: { label: 'Announcements & events', icon: '◫', description: 'Upcoming dates, flyers, locations, and links' },
     cta: { label: 'Closing invitation', icon: '→', description: 'A call to respond, submit stories, pray, or register' },
     divider: { label: 'Divider', icon: '─', description: 'A visual separator between sections' },
     spacer: { label: 'Spacer', icon: '↕', description: 'Controlled vertical breathing room' },
@@ -877,6 +878,42 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       const url = new URL(candidate);
       return /^https?:$/.test(url.protocol) && !url.username && !url.password ? (/##[^#]+##|\{\{[^}]+\}\}|\*\|[^|]+\|\*/.test(candidate) ? candidate : url.href) : '';
     } catch (error) { return ''; }
+  }
+
+  function announcementAction(value, bare) {
+    const raw = String(value || '').trim();
+    if (/[\u0000-\u0020\u007f\\<>"]/.test(raw)) return '';
+    const url = normalizeUrl(raw, { allowBareDomain: !!bare });
+    return /^(?:https?:|mailto:|tel:)/i.test(url) ? url : '';
+  }
+
+  function announcementVideo(value) {
+    try {
+      const raw = String(value || '');
+      if (/[\u0000-\u0020\u007f\\<>"']/.test(raw)) return '';
+      const u = new URL(raw);
+      if (u.protocol !== 'https:' || u.username || u.password || u.port) return '';
+      if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(u.hostname)) {
+        const id = u.hostname === 'youtu.be' ? /^\/([A-Za-z0-9_-]{11})\/?$/.exec(u.pathname)?.[1] : u.pathname === '/watch' ? u.searchParams.get('v') : /^\/(?:embed|shorts)\/([A-Za-z0-9_-]{11})\/?$/.exec(u.pathname)?.[1];
+        return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? 'https://www.youtube.com/watch?v=' + id : '';
+      }
+      if (['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'].includes(u.hostname)) {
+        const id = /^\/(?:video\/)?([1-9]\d{0,11})\/?$/.exec(u.pathname)?.[1];
+        if (id) return 'https://vimeo.com/' + id;
+      }
+    } catch (error) {}
+    return '';
+  }
+
+  function eventActions(event) {
+    const links = (Array.isArray(event.links) ? event.links : []).slice(0, 3).map(function (link) {
+      return { label: String(link && link.label || '').slice(0, 120), url: announcementAction(link && link.url) };
+    }).filter(function (link) { return link.label && link.url; });
+    const primary = announcementAction(event.link, true);
+    if (primary && !links.some(function (link) { return link.url === primary; })) links.push({ label: event.buttonLabel || 'More details', url: primary });
+    const video = announcementVideo(event.videoUrl);
+    if (video && !links.some(function (link) { return link.url === video; })) links.push({ label: 'Watch video', url: video });
+    return links;
   }
 
   function hexToRgb(hex) {
@@ -1003,6 +1040,9 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     isLikelyUrl: isLikelyUrl,
     isEmail: isEmail,
     normalizeUrl: normalizeUrl,
+    announcementAction: announcementAction,
+    announcementVideo: announcementVideo,
+    eventActions: eventActions,
     hexToRgb: hexToRgb,
     withAlpha: withAlpha,
     contrastRatio: contrastRatio,
@@ -1012,6 +1052,10 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     download: download,
     copyText: copyText,
     truncate: truncate,
+    photoCrop: function (photo) {
+      const read = function (key, min, max, fallback) { const v = photo && photo[key]; return typeof v === 'number' && Number.isFinite(v) ? Math.round(Math.max(min, Math.min(max, v)) * 100) / 100 : fallback; };
+      return { focalX: read('focalX', 0, 100, 50), focalY: read('focalY', 0, 100, 50), zoom: read('zoom', 1, 3, 1) };
+    },
     blockLabel: blockLabel,
     blockSummary: blockSummary
   };
@@ -1032,7 +1076,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       alt: '',
       caption: '',
       focalX: 50,
-      focalY: 50
+      focalY: 50,
+      zoom: 1
     }, overrides || {});
   }
 
@@ -1046,7 +1091,10 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       imageUrl: '',
       imageAlt: '',
       link: '',
-      buttonLabel: 'More details'
+      buttonLabel: 'More details',
+      kind: 'event',
+      links: [{ label: '', url: '' }, { label: '', url: '' }, { label: '', url: '' }],
+      videoUrl: ''
     }, overrides || {});
   }
 
@@ -1437,9 +1485,11 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     try {
       localStorage.setItem(STORAGE_KEY, serialize());
       setSaveState('saved');
+      return true;
     } catch (error) {
       console.warn('Draft persistence is unavailable in this browser context.');
       setSaveState('error');
+      return false;
     }
   }
 
@@ -1578,7 +1628,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
           caption: item.c || item.caption || '',
           alt: item.a || item.alt || '',
           focalX: item.focalX != null ? item.focalX : 50,
-          focalY: item.focalY != null ? item.focalY : 50
+          focalY: item.focalY != null ? item.focalY : 50,
+          zoom: item.zoom != null ? item.zoom : 1
         });
       }).filter(function (item) { return item.url || item.caption || item.alt; });
       const layoutMap = { one: 'one', twoup: 'twoUp', heroGrid: 'heroGrid', mosaic: 'mosaic', filmstrip: 'stack', stack: 'stack' };
@@ -1702,13 +1753,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       if (normalized.type === 'story' || normalized.type === 'gallery') {
         normalized.photos = Array.isArray(normalized.photos) ? normalized.photos.map(function (item, index) {
           const photo = Object.assign(Templates.photo(), item || {});
+          Object.assign(photo, U.photoCrop(photo));
           if (photo.autoAlt) photo.alt = (String(normalized.title || '').trim() || 'Untitled story') + ' — Photo #' + (index + 1);
           return photo;
         }) : [];
       }
       if (normalized.type === 'eventList') {
         normalized.events = Array.isArray(normalized.events) ? normalized.events.map(function (item) {
-          return Object.assign(Templates.event(), item || {});
+          const result = Object.assign(Templates.event(), item || {});
+          if (result.flyerPending) { result.flyerPending = false; result.flyerError = true; } // Interrupted transfer: replace or reimport, never show an endless loading state.
+          result.links = Array.from({ length: 3 }, function (_, n) { return Object.assign({ label: '', url: '' }, Array.isArray(result.links) && result.links[n] || {}); });
+          return result;
         }) : [];
       }
       if (normalized.type === 'footer') {
@@ -1783,6 +1838,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     if (!block) return;
     mutate(function () {
       U.setPath(block, path, value);
+      const flyer = /^events\.(\d+)\.imageUrl$/.exec(path);
+      if (flyer) { block.events[Number(flyer[1])].flyerPending = false; block.events[Number(flyer[1])].flyerError = false; }
       const match = /^photos\.(\d+)\.alt$/.exec(path);
       if (match) block.photos[Number(match[1])].autoAlt = false;
       if (path === 'autoPhotoAlt') (block.photos || []).forEach(function (photo) {
@@ -1796,7 +1853,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     const list = (changes || []).filter(function (change) { return getBlock(change.id); });
     if (!list.length) return;
     mutate(function () {
-      list.forEach(function (change) { U.setPath(getBlock(change.id), change.path, change.value); });
+      list.forEach(function (change) { const block = getBlock(change.id); U.setPath(block, change.path, change.value); const flyer = /^events\.(\d+)\.imageUrl$/.exec(change.path); if (flyer) { block.events[Number(flyer[1])].flyerPending = false; block.events[Number(flyer[1])].flyerError = false; } });
     }, Object.assign({ type: 'block-change' }, options || {}));
   }
 
@@ -2139,17 +2196,16 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
   function croppedImage(photo, width, height, alt, wrapStyle) {
     const src = U.normalizeUrl(photo && photo.url, { allowBareDomain: false });
     if (!src) return '';
-    const fx = Math.max(0, Math.min(100, Number(photo.focalX ?? 50)));
-    const fy = Math.max(0, Math.min(100, Number(photo.focalY ?? 50)));
+    const crop = U.photoCrop(photo), fx = crop.focalX, fy = crop.focalY, zoom = crop.zoom;
     const size = ImageSizes.get(photo.url);
-    const offset = size ? Math.max(0, Math.round((width * size.h / size.w - height) * fy / 100)) : 0;
+    const offset = size ? Math.max(0, Math.round((width * zoom * size.h / size.w - height) * fy / 100)) : 0;
     return '<div class="em-crop em-h' + height + '" style="max-height:' + height + 'px;overflow:hidden;' + (wrapStyle || '') + '">'
-      + '<img src="' + U.escapeAttr(U.normalizeUrl(src)) + '" width="' + width + '" alt="' + U.escapeAttr(alt || '') + '" style="display:block;width:100%;max-width:' + width + 'px;height:auto;border:0;' + (offset ? 'margin-top:-' + offset + 'px;' : '') + 'object-position:' + fx + '% ' + fy + '%;" />'
+      + '<img src="' + U.escapeAttr(U.normalizeUrl(src)) + '" width="' + Math.round(width * zoom) + '" alt="' + U.escapeAttr(alt || '') + '" style="display:block;width:' + (zoom * 100) + '%;max-width:' + Math.round(width * zoom) + 'px;height:auto;border:0;margin-left:-' + ((zoom - 1) * fx) + '%;' + (offset ? 'margin-top:-' + offset + 'px;' : '') + 'object-position:' + fx + '% ' + fy + '%;--photo-zoom:' + zoom + ';--photo-x:' + fx + '%;--photo-y:' + fy + '%;" />'
       + '</div>';
   }
 
   function cropSupportCss() {
-    return '<style>@supports (object-fit:cover){.em-crop img{height:100%!important;margin-top:0!important;object-fit:cover}'
+    return '<style>@supports (object-fit:cover){.em-crop img{width:100%!important;max-width:none!important;height:100%!important;margin:0!important;object-fit:cover;transform:scale(var(--photo-zoom,1));transform-origin:var(--photo-x,50%) var(--photo-y,50%)}'
       + CROP_HEIGHTS.map(function (h) { return '.em-h' + h + '{height:' + h + 'px}'; }).join('') + '}</style>';
   }
 
@@ -2281,12 +2337,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     };
     const edge = S.position === 'belowHeadline' ? '0' : '16px';
 
-    if (block.layout === 'twoUp' && photos.length > 1) return pairRow(photos.slice(0, 2), edge + ' 20px 4px');
+    const remaining = function (from) {
+      let html = '';
+      for (let i = from; i < photos.length; i += 2) html += pairRow(photos.slice(i, i + 2), '10px 20px 0');
+      return html;
+    };
+    if (block.layout === 'twoUp' && photos.length > 1) return pairRow(photos.slice(0, 2), edge + ' 20px 4px') + remaining(2);
 
     if (block.layout === 'heroGrid' && photos.length > 1) {
       const rest = photos.slice(1, 3);
       return '<tr><td style="padding:0;background:' + C.light + ';">' + bleed(photos[0]) + '</td></tr>'
-        + (rest.length ? pairRow(rest, '9px 20px 4px') : '');
+        + (rest.length ? pairRow(rest, '9px 20px 4px') : '') + remaining(3);
     }
 
     if (block.layout === 'stack' && photos.length > 1) {
@@ -2299,7 +2360,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       return rows.map(function (pair, index) { return pairRow(pair, (index ? '10px' : edge) + ' 20px 0'); }).join('');
     }
 
-    return '<tr><td style="padding:0;background:' + C.light + ';">' + bleed(photos[0]) + '</td></tr>';
+    return '<tr><td style="padding:0;background:' + C.light + ';">' + bleed(photos[0]) + '</td></tr>' + remaining(1);
   }
 
   function storyButton(block, S) {
@@ -2395,7 +2456,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
   }
 
   function eventCard(event, C) {
-    const link = U.normalizeUrl(event.link, { allowBareDomain: true });
+    const actions = U.eventActions(event);
     const imageHtml = event.imageUrl
       ? image(event.imageUrl, 520, event.imageAlt || event.name || '', 'border-radius:10px 10px 0 0;')
       : '';
@@ -2405,7 +2466,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       + '<p style="margin:0 0 5px;font-family:Georgia,Times,serif;font-size:17px;line-height:23px;font-weight:bold;color:' + C.dark + ';">' + U.escapeHtml(event.name || 'Event') + '</p>'
       + ((event.date || event.location) ? '<p style="margin:0 0 7px;font-family:Arial,sans-serif;font-size:10px;line-height:16px;font-weight:bold;letter-spacing:.7px;text-transform:uppercase;color:' + C.primary + ';">' + U.escapeHtml([event.date, event.location].filter(Boolean).join(' · ')) + '</p>' : '')
       + (event.description ? '<p style="margin:0;font-family:Arial,sans-serif;font-size:13px;line-height:21px;color:#4a5459;">' + U.nl2br(event.description) + '</p>' : '')
-      + (link ? '<p style="margin:10px 0 0;"><a href="' + U.escapeAttr(link) + '" style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:' + C.primary + ';text-decoration:none;">' + U.escapeHtml(event.buttonLabel || 'More details') + ' →</a></p>' : '')
+      + actions.map(function (link) { return '<p style="margin:10px 0 0;"><a href="' + U.escapeAttr(link.url) + '" style="font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:' + C.primary + ';text-decoration:underline;">' + U.escapeHtml(link.label) + ' →</a></p>'; }).join('')
       + '</td></tr></table>';
   }
 
@@ -2571,7 +2632,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         parts.push(wpHeading(block.title, 2));
         (block.events || []).forEach(function (event) {
           parts.push(wpHeading(event.name, 3), wpParagraph([event.date, event.location].filter(Boolean).join(' · ')), wpParagraph(event.description));
-          if (event.imageUrl) parts.push(wpImage({ url: event.imageUrl, alt: event.imageAlt }, event.name));
+          if (event.imageUrl && U.normalizeUrl(event.imageUrl)) parts.push(wpImage({ url: U.normalizeUrl(event.imageUrl), alt: event.imageAlt }, event.name));
+          U.eventActions(event).forEach(function (link) { parts.push('<!-- wp:paragraph --><p><a href="' + U.escapeAttr(link.url) + '">' + U.escapeHtml(link.label) + '</a></p><!-- /wp:paragraph -->'); });
         });
       }
       if (block.type === 'cta') parts.push(wpParagraph(block.text + (block.contact ? '\n' + block.contact : ''), 'newsletter-cta'));
@@ -2706,10 +2768,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         if (!(block.events || []).length) issues.push(issue('warning', 'Events section has no events.', 'Add an event or hide the section.', block.id, 'events'));
         (block.events || []).forEach(function (event, index) {
           if (!String(event.name || '').trim()) issues.push(issue('error', 'Event ' + (index + 1) + ' needs a name.', 'Add the event name.', block.id, 'events.' + index + '.name'));
-          if (!String(event.date || '').trim()) issues.push(issue('suggestion', 'Event ' + (index + 1) + ' has no date.', 'Add the date and time readers need.', block.id, 'events.' + index + '.date'));
+          if (event.kind !== 'announcement' && !String(event.date || '').trim()) issues.push(issue('suggestion', 'Event ' + (index + 1) + ' has no date.', 'Add the date and time readers need.', block.id, 'events.' + index + '.date'));
           if (event.link && !U.isLikelyUrl(event.link, { allowBareDomain: true })) issues.push(issue('error', 'Event ' + (index + 1) + ' link looks invalid.', 'Use a full HTTPS URL.', block.id, 'events.' + index + '.link'));
+          if (event.importedFrom === 'draft') issues.push(issue('warning', 'Announcement is still an unpublished draft.', 'Review its facts and flyer; publish it on IMConnected before adding a story link.', block.id, 'events.' + index + '.link'));
+          if (event.flyerPending) issues.push(issue('error', 'Announcement flyer is still loading.', 'Wait for the flyer transfer before exporting.', block.id, 'events.' + index + '.imageUrl'));
+          if (event.flyerError) issues.push(issue('error', 'Announcement flyer could not be imported.', 'Import again or choose its flyer under Browse.', block.id, 'events.' + index + '.imageUrl'));
+          if (event.videoUrl && !U.announcementVideo(event.videoUrl)) issues.push(issue('error', 'Announcement video is not supported.', 'Use an HTTPS YouTube or Vimeo video URL.', block.id, 'events.' + index + '.videoUrl'));
+          (Array.isArray(event.links) ? event.links : []).slice(0, 3).forEach(function (link, n) { if ((link.label || link.url) && (!link.label || !U.announcementAction(link.url))) issues.push(issue('error', 'Announcement action needs a label and valid address.', 'Use HTTP(S), mailto or tel.', block.id, 'events.' + index + '.links.' + n + '.url')); });
           if (event.imageUrl) {
             imageCount += 1;
+            if (!U.isLikelyUrl(event.imageUrl, { allowData: true })) issues.push(issue('error', 'Announcement flyer address is invalid.', 'Choose a supported image.', block.id, 'events.' + index + '.imageUrl'));
+            if (String(event.imageUrl).startsWith('data:image/')) issues.push(issue('warning', 'Announcement flyer is a local preview image.', 'Use Browse → WordPress to upload it before sending email.', block.id, 'events.' + index + '.imageUrl'));
             if (!String(event.imageAlt || '').trim()) issues.push(issue('warning', 'Event ' + (index + 1) + ' image needs alt text.', 'Describe the flyer or event image.', block.id, 'events.' + index + '.imageAlt'));
           }
         });
@@ -2952,16 +3021,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     return commonAdvanced(block);
   }
 
-  function focalPicker(block, url, xPath, yPath, x, y, portrait) {
+  function focalPicker(block, url, xPath, yPath, x, y, portrait, zoom) {
     const src = U.normalizeUrl(url);
     if (!src) return '';
     const clamp = function (value) { return Number.isFinite(Number(value)) ? Math.max(0, Math.min(100, Number(value))) : 50; };
     x = clamp(x ?? 50); y = clamp(y ?? 50);
+    zoom = U.photoCrop({ zoom: zoom }).zoom;
     return '<div class="focal-picker" data-focal-block="' + U.escapeAttr(block.id) + '" data-focal-x-path="' + U.escapeAttr(xPath) + '" data-focal-y-path="' + U.escapeAttr(yPath) + '" data-focal-x="' + x + '" data-focal-y="' + y + '">'
       + '<p class="focal-help">Tap or drag on the photo to choose what stays in view. Arrow keys fine-tune the position.</p>'
       + '<button type="button" class="focal-surface" aria-label="Choose photo focal point. Use arrow keys to adjust."><img src="' + U.escapeAttr(src) + '" alt="Photo for choosing focus" draggable="false"><span class="focal-dot" style="left:' + x + '%;top:' + y + '%;"></span></button>'
       + '<div class="focal-footer"><output aria-live="polite">' + x + '% across · ' + y + '% down</output><button type="button" class="small-button" data-focal-center>Center</button></div>'
-      + '<div class="focal-crop' + (portrait ? ' portrait' : '') + '"><img src="' + U.escapeAttr(src) + '" alt="Crop preview" style="object-position:' + x + '% ' + y + '%;"></div><small class="focal-help">Crop preview. The newsletter updates when you release. Natural-height photos show the whole image.</small></div>';
+      + '<div class="focal-crop' + (portrait ? ' portrait' : '') + '"><img src="' + U.escapeAttr(src) + '" alt="Crop preview" style="object-position:' + x + '% ' + y + '%;transform:scale(' + zoom + ');transform-origin:' + x + '% ' + y + '%;"></div><small class="focal-help">Crop preview. The newsletter updates when you release. Natural-height photos show the whole image.</small></div>';
   }
 
   function photoCards(block, collectionPath) {
@@ -2973,7 +3043,9 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         + '<button type="button" class="small-button" data-array-action="move" data-array-path="' + collectionPath + '" data-array-index="' + index + '" data-array-direction="1"' + (index === photos.length - 1 ? ' disabled' : '') + '>↓</button>'
         + '<button type="button" class="small-button danger" data-array-action="remove" data-array-path="' + collectionPath + '" data-array-index="' + index + '">Remove</button></div></div>'
         + imageField('Image', 'block', base + '.url', photo.url, { hidePreview: true })
-        + focalPicker(block, photo.url, base + '.focalX', base + '.focalY', photo.focalX, photo.focalY)
+        + focalPicker(block, photo.url, base + '.focalX', base + '.focalY', photo.focalX, photo.focalY, false, U.photoCrop(photo).zoom)
+        + field('Zoom (1×–3×)', 'block', base + '.zoom', U.photoCrop(photo).zoom, { type: 'range', min: 1, max: 3, step: 0.01, kind: 'number', help: '100–300%. Natural-height photos show the original framing.' })
+        + '<output data-photo-zoom-path="' + base + '.zoom">' + Math.round(U.photoCrop(photo).zoom * 100) + '%</output>'
         + toggle('Use story title for alt text', 'block', base + '.autoAlt', !!photo.autoAlt, 'Follows the headline and photo order. Typing a description turns this off.')
         + field('Alt text', 'block', base + '.alt', photo.alt, { help: 'Describe the meaningful visual content.' })
         + field('Caption', 'block', base + '.caption', photo.caption)
@@ -3058,11 +3130,14 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         + '<button type="button" class="small-button" data-array-action="move" data-array-path="events" data-array-index="' + index + '" data-array-direction="-1"' + (index === 0 ? ' disabled' : '') + '>↑</button>'
         + '<button type="button" class="small-button" data-array-action="move" data-array-path="events" data-array-index="' + index + '" data-array-direction="1"' + (index === events.length - 1 ? ' disabled' : '') + '>↓</button>'
         + '<button type="button" class="small-button danger" data-array-action="remove" data-array-path="events" data-array-index="' + index + '">Remove</button></div></div>'
-        + field('Event name', 'block', base + '.name', event.name)
+        + field('Content type', 'block', base + '.kind', event.kind || 'event', { type: 'select', options: [{ value: 'announcement', label: 'Announcement' }, { value: 'event', label: 'Event' }] })
+        + field('Announcement / event name', 'block', base + '.name', event.name)
         + '<div class="field-row">' + field('Date / time', 'block', base + '.date', event.date) + field('Location', 'block', base + '.location', event.location) + '</div>'
         + field('Description', 'block', base + '.description', event.description, { type: 'textarea', rows: 4 })
         + imageField('Flyer or event image', 'block', base + '.imageUrl', event.imageUrl)
         + field('Image alt text', 'block', base + '.imageAlt', event.imageAlt)
+        + field('Video URL', 'block', base + '.videoUrl', event.videoUrl, { type: 'url', help: 'YouTube or Vimeo; email uses a Watch video link.' })
+        + [0, 1, 2].map(function (n) { const link = (event.links || [])[n] || {}; return '<div class="field-row">' + field('Action ' + (n + 1) + ' label', 'block', base + '.links.' + n + '.label', link.label) + field('Action ' + (n + 1) + ' URL', 'block', base + '.links.' + n + '.url', link.url) + '</div>'; }).join('')
         + '<div class="field-row">' + field('Details URL', 'block', base + '.link', event.link, { type: 'url' }) + field('Button label', 'block', base + '.buttonLabel', event.buttonLabel) + '</div>'
         + '</div>';
     }).join('') + '<button type="button" class="add-section-button" data-array-action="add-event" data-array-path="events">＋ Add event</button>';
@@ -3687,7 +3762,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     }
   }
 
-  root.Media = { init: init, open: open, setTab: setTab, photoHost: photoHost, canUpload: canUpload, uploadPhoto: uploadPhoto };
+  root.Media = { init: init, open: open, setTab: setTab, photoHost: photoHost, canUpload: canUpload, uploadPhoto: uploadPhoto, preparePhoto: shrinkImage };
 })();
 
   </script>
@@ -4239,6 +4314,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       if (!/^#[0-9a-f]{6}$/i.test(value)) return;
     } else value = input.value;
 
+    const cropField = /^photos\.\d+\.(focalX|focalY|zoom)$/.exec(path);
+    if (scope === 'block' && cropField) { value = U.photoCrop({ [cropField[1]]: value })[cropField[1]]; input.value = value; }
     if (scope === 'document') {
       const doc = Store.getDocument();
       const oldValue = U.getPath(doc, path, '');
@@ -4247,6 +4324,18 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     } else {
       Store.patchBlock(Store.getSelectedId(), path, value, { source: 'input', record: false, renderInspector: false });
       const block = Store.getSelectedBlock();
+      if (cropField) {
+        const prefix = path.replace(/\.(focalX|focalY|zoom)$/, '');
+        const crop = U.photoCrop(U.getPath(block, prefix));
+        Array.from(elements.inspectorBody.querySelectorAll('.focal-picker')).filter(function (picker) { return picker.dataset.focalXPath === prefix + '.focalX'; }).forEach(function (picker) {
+          picker.dataset.focalX = crop.focalX; picker.dataset.focalY = crop.focalY;
+          const image = picker.querySelector('.focal-crop img'); image.style.objectPosition = crop.focalX + '% ' + crop.focalY + '%'; image.style.transform = 'scale(' + crop.zoom + ')'; image.style.transformOrigin = crop.focalX + '% ' + crop.focalY + '%';
+          const dot = picker.querySelector('.focal-dot'); dot.style.left = crop.focalX + '%'; dot.style.top = crop.focalY + '%';
+          picker.querySelector('output').textContent = crop.focalX + '% across · ' + crop.focalY + '% down';
+        });
+        const output = Array.from(elements.inspectorBody.querySelectorAll('[data-photo-zoom-path]')).find(function (node) { return node.dataset.photoZoomPath === prefix + '.zoom'; });
+        if (output) output.textContent = Math.round(crop.zoom * 100) + '%';
+      }
       document.querySelectorAll('[data-bind-scope="block"][data-bind-path]').forEach(function (control) {
         const bound = control.dataset.bindPath;
         if (/^photos\.\d+\.(alt|autoAlt)$/.test(bound) && control !== input) {
@@ -4692,7 +4781,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         body: String(block.body || ''),
         quote: String(block.quote || ''),
         attribution: String(block.attribution || ''),
-        photos: (block.photos || []).filter(function (item) { return item && item.url; }).map(function (item) { return { url: item.url, alt: item.alt || '', caption: item.caption || '' }; }),
+        photos: (block.photos || []).filter(function (item) { return item && item.url; }).map(function (item) { return Object.assign({ url: item.url, alt: item.alt || '', caption: item.caption || '' }, U.photoCrop(item)); }),
         photoLayout: publishPhotoLayout(block.layout)
       };
       if (section.areas) story.area = area;
@@ -4811,18 +4900,30 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       date: /^\d{4}-\d{2}-\d{2}/.test(String(item.date || '')) ? String(item.date).slice(0, 10) : '',
       status: isDraft ? (IMPORT_STATUS[item.status] ? item.status : '') : '',
       agent: !!isDraft && item.source === 'agent',
-      url: '', linkDropped: false, image: '', imageAlt: importText(item.imageAlt, 300), credit: importText(item.photoCredit, 200), imageDropped: false
+      url: '', linkDropped: false, image: '', imageAlt: importText(item.imageAlt, 300), credit: importText(item.photoCredit, 200), imageDropped: false,
+      photos: [], layout: publishPhotoLayout(item.photoLayout), announcement: null, draftFlyer: null
     };
+    const notice = item.announcement;
+    if (notice && ['announcement', 'event'].includes(notice.kind)) {
+      story.announcement = { kind: notice.kind, eventDate: /^\d{4}-\d{2}-\d{2}$/.test(notice.eventDate || '') ? notice.eventDate : '', location: importText(notice.location, 200), links: (Array.isArray(notice.links) ? notice.links : []).slice(0, 3).map(function (link) { return { label: importText(link && link.label, 120), url: U.announcementAction(link && link.url) }; }).filter(function (link) { return link.label && link.url; }), videoUrl: U.announcementVideo(notice.videoUrl) };
+      const flyer = item.draftFlyer;
+      if (isDraft && flyer && Number.isSafeInteger(flyer.draftId) && flyer.draftId > 0 && Number.isSafeInteger(flyer.photoId) && flyer.photoId > 0 && /^[a-f0-9]{32}$/.test(flyer.key)) story.draftFlyer = { draftId: flyer.draftId, photoId: flyer.photoId, key: flyer.key, alt: importText(flyer.alt, 300) };
+    }
     if (!isDraft) {
       const url = importText(item.url, 2000);
       if (url && importSameOrigin(url, siteUrl)) story.url = new URL(url).href;
       else story.linkDropped = true;
     }
-    const image = importText(item.image, 2000);
-    if (image) {
-      if (importImageOk(image, siteUrl)) story.image = new URL(image).href;
-      else story.imageDropped = true;
-    }
+    const paths = (item.image ? [item.image] : []).concat(Array.isArray(item.photos) ? item.photos : []);
+    const alts = (item.image ? [item.imageAlt] : []).concat(Array.isArray(item.photoAlts) ? item.photoAlts : []);
+    paths.slice(0, 6).forEach(function (path, index) {
+      if (story.announcement && index > 0) return; // Only the actual lead is the flyer; never promote another image.
+      const url = importText(path, 2000);
+      if (!url || !importImageOk(url, siteUrl)) { story.imageDropped = true; return; }
+      const crop = U.photoCrop(Array.isArray(item.photoFocus) ? item.photoFocus[index] : null);
+      story.photos.push(Object.assign({ url: new URL(url).href, alt: importText(alts[index], 300), caption: index === 0 && story.credit ? 'Photo: ' + story.credit : '' }, crop));
+    });
+    if (story.photos.length) story.image = story.photos[0].url;
     return story;
   }
 
@@ -4864,6 +4965,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
   function importLinkedUrls() {
     const urls = new Set();
     Store.getDocument().blocks.forEach(function (block) {
+      if (block.type === 'eventList') (block.events || []).forEach(function (event) { try { if (event.importedFrom && event.importedFrom !== 'draft') urls.add(new URL(event.importedFrom).href); } catch (error) {} });
       if (block.type !== 'story' || !block.link) return;
       try { urls.add(new URL(String(block.link).trim()).href); } catch (error) {}
     });
@@ -4919,6 +5021,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         text.appendChild(title);
         text.appendChild(meta);
         const flags = [];
+        if (story.announcement) flags.push([story.announcement.kind === 'event' ? 'Event · flyer card' : 'Announcement · flyer card', false]);
+        if (story.draftFlyer) flags.push(['Flyer included through authenticated import', false]);
         if (story.draft) flags.push([IMPORT_STATUS[story.status] || 'Draft', false]);
         if (story.agent) flags.push(['From AI agent', false]);
         if (story.draft) flags.push(['Not published yet: no link', false]);
@@ -5005,6 +5109,10 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     const picked = Array.from(importTicks).sort(function (a, b) { return a - b; }).map(function (index) { return importStories[index]; }).filter(Boolean);
     if (!picked.length) { setPublishStatus('Tick at least one story to add.', 'error', 'importStatus'); return; }
     const specs = picked.map(function (story) {
+      if (story.announcement) {
+        const a = story.announcement;
+        return { type: 'eventList', initial: { title: a.kind === 'event' ? 'Events' : 'Announcements', events: [Templates.event({ kind: a.kind, name: story.title, date: a.eventDate ? importShortDate(a.eventDate) : '', location: a.location, description: story.dek || story.excerpt, imageUrl: story.image, imageAlt: story.draftFlyer ? story.draftFlyer.alt : story.imageAlt, links: a.links, videoUrl: a.videoUrl, link: story.draft ? '' : story.url, buttonLabel: 'Read announcement', importedFrom: story.draft ? 'draft' : story.url, flyerPending: !!story.draftFlyer })] } };
+      }
       const initial = {
         tag: (story.areaLabel || story.sectionLabel).toUpperCase(),
         title: story.title,
@@ -5013,7 +5121,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         // Imported stories are already on the website; Publish must never send this card's short text back.
         importedFrom: story.draft ? 'draft' : story.url,
         buttonLabel: story.draft ? '' : 'Read full story',
-        photos: story.image ? [Templates.photo({ url: story.image, alt: story.imageAlt, caption: story.credit ? 'Photo: ' + story.credit : '' })] : []
+        layout: story.layout,
+        photos: story.photos.map(function (photo) { return Templates.photo(photo); })
       };
       return { type: 'story', initial: initial };
     });
@@ -5024,7 +5133,13 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     const copies = [];
     blocks.forEach(function (block, index) {
       const story = picked[index];
-      if (block && story && story.image && !importOnWordPress(story.image)) copies.push({ id: block.id, src: story.image, name: importPhotoName(story) });
+      if (block && story && block.type === 'eventList') {
+        const event = block.events[0];
+        if (story.draftFlyer || (event.imageUrl && !importOnWordPress(event.imageUrl))) copies.push({ id: block.id, eventId: event.id, src: event.imageUrl, draftFlyer: story.draftFlyer, name: story.draftFlyer ? 'announcement-flyer.png' : importPhotoName({ image: event.imageUrl }) });
+      }
+      if (block && story && block.photos) block.photos.forEach(function (photo, photoIndex) {
+        if (photo.url && !importOnWordPress(photo.url)) copies.push({ id: block.id, photoId: photo.id, src: photo.url, name: importPhotoName({ image: photo.url }) });
+      });
     });
     if (copies.length) copyImportPhotos(siteUrl, token, copies);
   }
@@ -5033,11 +5148,12 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     try { file = new URL(story.image).pathname.split('/').filter(Boolean).slice(-2).join('-') || file; } catch (error) {}
     return file.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-120);
   }
-  async function fetchSitePhoto(siteUrl, token, src) {
+  async function fetchSitePhoto(siteUrl, token, src, draftFlyer) {
     const controller = new AbortController();
     const timer = setTimeout(function () { controller.abort(); }, 60000);
     try {
-      const response = await fetch(siteUrl + '/api/studio-photo?src=' + encodeURIComponent(src), {
+      const endpoint = draftFlyer ? '/api/studio-draft-flyer?draftId=' + draftFlyer.draftId + '&photoId=' + draftFlyer.photoId + '&key=' + draftFlyer.key : '/api/studio-photo?src=' + encodeURIComponent(src);
+      const response = await fetch(siteUrl + endpoint, {
         headers: { Authorization: 'Bearer ' + token }, signal: controller.signal, redirect: 'error', credentials: 'omit', referrerPolicy: 'no-referrer'
       });
       if (!response.ok) {
@@ -5046,7 +5162,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         throw new Error(response.status === 404 ? 'the website couldn’t find it' : 'the website answered HTTP ' + response.status);
       }
       const blob = await response.blob();
-      if (!/^image\/(jpeg|png|webp)$/i.test(blob.type)) throw new Error('the website didn’t send an image');
+      if (!/^image\/(jpeg|png|webp)$/i.test(blob.type) || blob.size > 10 * 1024 * 1024) throw new Error('the website didn’t send a supported image within 10 MB');
       return blob;
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('the website took too long');
@@ -5054,34 +5170,67 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       throw error;
     } finally { clearTimeout(timer); }
   }
-  // Emails are sent from WordPress, so imported photos are copied into its media library.
+  function importCopyTarget(copy) {
+    const block = Store.getBlock(copy.id);
+    const list = block && (copy.eventId ? block.events : block.photos);
+    const at = list ? list.findIndex(function (item) { return item.id === (copy.eventId || copy.photoId) && (copy.eventId ? item.imageUrl : item.url) === copy.src; }) : -1;
+    return at < 0 ? null : { block: block, at: at };
+  }
+  async function localFlyerUrl(blob) {
+    const prepared = root.Media && root.Media.preparePhoto ? await root.Media.preparePhoto(blob) : blob;
+    // Bound base64 expansion before touching localStorage. A real quota check follows the patch.
+    if (prepared.size > 1536 * 1024) throw new Error('the flyer is too large for browser storage; connect WordPress or choose a smaller flyer');
+    return new Promise(function (resolve, reject) { const reader = new FileReader(); reader.onload = function () { resolve(reader.result); }; reader.onerror = function () { reject(new Error('the flyer could not be retained for preview')); }; reader.readAsDataURL(prepared); });
+  }
+  // Imported private flyers stay private until the editor's requested WordPress transfer.
   async function copyImportPhotos(siteUrl, token, copies) {
     const Media = root.Media;
-    if (!Media || !Media.canUpload()) {
-      toast('Photos still point to the website. Connect WordPress (Browse → WordPress) and import again to copy them, or choose them from WordPress. Send Check will flag them.', 'warning');
-      return;
-    }
-    const changes = [];
-    let failed = 0;
-    let reason = '';
+    let copied = 0, keptLocal = 0, skipped = 0, failed = 0, reason = '';
     for (let i = 0; i < copies.length; i += 1) {
       const copy = copies[i];
-      toast('Copying photo ' + (i + 1) + ' of ' + copies.length + ' into WordPress…');
+      if (!importCopyTarget(copy)) continue;
+      if (!copy.draftFlyer && (!Media || !Media.canUpload())) { skipped += 1; continue; }
+      toast(copy.draftFlyer ? 'Importing announcement flyer…' : 'Copying photo into WordPress…');
       try {
-        const blob = await fetchSitePhoto(siteUrl, token, copy.src);
-        const url = await Media.uploadPhoto(blob, copy.name);
-        const block = Store.getBlock(copy.id);
-        // Skip if the story was removed or its photo changed while copying.
-        if (block && block.photos && block.photos[0] && block.photos[0].url === copy.src) changes.push({ id: copy.id, path: 'photos.0.url', value: url });
+        const blob = await fetchSitePhoto(siteUrl, token, copy.src, copy.draftFlyer);
+        if (!importCopyTarget(copy)) continue;
+        let url = '';
+        if (Media && Media.canUpload()) {
+          // Recheck before transferring private bytes, then once again before patching the slot.
+          if (!importCopyTarget(copy)) continue;
+          try { url = await Media.uploadPhoto(blob, copy.name); }
+          catch (error) { if (!copy.draftFlyer) throw error; }
+        }
+        if (!url && copy.draftFlyer) url = await localFlyerUrl(blob);
+        const target = importCopyTarget(copy);
+        if (!target) continue;
+        if (copy.eventId) {
+          const base = 'events.' + target.at;
+          Store.patchBlocks([{ id: copy.id, path: base + '.imageUrl', value: url }, { id: copy.id, path: base + '.flyerPending', value: false }, { id: copy.id, path: base + '.flyerError', value: false }], { source: 'import-photos' });
+          if (String(url).startsWith('data:')) {
+            if (!Store.persistNow()) {
+              Store.patchBlocks([{ id: copy.id, path: base + '.imageUrl', value: copy.src }, { id: copy.id, path: base + '.flyerError', value: true }], { source: 'import-photos' });
+              Store.persistNow();
+              throw new Error('browser storage is full; connect WordPress or choose a smaller flyer');
+            }
+            keptLocal += 1;
+          } else copied += 1;
+        } else {
+          Store.patchBlocks([{ id: copy.id, path: 'photos.' + target.at + '.url', value: url }], { source: 'import-photos' });
+          copied += 1;
+        }
       } catch (error) {
+        if (!importCopyTarget(copy)) continue;
         failed += 1;
         if (!reason) reason = safePublishMessage(error.message, token);
-        if (!Media.canUpload()) { failed += copies.length - i - 1; break; }
+        const target = importCopyTarget(copy);
+        if (copy.eventId && target) Store.patchBlocks([{ id: copy.id, path: 'events.' + target.at + '.flyerPending', value: false }, { id: copy.id, path: 'events.' + target.at + '.flyerError', value: true }], { source: 'import-photos' });
       }
     }
-    if (changes.length) Store.patchBlocks(changes, { source: 'import-photos' });
-    if (failed) toast(changes.length + ' photo(s) copied into WordPress. ' + failed + ' still point to the website (' + reason + '). Choose them under Browse → WordPress; Send Check will flag them.', 'error');
-    else toast(changes.length + ' photo(s) copied into WordPress.', 'success');
+    if (failed) toast(failed + ' photo/flyer import(s) failed (' + reason + '). Choose a replacement under Browse; Send Check will flag missing flyers.', 'error');
+    if (skipped) toast(skipped + ' photo(s) still point to the website. Connect WordPress and import again to copy them; Send Check will flag them.', 'warning');
+    if (keptLocal) toast(keptLocal + ' flyer(s) saved locally. Upload them to WordPress before sending email.', 'warning');
+    if (copied) toast(copied + ' photo(s) copied into WordPress.', 'success');
   }
 
   function bindImportEvents() {
@@ -5366,6 +5515,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       picker.dataset.focalX = x; picker.dataset.focalY = y;
       const dot = picker.querySelector('.focal-dot'); dot.style.left = x + '%'; dot.style.top = y + '%';
       picker.querySelector('.focal-crop img').style.objectPosition = x + '% ' + y + '%';
+      picker.querySelector('.focal-crop img').style.transformOrigin = x + '% ' + y + '%';
       picker.querySelector('output').textContent = x + '% across · ' + y + '% down';
     }
     function commit(picker) {
