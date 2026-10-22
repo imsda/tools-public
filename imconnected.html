@@ -1883,6 +1883,53 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     return blocks;
   }
 
+  // Imported events/announcements join one existing section per kind instead of a section each.
+  function isPlaceholderEvent(event) {
+    const blank = Templates.event();
+    return event.name === blank.name && event.date === blank.date && !event.description && !event.imageUrl && !event.link
+      && !(event.links || []).some(function (link) { return link && link.url; });
+  }
+  function eventSectionKind(block) {
+    if (/announce/i.test(block.title || '')) return 'announcement';
+    const real = (block.events || []).filter(function (event) { return !isPlaceholderEvent(event); });
+    return real.length && real.every(function (event) { return event.kind === 'announcement'; }) ? 'announcement' : 'event';
+  }
+  function eventSortTime(event) {
+    const time = Date.parse(event.sortDate || String(event.date || '').split('·')[0]);
+    return Number.isNaN(time) ? null : time;
+  }
+  function addImportedBlocks(specs, afterId, groups) {
+    const blocks = (specs || []).map(function (spec) { return Templates.makeBlock(spec.type, spec.initial || {}); });
+    const placed = {};
+    const targets = [];
+    if (!blocks.length && !(groups || []).length) return { blocks: blocks, placed: placed, targets: targets };
+    mutate(function (doc) {
+      const index = afterId && afterId !== 'document' ? doc.blocks.findIndex(function (item) { return item.id === afterId; }) : -1;
+      const footerIndex = doc.blocks.findIndex(function (item) { return item.type === 'footer'; });
+      let insertAt = index >= 0 ? index + 1 : (footerIndex >= 0 ? footerIndex : doc.blocks.length);
+      blocks.forEach(function (block) { doc.blocks.splice(insertAt, 0, block); insertAt += 1; });
+      (groups || []).forEach(function (group) {
+        let target = doc.blocks.find(function (block) { return block.type === 'eventList' && eventSectionKind(block) === group.kind; });
+        if (!target) {
+          target = Templates.makeBlock('eventList', { title: group.title, events: [] });
+          doc.blocks.splice(insertAt, 0, target);
+          insertAt += 1;
+        }
+        target.events = (target.events || []).filter(function (event) { return !isPlaceholderEvent(event); });
+        group.events.forEach(function (event) {
+          const time = eventSortTime(event);
+          const at = time == null ? -1 : target.events.findIndex(function (other) { const t = eventSortTime(other); return t != null && t > time; });
+          target.events.splice(at < 0 ? target.events.length : at, 0, event);
+          placed[event.id] = target.id;
+        });
+        target.events.forEach(function (event) { delete event.sortDate; });
+        if (!targets.includes(target)) targets.push(target);
+      });
+      selectedId = (blocks[0] || targets[0]).id;
+    }, { source: 'add-blocks', type: 'structure', structure: true });
+    return { blocks: blocks, placed: placed, targets: targets };
+  }
+
   function addBlockFromSaved(savedId, afterId) {
     const saved = savedBlocks.find(function (item) { return item.id === savedId; });
     if (!saved) return null;
@@ -2067,6 +2114,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     patchBlocks: patchBlocks,
     addBlock: addBlock,
     addBlocks: addBlocks,
+    addImportedBlocks: addImportedBlocks,
     addBlockFromSaved: addBlockFromSaved,
     removeBlock: removeBlock,
     duplicateBlock: duplicateBlock,
@@ -5108,11 +5156,19 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     if (siteUrl !== importTestedSite) { resetImportList('The site URL changed. Press Test connection to load its stories.'); return; }
     const picked = Array.from(importTicks).sort(function (a, b) { return a - b; }).map(function (index) { return importStories[index]; }).filter(Boolean);
     if (!picked.length) { setPublishStatus('Tick at least one story to add.', 'error', 'importStatus'); return; }
-    const specs = picked.map(function (story) {
-      if (story.announcement) {
-        const a = story.announcement;
-        return { type: 'eventList', initial: { title: a.kind === 'event' ? 'Events' : 'Announcements', events: [Templates.event({ kind: a.kind, name: story.title, date: a.eventDate ? importShortDate(a.eventDate) : '', location: a.location, description: story.dek || story.excerpt, imageUrl: story.image, imageAlt: story.draftFlyer ? story.draftFlyer.alt : story.imageAlt, links: a.links, videoUrl: a.videoUrl, link: story.draft ? '' : story.url, buttonLabel: 'Read announcement', importedFrom: story.draft ? 'draft' : story.url, flyerPending: !!story.draftFlyer })] } };
-      }
+    const groups = [];
+    const eventStories = {};
+    const storyPicked = picked.filter(function (story) { return !story.announcement; });
+    picked.forEach(function (story) {
+      if (!story.announcement) return;
+      const a = story.announcement;
+      let group = groups.find(function (item) { return item.kind === a.kind; });
+      if (!group) { group = { kind: a.kind, title: a.kind === 'event' ? 'Upcoming Events' : 'Announcements', events: [] }; groups.push(group); }
+      const event = Templates.event({ kind: a.kind, name: story.title, date: a.eventDate ? importShortDate(a.eventDate) : '', sortDate: a.eventDate, location: a.location, description: story.dek || story.excerpt, imageUrl: story.image, imageAlt: story.draftFlyer ? story.draftFlyer.alt : story.imageAlt, links: a.links, videoUrl: a.videoUrl, link: story.draft ? '' : story.url, buttonLabel: 'Read announcement', importedFrom: story.draft ? 'draft' : story.url, flyerPending: !!story.draftFlyer });
+      group.events.push(event);
+      eventStories[event.id] = story;
+    });
+    const specs = storyPicked.map(function (story) {
       const initial = {
         tag: (story.areaLabel || story.sectionLabel).toUpperCase(),
         title: story.title,
@@ -5126,18 +5182,26 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       };
       return { type: 'story', initial: initial };
     });
-    const blocks = Store.addBlocks(specs, Store.getSelectedId());
+    const result = Store.addImportedBlocks(specs, Store.getSelectedId(), groups);
     const token = importEl('importToken').value.trim();
     elements.importDialog.close();
-    toast('Added ' + blocks.length + (blocks.length === 1 ? ' story.' : ' stories.') + (picked.some(function (story) { return story.draft; }) ? ' Drafts have no link yet; Send Check will flag them.' : ''), 'success');
+    const added = [];
+    if (storyPicked.length) added.push(storyPicked.length + (storyPicked.length === 1 ? ' story' : ' stories'));
+    groups.forEach(function (group) {
+      const target = result.targets.find(function (block) { return block.id === result.placed[group.events[0].id]; });
+      added.push(group.events.length + ' ' + (group.kind === 'event' ? 'event' : 'announcement') + (group.events.length === 1 ? '' : 's') + ' to “' + (target && target.title || group.title) + '”');
+    });
+    toast('Added ' + added.join(' and ') + '.' + (picked.some(function (story) { return story.draft; }) ? ' Drafts have no link yet; Send Check will flag them.' : ''), 'success');
     const copies = [];
-    blocks.forEach(function (block, index) {
-      const story = picked[index];
-      if (block && story && block.type === 'eventList') {
-        const event = block.events[0];
-        if (story.draftFlyer || (event.imageUrl && !importOnWordPress(event.imageUrl))) copies.push({ id: block.id, eventId: event.id, src: event.imageUrl, draftFlyer: story.draftFlyer, name: story.draftFlyer ? 'announcement-flyer.png' : importPhotoName({ image: event.imageUrl }) });
-      }
-      if (block && story && block.photos) block.photos.forEach(function (photo, photoIndex) {
+    groups.forEach(function (group) {
+      group.events.forEach(function (event) {
+        const story = eventStories[event.id];
+        const blockId = result.placed[event.id];
+        if (blockId && (story.draftFlyer || (event.imageUrl && !importOnWordPress(event.imageUrl)))) copies.push({ id: blockId, eventId: event.id, src: event.imageUrl, draftFlyer: story.draftFlyer, name: story.draftFlyer ? 'announcement-flyer.png' : importPhotoName({ image: event.imageUrl }) });
+      });
+    });
+    result.blocks.forEach(function (block) {
+      block.photos.forEach(function (photo) {
         if (photo.url && !importOnWordPress(photo.url)) copies.push({ id: block.id, photoId: photo.id, src: photo.url, name: importPhotoName({ image: photo.url }) });
       });
     });
