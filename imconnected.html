@@ -8,6 +8,7 @@
     - WordPress REST API (/wp-json/) - optional, for media library uploads
     - IMConnected website publish API (GET/POST /api/publish, default https://stories.imadventist.org) - optional, for "Publish to IMConnected"
     - IMConnected website story list API (GET /api/stories, same site and token) - optional, for "Import from IMConnected"
+    - IMConnected photo transfer APIs (GET /api/studio-photo and /api/studio-draft-flyer) - optional, same Studio bearer connection
     - Cloudflare Web Analytics beacon (static.cloudflareinsights.com) - optional, page analytics
 -->
 <html lang="en">
@@ -765,7 +766,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     story: { label: 'Story', icon: '▤', description: 'Headline, article copy, photos, quote, and link' },
     gallery: { label: 'Photo gallery', icon: '▦', description: 'A standalone collection of photos and captions' },
     scripture: { label: 'Scripture', icon: '❝', description: 'Verse and reference in a highlighted block' },
-    eventList: { label: 'Events', icon: '◫', description: 'Upcoming dates, flyers, locations, and links' },
+    eventList: { label: 'Announcements & events', icon: '◫', description: 'Upcoming dates, flyers, locations, and links' },
     cta: { label: 'Closing invitation', icon: '→', description: 'A call to respond, submit stories, pray, or register' },
     divider: { label: 'Divider', icon: '─', description: 'A visual separator between sections' },
     spacer: { label: 'Spacer', icon: '↕', description: 'Controlled vertical breathing room' },
@@ -877,6 +878,42 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       const url = new URL(candidate);
       return /^https?:$/.test(url.protocol) && !url.username && !url.password ? (/##[^#]+##|\{\{[^}]+\}\}|\*\|[^|]+\|\*/.test(candidate) ? candidate : url.href) : '';
     } catch (error) { return ''; }
+  }
+
+  function announcementAction(value, bare) {
+    const raw = String(value || '').trim();
+    if (/[\u0000-\u0020\u007f\\<>"]/.test(raw)) return '';
+    const url = normalizeUrl(raw, { allowBareDomain: !!bare });
+    return /^(?:https?:|mailto:|tel:)/i.test(url) ? url : '';
+  }
+
+  function announcementVideo(value) {
+    try {
+      const raw = String(value || '');
+      if (/[\u0000-\u0020\u007f\\<>"']/.test(raw)) return '';
+      const u = new URL(raw);
+      if (u.protocol !== 'https:' || u.username || u.password || u.port) return '';
+      if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(u.hostname)) {
+        const id = u.hostname === 'youtu.be' ? /^\/([A-Za-z0-9_-]{11})\/?$/.exec(u.pathname)?.[1] : u.pathname === '/watch' ? u.searchParams.get('v') : /^\/(?:embed|shorts)\/([A-Za-z0-9_-]{11})\/?$/.exec(u.pathname)?.[1];
+        return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? 'https://www.youtube.com/watch?v=' + id : '';
+      }
+      if (['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'].includes(u.hostname)) {
+        const id = /^\/(?:video\/)?([1-9]\d{0,11})\/?$/.exec(u.pathname)?.[1];
+        if (id) return 'https://vimeo.com/' + id;
+      }
+    } catch (error) {}
+    return '';
+  }
+
+  function eventActions(event) {
+    const links = (Array.isArray(event.links) ? event.links : []).slice(0, 3).map(function (link) {
+      return { label: String(link && link.label || '').slice(0, 120), url: announcementAction(link && link.url) };
+    }).filter(function (link) { return link.label && link.url; });
+    const primary = announcementAction(event.link, true);
+    if (primary && !links.some(function (link) { return link.url === primary; })) links.push({ label: event.buttonLabel || 'More details', url: primary });
+    const video = announcementVideo(event.videoUrl);
+    if (video && !links.some(function (link) { return link.url === video; })) links.push({ label: 'Watch video', url: video });
+    return links;
   }
 
   function hexToRgb(hex) {
@@ -1003,6 +1040,9 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     isLikelyUrl: isLikelyUrl,
     isEmail: isEmail,
     normalizeUrl: normalizeUrl,
+    announcementAction: announcementAction,
+    announcementVideo: announcementVideo,
+    eventActions: eventActions,
     hexToRgb: hexToRgb,
     withAlpha: withAlpha,
     contrastRatio: contrastRatio,
@@ -1051,7 +1091,10 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       imageUrl: '',
       imageAlt: '',
       link: '',
-      buttonLabel: 'More details'
+      buttonLabel: 'More details',
+      kind: 'event',
+      links: [{ label: '', url: '' }, { label: '', url: '' }, { label: '', url: '' }],
+      videoUrl: ''
     }, overrides || {});
   }
 
@@ -1442,9 +1485,11 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     try {
       localStorage.setItem(STORAGE_KEY, serialize());
       setSaveState('saved');
+      return true;
     } catch (error) {
       console.warn('Draft persistence is unavailable in this browser context.');
       setSaveState('error');
+      return false;
     }
   }
 
@@ -1715,7 +1760,10 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       }
       if (normalized.type === 'eventList') {
         normalized.events = Array.isArray(normalized.events) ? normalized.events.map(function (item) {
-          return Object.assign(Templates.event(), item || {});
+          const result = Object.assign(Templates.event(), item || {});
+          if (result.flyerPending) { result.flyerPending = false; result.flyerError = true; } // Interrupted transfer: replace or reimport, never show an endless loading state.
+          result.links = Array.from({ length: 3 }, function (_, n) { return Object.assign({ label: '', url: '' }, Array.isArray(result.links) && result.links[n] || {}); });
+          return result;
         }) : [];
       }
       if (normalized.type === 'footer') {
@@ -1790,6 +1838,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     if (!block) return;
     mutate(function () {
       U.setPath(block, path, value);
+      const flyer = /^events\.(\d+)\.imageUrl$/.exec(path);
+      if (flyer) { block.events[Number(flyer[1])].flyerPending = false; block.events[Number(flyer[1])].flyerError = false; }
       const match = /^photos\.(\d+)\.alt$/.exec(path);
       if (match) block.photos[Number(match[1])].autoAlt = false;
       if (path === 'autoPhotoAlt') (block.photos || []).forEach(function (photo) {
@@ -1803,7 +1853,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     const list = (changes || []).filter(function (change) { return getBlock(change.id); });
     if (!list.length) return;
     mutate(function () {
-      list.forEach(function (change) { U.setPath(getBlock(change.id), change.path, change.value); });
+      list.forEach(function (change) { const block = getBlock(change.id); U.setPath(block, change.path, change.value); const flyer = /^events\.(\d+)\.imageUrl$/.exec(change.path); if (flyer) { block.events[Number(flyer[1])].flyerPending = false; block.events[Number(flyer[1])].flyerError = false; } });
     }, Object.assign({ type: 'block-change' }, options || {}));
   }
 
@@ -2406,7 +2456,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
   }
 
   function eventCard(event, C) {
-    const link = U.normalizeUrl(event.link, { allowBareDomain: true });
+    const actions = U.eventActions(event);
     const imageHtml = event.imageUrl
       ? image(event.imageUrl, 520, event.imageAlt || event.name || '', 'border-radius:10px 10px 0 0;')
       : '';
@@ -2416,7 +2466,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       + '<p style="margin:0 0 5px;font-family:Georgia,Times,serif;font-size:17px;line-height:23px;font-weight:bold;color:' + C.dark + ';">' + U.escapeHtml(event.name || 'Event') + '</p>'
       + ((event.date || event.location) ? '<p style="margin:0 0 7px;font-family:Arial,sans-serif;font-size:10px;line-height:16px;font-weight:bold;letter-spacing:.7px;text-transform:uppercase;color:' + C.primary + ';">' + U.escapeHtml([event.date, event.location].filter(Boolean).join(' · ')) + '</p>' : '')
       + (event.description ? '<p style="margin:0;font-family:Arial,sans-serif;font-size:13px;line-height:21px;color:#4a5459;">' + U.nl2br(event.description) + '</p>' : '')
-      + (link ? '<p style="margin:10px 0 0;"><a href="' + U.escapeAttr(link) + '" style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:' + C.primary + ';text-decoration:none;">' + U.escapeHtml(event.buttonLabel || 'More details') + ' →</a></p>' : '')
+      + actions.map(function (link) { return '<p style="margin:10px 0 0;"><a href="' + U.escapeAttr(link.url) + '" style="font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:' + C.primary + ';text-decoration:underline;">' + U.escapeHtml(link.label) + ' →</a></p>'; }).join('')
       + '</td></tr></table>';
   }
 
@@ -2582,7 +2632,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         parts.push(wpHeading(block.title, 2));
         (block.events || []).forEach(function (event) {
           parts.push(wpHeading(event.name, 3), wpParagraph([event.date, event.location].filter(Boolean).join(' · ')), wpParagraph(event.description));
-          if (event.imageUrl) parts.push(wpImage({ url: event.imageUrl, alt: event.imageAlt }, event.name));
+          if (event.imageUrl && U.normalizeUrl(event.imageUrl)) parts.push(wpImage({ url: U.normalizeUrl(event.imageUrl), alt: event.imageAlt }, event.name));
+          U.eventActions(event).forEach(function (link) { parts.push('<!-- wp:paragraph --><p><a href="' + U.escapeAttr(link.url) + '">' + U.escapeHtml(link.label) + '</a></p><!-- /wp:paragraph -->'); });
         });
       }
       if (block.type === 'cta') parts.push(wpParagraph(block.text + (block.contact ? '\n' + block.contact : ''), 'newsletter-cta'));
@@ -2717,10 +2768,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         if (!(block.events || []).length) issues.push(issue('warning', 'Events section has no events.', 'Add an event or hide the section.', block.id, 'events'));
         (block.events || []).forEach(function (event, index) {
           if (!String(event.name || '').trim()) issues.push(issue('error', 'Event ' + (index + 1) + ' needs a name.', 'Add the event name.', block.id, 'events.' + index + '.name'));
-          if (!String(event.date || '').trim()) issues.push(issue('suggestion', 'Event ' + (index + 1) + ' has no date.', 'Add the date and time readers need.', block.id, 'events.' + index + '.date'));
+          if (event.kind !== 'announcement' && !String(event.date || '').trim()) issues.push(issue('suggestion', 'Event ' + (index + 1) + ' has no date.', 'Add the date and time readers need.', block.id, 'events.' + index + '.date'));
           if (event.link && !U.isLikelyUrl(event.link, { allowBareDomain: true })) issues.push(issue('error', 'Event ' + (index + 1) + ' link looks invalid.', 'Use a full HTTPS URL.', block.id, 'events.' + index + '.link'));
+          if (event.importedFrom === 'draft') issues.push(issue('warning', 'Announcement is still an unpublished draft.', 'Review its facts and flyer; publish it on IMConnected before adding a story link.', block.id, 'events.' + index + '.link'));
+          if (event.flyerPending) issues.push(issue('error', 'Announcement flyer is still loading.', 'Wait for the flyer transfer before exporting.', block.id, 'events.' + index + '.imageUrl'));
+          if (event.flyerError) issues.push(issue('error', 'Announcement flyer could not be imported.', 'Import again or choose its flyer under Browse.', block.id, 'events.' + index + '.imageUrl'));
+          if (event.videoUrl && !U.announcementVideo(event.videoUrl)) issues.push(issue('error', 'Announcement video is not supported.', 'Use an HTTPS YouTube or Vimeo video URL.', block.id, 'events.' + index + '.videoUrl'));
+          (Array.isArray(event.links) ? event.links : []).slice(0, 3).forEach(function (link, n) { if ((link.label || link.url) && (!link.label || !U.announcementAction(link.url))) issues.push(issue('error', 'Announcement action needs a label and valid address.', 'Use HTTP(S), mailto or tel.', block.id, 'events.' + index + '.links.' + n + '.url')); });
           if (event.imageUrl) {
             imageCount += 1;
+            if (!U.isLikelyUrl(event.imageUrl, { allowData: true })) issues.push(issue('error', 'Announcement flyer address is invalid.', 'Choose a supported image.', block.id, 'events.' + index + '.imageUrl'));
+            if (String(event.imageUrl).startsWith('data:image/')) issues.push(issue('warning', 'Announcement flyer is a local preview image.', 'Use Browse → WordPress to upload it before sending email.', block.id, 'events.' + index + '.imageUrl'));
             if (!String(event.imageAlt || '').trim()) issues.push(issue('warning', 'Event ' + (index + 1) + ' image needs alt text.', 'Describe the flyer or event image.', block.id, 'events.' + index + '.imageAlt'));
           }
         });
@@ -3072,11 +3130,14 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         + '<button type="button" class="small-button" data-array-action="move" data-array-path="events" data-array-index="' + index + '" data-array-direction="-1"' + (index === 0 ? ' disabled' : '') + '>↑</button>'
         + '<button type="button" class="small-button" data-array-action="move" data-array-path="events" data-array-index="' + index + '" data-array-direction="1"' + (index === events.length - 1 ? ' disabled' : '') + '>↓</button>'
         + '<button type="button" class="small-button danger" data-array-action="remove" data-array-path="events" data-array-index="' + index + '">Remove</button></div></div>'
-        + field('Event name', 'block', base + '.name', event.name)
+        + field('Content type', 'block', base + '.kind', event.kind || 'event', { type: 'select', options: [{ value: 'announcement', label: 'Announcement' }, { value: 'event', label: 'Event' }] })
+        + field('Announcement / event name', 'block', base + '.name', event.name)
         + '<div class="field-row">' + field('Date / time', 'block', base + '.date', event.date) + field('Location', 'block', base + '.location', event.location) + '</div>'
         + field('Description', 'block', base + '.description', event.description, { type: 'textarea', rows: 4 })
         + imageField('Flyer or event image', 'block', base + '.imageUrl', event.imageUrl)
         + field('Image alt text', 'block', base + '.imageAlt', event.imageAlt)
+        + field('Video URL', 'block', base + '.videoUrl', event.videoUrl, { type: 'url', help: 'YouTube or Vimeo; email uses a Watch video link.' })
+        + [0, 1, 2].map(function (n) { const link = (event.links || [])[n] || {}; return '<div class="field-row">' + field('Action ' + (n + 1) + ' label', 'block', base + '.links.' + n + '.label', link.label) + field('Action ' + (n + 1) + ' URL', 'block', base + '.links.' + n + '.url', link.url) + '</div>'; }).join('')
         + '<div class="field-row">' + field('Details URL', 'block', base + '.link', event.link, { type: 'url' }) + field('Button label', 'block', base + '.buttonLabel', event.buttonLabel) + '</div>'
         + '</div>';
     }).join('') + '<button type="button" class="add-section-button" data-array-action="add-event" data-array-path="events">＋ Add event</button>';
@@ -3701,7 +3762,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     }
   }
 
-  root.Media = { init: init, open: open, setTab: setTab, photoHost: photoHost, canUpload: canUpload, uploadPhoto: uploadPhoto };
+  root.Media = { init: init, open: open, setTab: setTab, photoHost: photoHost, canUpload: canUpload, uploadPhoto: uploadPhoto, preparePhoto: shrinkImage };
 })();
 
   </script>
@@ -4840,8 +4901,14 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       status: isDraft ? (IMPORT_STATUS[item.status] ? item.status : '') : '',
       agent: !!isDraft && item.source === 'agent',
       url: '', linkDropped: false, image: '', imageAlt: importText(item.imageAlt, 300), credit: importText(item.photoCredit, 200), imageDropped: false,
-      photos: [], layout: publishPhotoLayout(item.photoLayout)
+      photos: [], layout: publishPhotoLayout(item.photoLayout), announcement: null, draftFlyer: null
     };
+    const notice = item.announcement;
+    if (notice && ['announcement', 'event'].includes(notice.kind)) {
+      story.announcement = { kind: notice.kind, eventDate: /^\d{4}-\d{2}-\d{2}$/.test(notice.eventDate || '') ? notice.eventDate : '', location: importText(notice.location, 200), links: (Array.isArray(notice.links) ? notice.links : []).slice(0, 3).map(function (link) { return { label: importText(link && link.label, 120), url: U.announcementAction(link && link.url) }; }).filter(function (link) { return link.label && link.url; }), videoUrl: U.announcementVideo(notice.videoUrl) };
+      const flyer = item.draftFlyer;
+      if (isDraft && flyer && Number.isSafeInteger(flyer.draftId) && flyer.draftId > 0 && Number.isSafeInteger(flyer.photoId) && flyer.photoId > 0 && /^[a-f0-9]{32}$/.test(flyer.key)) story.draftFlyer = { draftId: flyer.draftId, photoId: flyer.photoId, key: flyer.key, alt: importText(flyer.alt, 300) };
+    }
     if (!isDraft) {
       const url = importText(item.url, 2000);
       if (url && importSameOrigin(url, siteUrl)) story.url = new URL(url).href;
@@ -4850,6 +4917,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     const paths = (item.image ? [item.image] : []).concat(Array.isArray(item.photos) ? item.photos : []);
     const alts = (item.image ? [item.imageAlt] : []).concat(Array.isArray(item.photoAlts) ? item.photoAlts : []);
     paths.slice(0, 6).forEach(function (path, index) {
+      if (story.announcement && index > 0) return; // Only the actual lead is the flyer; never promote another image.
       const url = importText(path, 2000);
       if (!url || !importImageOk(url, siteUrl)) { story.imageDropped = true; return; }
       const crop = U.photoCrop(Array.isArray(item.photoFocus) ? item.photoFocus[index] : null);
@@ -4897,6 +4965,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
   function importLinkedUrls() {
     const urls = new Set();
     Store.getDocument().blocks.forEach(function (block) {
+      if (block.type === 'eventList') (block.events || []).forEach(function (event) { try { if (event.importedFrom && event.importedFrom !== 'draft') urls.add(new URL(event.importedFrom).href); } catch (error) {} });
       if (block.type !== 'story' || !block.link) return;
       try { urls.add(new URL(String(block.link).trim()).href); } catch (error) {}
     });
@@ -4952,6 +5021,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         text.appendChild(title);
         text.appendChild(meta);
         const flags = [];
+        if (story.announcement) flags.push([story.announcement.kind === 'event' ? 'Event · flyer card' : 'Announcement · flyer card', false]);
+        if (story.draftFlyer) flags.push(['Flyer included through authenticated import', false]);
         if (story.draft) flags.push([IMPORT_STATUS[story.status] || 'Draft', false]);
         if (story.agent) flags.push(['From AI agent', false]);
         if (story.draft) flags.push(['Not published yet: no link', false]);
@@ -5038,6 +5109,10 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     const picked = Array.from(importTicks).sort(function (a, b) { return a - b; }).map(function (index) { return importStories[index]; }).filter(Boolean);
     if (!picked.length) { setPublishStatus('Tick at least one story to add.', 'error', 'importStatus'); return; }
     const specs = picked.map(function (story) {
+      if (story.announcement) {
+        const a = story.announcement;
+        return { type: 'eventList', initial: { title: a.kind === 'event' ? 'Events' : 'Announcements', events: [Templates.event({ kind: a.kind, name: story.title, date: a.eventDate ? importShortDate(a.eventDate) : '', location: a.location, description: story.dek || story.excerpt, imageUrl: story.image, imageAlt: story.draftFlyer ? story.draftFlyer.alt : story.imageAlt, links: a.links, videoUrl: a.videoUrl, link: story.draft ? '' : story.url, buttonLabel: 'Read announcement', importedFrom: story.draft ? 'draft' : story.url, flyerPending: !!story.draftFlyer })] } };
+      }
       const initial = {
         tag: (story.areaLabel || story.sectionLabel).toUpperCase(),
         title: story.title,
@@ -5058,7 +5133,11 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     const copies = [];
     blocks.forEach(function (block, index) {
       const story = picked[index];
-      if (block && story) block.photos.forEach(function (photo, photoIndex) {
+      if (block && story && block.type === 'eventList') {
+        const event = block.events[0];
+        if (story.draftFlyer || (event.imageUrl && !importOnWordPress(event.imageUrl))) copies.push({ id: block.id, eventId: event.id, src: event.imageUrl, draftFlyer: story.draftFlyer, name: story.draftFlyer ? 'announcement-flyer.png' : importPhotoName({ image: event.imageUrl }) });
+      }
+      if (block && story && block.photos) block.photos.forEach(function (photo, photoIndex) {
         if (photo.url && !importOnWordPress(photo.url)) copies.push({ id: block.id, photoId: photo.id, src: photo.url, name: importPhotoName({ image: photo.url }) });
       });
     });
@@ -5069,11 +5148,12 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     try { file = new URL(story.image).pathname.split('/').filter(Boolean).slice(-2).join('-') || file; } catch (error) {}
     return file.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-120);
   }
-  async function fetchSitePhoto(siteUrl, token, src) {
+  async function fetchSitePhoto(siteUrl, token, src, draftFlyer) {
     const controller = new AbortController();
     const timer = setTimeout(function () { controller.abort(); }, 60000);
     try {
-      const response = await fetch(siteUrl + '/api/studio-photo?src=' + encodeURIComponent(src), {
+      const endpoint = draftFlyer ? '/api/studio-draft-flyer?draftId=' + draftFlyer.draftId + '&photoId=' + draftFlyer.photoId + '&key=' + draftFlyer.key : '/api/studio-photo?src=' + encodeURIComponent(src);
+      const response = await fetch(siteUrl + endpoint, {
         headers: { Authorization: 'Bearer ' + token }, signal: controller.signal, redirect: 'error', credentials: 'omit', referrerPolicy: 'no-referrer'
       });
       if (!response.ok) {
@@ -5082,7 +5162,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         throw new Error(response.status === 404 ? 'the website couldn’t find it' : 'the website answered HTTP ' + response.status);
       }
       const blob = await response.blob();
-      if (!/^image\/(jpeg|png|webp)$/i.test(blob.type)) throw new Error('the website didn’t send an image');
+      if (!/^image\/(jpeg|png|webp)$/i.test(blob.type) || blob.size > 10 * 1024 * 1024) throw new Error('the website didn’t send a supported image within 10 MB');
       return blob;
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('the website took too long');
@@ -5090,34 +5170,67 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       throw error;
     } finally { clearTimeout(timer); }
   }
-  // Emails are sent from WordPress, so imported photos are copied into its media library.
+  function importCopyTarget(copy) {
+    const block = Store.getBlock(copy.id);
+    const list = block && (copy.eventId ? block.events : block.photos);
+    const at = list ? list.findIndex(function (item) { return item.id === (copy.eventId || copy.photoId) && (copy.eventId ? item.imageUrl : item.url) === copy.src; }) : -1;
+    return at < 0 ? null : { block: block, at: at };
+  }
+  async function localFlyerUrl(blob) {
+    const prepared = root.Media && root.Media.preparePhoto ? await root.Media.preparePhoto(blob) : blob;
+    // Bound base64 expansion before touching localStorage. A real quota check follows the patch.
+    if (prepared.size > 1536 * 1024) throw new Error('the flyer is too large for browser storage; connect WordPress or choose a smaller flyer');
+    return new Promise(function (resolve, reject) { const reader = new FileReader(); reader.onload = function () { resolve(reader.result); }; reader.onerror = function () { reject(new Error('the flyer could not be retained for preview')); }; reader.readAsDataURL(prepared); });
+  }
+  // Imported private flyers stay private until the editor's requested WordPress transfer.
   async function copyImportPhotos(siteUrl, token, copies) {
     const Media = root.Media;
-    if (!Media || !Media.canUpload()) {
-      toast('Photos still point to the website. Connect WordPress (Browse → WordPress) and import again to copy them, or choose them from WordPress. Send Check will flag them.', 'warning');
-      return;
-    }
-    let copied = 0;
-    let failed = 0;
-    let reason = '';
+    let copied = 0, keptLocal = 0, skipped = 0, failed = 0, reason = '';
     for (let i = 0; i < copies.length; i += 1) {
       const copy = copies[i];
-      toast('Copying photo ' + (i + 1) + ' of ' + copies.length + ' into WordPress…');
+      if (!importCopyTarget(copy)) continue;
+      if (!copy.draftFlyer && (!Media || !Media.canUpload())) { skipped += 1; continue; }
+      toast(copy.draftFlyer ? 'Importing announcement flyer…' : 'Copying photo into WordPress…');
       try {
-        const blob = await fetchSitePhoto(siteUrl, token, copy.src);
-        const url = await Media.uploadPhoto(blob, copy.name);
-        const block = Store.getBlock(copy.id);
-        // Resolve stable identity now: reorder/delete/replace may have happened during upload.
-        const at = block && block.photos ? block.photos.findIndex(function (photo) { return photo.id === copy.photoId && photo.url === copy.src; }) : -1;
-        if (at >= 0) { Store.patchBlocks([{ id: copy.id, path: 'photos.' + at + '.url', value: url }], { source: 'import-photos' }); copied += 1; }
+        const blob = await fetchSitePhoto(siteUrl, token, copy.src, copy.draftFlyer);
+        if (!importCopyTarget(copy)) continue;
+        let url = '';
+        if (Media && Media.canUpload()) {
+          // Recheck before transferring private bytes, then once again before patching the slot.
+          if (!importCopyTarget(copy)) continue;
+          try { url = await Media.uploadPhoto(blob, copy.name); }
+          catch (error) { if (!copy.draftFlyer) throw error; }
+        }
+        if (!url && copy.draftFlyer) url = await localFlyerUrl(blob);
+        const target = importCopyTarget(copy);
+        if (!target) continue;
+        if (copy.eventId) {
+          const base = 'events.' + target.at;
+          Store.patchBlocks([{ id: copy.id, path: base + '.imageUrl', value: url }, { id: copy.id, path: base + '.flyerPending', value: false }, { id: copy.id, path: base + '.flyerError', value: false }], { source: 'import-photos' });
+          if (String(url).startsWith('data:')) {
+            if (!Store.persistNow()) {
+              Store.patchBlocks([{ id: copy.id, path: base + '.imageUrl', value: copy.src }, { id: copy.id, path: base + '.flyerError', value: true }], { source: 'import-photos' });
+              Store.persistNow();
+              throw new Error('browser storage is full; connect WordPress or choose a smaller flyer');
+            }
+            keptLocal += 1;
+          } else copied += 1;
+        } else {
+          Store.patchBlocks([{ id: copy.id, path: 'photos.' + target.at + '.url', value: url }], { source: 'import-photos' });
+          copied += 1;
+        }
       } catch (error) {
+        if (!importCopyTarget(copy)) continue;
         failed += 1;
         if (!reason) reason = safePublishMessage(error.message, token);
-        if (!Media.canUpload()) { failed += copies.length - i - 1; break; }
+        const target = importCopyTarget(copy);
+        if (copy.eventId && target) Store.patchBlocks([{ id: copy.id, path: 'events.' + target.at + '.flyerPending', value: false }, { id: copy.id, path: 'events.' + target.at + '.flyerError', value: true }], { source: 'import-photos' });
       }
     }
-    if (failed) toast(copied + ' photo(s) copied into WordPress. ' + failed + ' still point to the website (' + reason + '). Choose them under Browse → WordPress; Send Check will flag them.', 'error');
-    else toast(copied + ' photo(s) copied into WordPress.', 'success');
+    if (failed) toast(failed + ' photo/flyer import(s) failed (' + reason + '). Choose a replacement under Browse; Send Check will flag missing flyers.', 'error');
+    if (skipped) toast(skipped + ' photo(s) still point to the website. Connect WordPress and import again to copy them; Send Check will flag them.', 'warning');
+    if (keptLocal) toast(keptLocal + ' flyer(s) saved locally. Upload them to WordPress before sending email.', 'warning');
+    if (copied) toast(copied + ' photo(s) copied into WordPress.', 'success');
   }
 
   function bindImportEvents() {
