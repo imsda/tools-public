@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <!--
   DEPENDENCIES
-  Archivos locales (misma carpeta):
-    - Logos/Logo Template White.png  (logotipo predeterminado)
-    - Logos/SDA Logo.png  (logotipo predeterminado)
-    - Logos/facebook.png  (logotipo predeterminado)
-    - Logos/instagram.png  (logotipo predeterminado)
-    - Logos/link.png  (logotipo predeterminado)
-    - tools-nav.css  (opcional - estilos de la navegación superior compartida; la página funciona sin él)
-    - tools-nav.js  (opcional - navegación superior compartida + lista de herramientas; la página funciona sin él)
-  Externas (internet):
-    - html-to-image - necesario para exportar imagen/PDF: https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js
-    - jsPDF - necesario para exportar PDF: https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js
-    - Google Fonts - opcional, usa fuentes del sistema si no está disponible
+  Local files (same folder):
+    - Logos/Logo Template White.png  (default logo asset)
+    - Logos/SDA Logo.png  (default logo asset)
+    - Logos/facebook.png  (default logo asset)
+    - Logos/instagram.png  (default logo asset)
+    - Logos/link.png  (default logo asset)
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    - html-to-image - required for image/PDF export: https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js
+    - jsPDF - required for PDF export: https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js
+    - Google Fonts - optional, falls back to system fonts
 -->
 <html lang="es">
 <head>
@@ -20,10 +20,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Generador de tarjetas de presentación</title>
   <!--
-    Rutas de los logotipos para las plantillas de tarjeta.
-    Actualiza estos dos valores src si cambia la ubicación oficial de los logotipos en el repositorio:
-    - Logotipo frontal: Logos/Logo Template White.png
-    - Símbolo posterior: Logos/SDA Logo.png
+    Logo asset paths for the card templates.
+    Update these two image src values if official repository logo locations ever change:
+    - Front lockup: Logos/Logo Template White.png
+    - Back symbol: Logos/SDA Logo.png
   -->
   <style>
     @import url("https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;1,400&display=swap");

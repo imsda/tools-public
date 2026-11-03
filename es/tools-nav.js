@@ -31,7 +31,8 @@
       ['security-camera-quote-generator.html','Solicitud de cotización de cámaras de seguridad']
     ]},
     { section: 'Herramientas especiales', items: [
-      ['../imconnected.html','Creador de boletines por correo electrónico (en inglés)']
+      ['../imconnected.html','Creador de boletines por correo electrónico (en inglés)'],
+      ['id-card-generator.html','Generador de credenciales']
     ]}
   ];
 

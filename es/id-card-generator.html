@@ -1,0 +1,2540 @@
+<!DOCTYPE html>
+<!--
+  DEPENDENCIES
+  Local files (same folder):
+    - fonts/AdventSans-Beta.otf  (optional - "Advent Sans" font choice for Template 1 lines; loaded only when chosen)
+    - tools-nav.css  (optional - shared top nav styling; page works without it)
+    - tools-nav.js  (optional - shared top nav + tool list; page works without it)
+  External (internet):
+    - PDF.js - optional, loaded only when a PDF template is uploaded (PNG/JPG templates work offline):
+        https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js
+        https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generador de credenciales</title>
+  <style>
+    /* Single regular weight; Medium/Bold and italic are synthesized by the browser. */
+    @font-face {
+      font-family: 'Advent Sans';
+      src: url('fonts/AdventSans-Beta.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: block;
+    }
+    :root {
+      --bg: #f4f7f9;
+      --surface: #ffffff;
+      --border: #d6e0e8;
+      --text: #1a2b3c;
+      --muted: #5e7185;
+      --primary: #087E8B;
+      --primary-dark: #0B3954;
+      --error: #a12a3a;
+      --error-bg: #fff1f3;
+      --warn: #7a5300;
+      --warn-bg: #fff8e6;
+      --ok: #1f6b3a;
+      --ok-bg: #ebf8ef;
+      --radius: 14px;
+      --shadow: 0 10px 24px rgba(11, 57, 84, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .app { max-width: 1440px; margin: 0 auto; padding: 1rem; }
+    .hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1rem 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .hero h1 { margin: 0; font-size: clamp(1.3rem, 2.4vw, 1.8rem); color: var(--primary-dark); }
+    .hero p { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.92rem; }
+    .layout { display: grid; gap: 1rem; grid-template-columns: minmax(320px, 420px) 1fr; align-items: start; }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 0.9rem 1rem;
+    }
+    .controls { display: grid; gap: 0.85rem; }
+    .step { border: 1px solid #dfe8ee; border-radius: 12px; padding: 0.7rem 0.75rem; background: #fbfdfe; }
+    .step > h2 { margin: 0 0 0.55rem; font-size: 0.95rem; color: var(--primary-dark); display: flex; gap: 0.45rem; align-items: center; }
+    .step-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 1.45rem; height: 1.45rem; border-radius: 999px;
+      background: var(--primary-dark); color: #fff; font-size: 0.78rem;
+    }
+    .field { margin-bottom: 0.55rem; }
+    .field:last-child { margin-bottom: 0; }
+    label, .label { display: block; font-size: 0.8rem; font-weight: 700; color: #2d4659; margin-bottom: 0.25rem; }
+    .hint { font-size: 0.76rem; color: var(--muted); margin: 0.25rem 0 0; line-height: 1.35; }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      border: 1px solid #bfd0dc;
+      border-radius: 9px;
+      font: inherit;
+      font-size: 0.9rem;
+      padding: 0.45rem 0.55rem;
+      background: #fff;
+      color: var(--text);
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    input[type="color"] { width: 100%; height: 2.1rem; border: 1px solid #bfd0dc; border-radius: 9px; padding: 0.15rem; background: #fff; }
+    input[type="file"] { font-size: 0.82rem; max-width: 100%; }
+    .type-switch { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 0.45rem; }
+    .type-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .type-option span {
+      display: block; text-align: center; padding: 0.55rem 0.4rem; border-radius: 10px;
+      border: 1px solid #c9d8e3; background: #fff; font-weight: 700; font-size: 0.86rem; cursor: pointer;
+    }
+    .type-option span small { display: block; font-weight: 600; color: var(--muted); font-size: 0.72rem; }
+    .type-option input:checked + span { border-color: var(--primary); background: #e6f4f5; color: var(--primary-dark); box-shadow: inset 0 0 0 1px var(--primary); }
+    .type-option input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .btn {
+      border: 1px solid #c9d8e3; border-radius: 999px; padding: 0.45rem 0.85rem; font: inherit;
+      font-size: 0.82rem; font-weight: 700; background: #fff; color: #1f4960; cursor: pointer;
+    }
+    .btn:hover { background: #f1f7fa; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.45rem; }
+    details.advanced summary { cursor: pointer; font-weight: 700; font-size: 0.85rem; color: var(--primary-dark); }
+    details.advanced[open] summary { margin-bottom: 0.5rem; }
+    .file-status { font-size: 0.78rem; color: var(--muted); margin-top: 0.25rem; }
+    .file-status.bad { color: var(--error); font-weight: 700; }
+
+    .results { display: grid; gap: 1rem; }
+    .summary { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; }
+    .chip { display: inline-block; border-radius: 999px; padding: 0.18rem 0.55rem; font-size: 0.74rem; font-weight: 700; border: 1px solid transparent; white-space: nowrap; }
+    .chip.error { background: var(--error-bg); color: var(--error); border-color: #efc3cb; }
+    .chip.warn { background: var(--warn-bg); color: var(--warn); border-color: #ecd59b; }
+    .chip.ok { background: var(--ok-bg); color: var(--ok); border-color: #b9e2c6; }
+    .chip.info { background: #eef4f8; color: #2d4659; border-color: #d3e0e9; }
+    .issues { margin: 0.6rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.3rem; }
+    .issues li { font-size: 0.84rem; padding: 0.4rem 0.55rem; border-radius: 9px; }
+    .issues li.error { background: var(--error-bg); color: var(--error); }
+    .issues li.warn { background: var(--warn-bg); color: var(--warn); }
+    .issues li.info { background: #eef4f8; color: #2d4659; }
+
+    .preview-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; align-items: center; margin-bottom: 0.6rem; }
+    .preview-head h2 { margin: 0; font-size: 1rem; color: var(--primary-dark); }
+    .preview-cards { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; justify-content: center; }
+    .card-face { margin: 0; text-align: center; }
+    .card-face figcaption { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 0.35rem; }
+    .card-face canvas {
+      display: block; border-radius: 12px; background: #fff;
+      box-shadow: 0 6px 18px rgba(11, 57, 84, 0.2), 0 0 0 1px rgba(11, 57, 84, 0.12);
+    }
+    .card-face.landscape { width: min(100%, 405px); }
+    .card-face.portrait { width: min(100%, 255px); }
+    .card-face canvas { width: 100%; height: auto; }
+    .preview-note { font-size: 0.8rem; color: var(--muted); text-align: center; margin: 0.6rem 0 0; }
+    #frontCanvas.can-drag { cursor: grab; touch-action: none; }
+    .layout-drag canvas { touch-action: none; }
+    .layout-drag .card-face canvas { outline: 2px dashed var(--primary); outline-offset: 3px; }
+    .custom-options { display: none; margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px dashed #d3dee7; gap: 0.55rem; }
+    .custom-options.show { display: grid; }
+    .opt-row { display: grid; grid-template-columns: 6.2rem 1fr; align-items: center; gap: 0.5rem; }
+    .opt-row > .opt-label { font-size: 0.82rem; font-weight: 700; color: #2d4659; }
+    .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #fff; width: fit-content; }
+    .seg label { position: relative; cursor: pointer; }
+    .seg input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg span { display: block; padding: 0.38rem 0.75rem; font-size: 0.82rem; font-weight: 700; color: #2d4659; border-right: 1px solid var(--border); }
+    .seg label:last-child span { border-right: 0; }
+    .seg input:checked + span { background: var(--primary-dark); color: #fff; }
+    .seg input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: -2px; }
+    .seg input:disabled + span { opacity: 0.45; cursor: not-allowed; }
+    .drag-toggle { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 700; color: var(--primary-dark); cursor: pointer; }
+    .drag-toggle input { width: 1.05rem; height: 1.05rem; }
+    #frontCanvas.dragging { cursor: grabbing; }
+    .crop-tools { display: none; max-width: 520px; margin: 0.7rem auto 0; padding: 0.55rem 0.7rem; border: 1px solid var(--border, #d6dee5); border-radius: 10px; }
+    .crop-tools.show { display: block; }
+    .crop-tools .grid-3 { align-items: end; }
+    .crop-tools input[type="range"] { width: 100%; }
+    .crop-tools .hint { margin: 0 0 0.4rem; }
+    .preview-issues { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3rem; margin-top: 0.55rem; }
+
+    .table-tools { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+    .table-tools h2 { margin: 0; font-size: 1rem; color: var(--primary-dark); }
+    .check-inline { display: inline-flex; gap: 0.35rem; align-items: center; font-size: 0.82rem; font-weight: 700; color: #2d4659; }
+    .table-wrap { overflow: auto; max-height: 460px; border: 1px solid #e1e9ef; border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th, td { text-align: left; padding: 0.42rem 0.55rem; border-bottom: 1px solid #edf2f6; vertical-align: top; }
+    th { position: sticky; top: 0; background: #f4f8fb; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px; color: #3d566a; z-index: 1; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: #f6fafc; }
+    tbody tr.selected { background: #e6f4f5; }
+    tbody tr.row-error td:first-child { box-shadow: inset 3px 0 0 var(--error); }
+    tbody tr.row-warn td:first-child { box-shadow: inset 3px 0 0 #d9a520; }
+    td .chip { margin: 0 0.2rem 0.2rem 0; }
+    .empty-cell { color: #b0bcc6; font-style: italic; }
+    .empty-state { padding: 1.2rem; text-align: center; color: var(--muted); font-size: 0.9rem; }
+
+    /* Side-by-side layout: the settings column scrolls on its own and stays in view, so the
+       card preview on the right stays visible while settings change. Clears the fixed tools nav. */
+    @media (min-width: 981px) {
+      .controls {
+        position: sticky;
+        top: calc(var(--imsda-nav-h, 0px) + 0.75rem);
+        max-height: calc(100vh - var(--imsda-nav-h, 0px) - 1.5rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+      }
+    }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+  <link rel="stylesheet" href="tools-nav.css?v=20260928" />
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <h1>Generador de credenciales</h1>
+      <p>Aquí unimos un CSV y nuestras fotos en una plantilla de credencial CR80 (3.375&Prime; &times; 2.125&Prime;, 300 dpi), revisamos si falta información y vemos el anverso y el reverso con código de barras de cada credencial. Todo se queda en este navegador; no subimos nada.</p>
+    </section>
+
+    <div class="layout">
+      <aside class="panel controls" aria-label="Configuración de la credencial">
+        <section class="step">
+          <h2><span class="step-num">1</span> Tipo de credencial</h2>
+          <div class="type-switch" role="radiogroup" aria-label="Tipo de credencial">
+            <label class="type-option"><input type="radio" name="cardType" value="staff" /><span>Personal<small>Vertical &middot; Nombre, ID#</small></span></label>
+            <label class="type-option"><input type="radio" name="cardType" value="student" /><span>Estudiante<small>Horizontal &middot; Nombre, ID#, fecha de nac., grado</small></span></label>
+            <label class="type-option"><input type="radio" name="cardType" value="template1" /><span>Plantilla 1<small>Horizontal &middot; Nombre + 3 líneas del CSV + año</small></span></label>
+            <label class="type-option"><input type="radio" name="cardType" value="custom" /><span>Plantilla personalizada<small>Cualquier columna del CSV &middot; cada una en el anverso o el reverso</small></span></label>
+          </div>
+          <div class="custom-options" id="customOptions" aria-label="Opciones de la plantilla personalizada">
+            <div class="opt-row"><span class="opt-label">Credencial</span>
+              <div class="seg" role="radiogroup" aria-label="Orientación de la credencial">
+                <label><input type="radio" name="customOrient" value="landscape" /><span>Horizontal</span></label>
+                <label><input type="radio" name="customOrient" value="portrait" /><span>Vertical</span></label>
+              </div>
+            </div>
+            <div class="opt-row"><span class="opt-label">Foto</span>
+              <div class="seg" role="radiogroup" aria-label="Foto sí o no">
+                <label><input type="radio" name="cpEnabled" value="on" /><span>Sí</span></label>
+                <label><input type="radio" name="cpEnabled" value="off" /><span>No (sin fotos)</span></label>
+              </div>
+            </div>
+            <div class="opt-row"><span class="opt-label">Recorte de foto</span>
+              <div class="seg" role="radiogroup" aria-label="Forma del recorte de la foto">
+                <label><input type="radio" name="cpShape" value="rect" /><span>Cuadrada</span></label>
+                <label><input type="radio" name="cpShape" value="circle" /><span>Redonda</span></label>
+              </div>
+            </div>
+            <div class="opt-row"><span class="opt-label">Foto en</span>
+              <div class="seg" role="radiogroup" aria-label="Lado de la foto">
+                <label><input type="radio" name="cpSide" value="front" /><span>Anverso</span></label>
+                <label><input type="radio" name="cpSide" value="back" /><span>Reverso</span></label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="step">
+          <h2><span class="step-num">2</span> Datos y fotos</h2>
+          <div class="field">
+            <label for="csvInput">Archivo CSV</label>
+            <input id="csvInput" type="file" accept=".csv,text/csv" />
+            <div class="file-status" id="csvStatus">Aún no hay un CSV cargado.</div>
+            <p class="hint" id="csvHint"></p>
+            <div class="btn-row"><button class="btn" type="button" id="sampleCsvBtn">Descargar CSV de ejemplo</button><button class="btn" type="button" id="clearCsvBtn">Quitar CSV</button></div>
+          </div>
+          <div class="field" id="photoField">
+            <label for="photoInput">Fotos</label>
+            <input id="photoInput" type="file" accept="image/*" multiple />
+            <div class="file-status" id="photoStatus">Aún no hay fotos cargadas.</div>
+            <p class="hint">Ponle a cada foto el ID# de la persona (<code>100001.jpg</code>) o su nombre (<code>Juan Pérez.jpg</code>; no importan el orden, las mayúsculas, la puntuación ni los acentos). Primero revisamos el ID#. Selecciónalas todas a la vez (puedes agregar más después). JPG o PNG.</p>
+            <div class="btn-row"><button class="btn" type="button" id="clearPhotosBtn">Quitar fotos</button></div>
+          </div>
+        </section>
+
+        <section class="step">
+          <h2><span class="step-num">3</span> Plantillas</h2>
+          <div class="field">
+            <label for="frontTemplateInput">Plantilla del anverso (imagen o PDF)</label>
+            <input id="frontTemplateInput" type="file" accept="image/*,application/pdf,.pdf" />
+            <div class="file-status" id="frontTemplateStatus">Usando la plantilla integrada.</div>
+          </div>
+          <div class="field">
+            <label for="backTemplateInput">Plantilla del reverso (imagen o PDF, opcional)</label>
+            <input id="backTemplateInput" type="file" accept="image/*,application/pdf,.pdf" />
+            <div class="file-status" id="backTemplateStatus">Usando el reverso integrado.</div>
+          </div>
+          <p class="hint">Plantillas PDF: usamos la página 1. Si subes un PDF de 2 páginas como anverso, la página 2 se vuelve el reverso. Para leer PDFs necesitamos conexión a internet la primera vez; PNG/JPG funcionan sin conexión.</p>
+          <div class="btn-row">
+            <button class="btn" type="button" id="downloadFrontTemplateBtn">Descargar plantilla del anverso</button>
+            <button class="btn" type="button" id="downloadBackTemplateBtn">Descargar plantilla del reverso</button>
+            <button class="btn" type="button" id="resetTemplatesBtn">Usar plantillas integradas</button>
+          </div>
+          <p class="hint" id="templateHint"></p>
+        </section>
+
+        <section class="step">
+          <h2><span class="step-num">4</span> Texto de la credencial</h2>
+          <div class="field" id="roleField">
+            <label for="roleLine">Línea debajo del nombre del personal (opcional)</label>
+            <input id="roleLine" type="text" placeholder="p. ej., PERSONAL o MAESTRO" />
+          </div>
+          <div class="grid-2">
+            <div class="field"><label for="textColor">Color del texto</label><input id="textColor" type="color" /></div>
+            <div class="field"><label for="labelColor">Color de las etiquetas</label><input id="labelColor" type="color" /></div>
+          </div>
+          <div class="field" id="yearTextField">
+            <label for="yearText">Año escolar</label>
+            <input id="yearText" type="text" placeholder="p. ej., 2026–2027" />
+          </div>
+          <div id="yearPlacement">
+          <div class="grid-3">
+            <div class="field"><label for="yearX">Año X %</label><input id="yearX" type="number" min="0" max="100" step="0.5" /></div>
+            <div class="field"><label for="yearY">Año Y %</label><input id="yearY" type="number" min="0" max="100" step="0.5" /></div>
+            <div class="field"><label for="yearSize">Tamaño del año</label><input id="yearSize" type="number" min="10" max="160" step="1" title="Píxeles a 300 dpi" /></div>
+          </div>
+          <div class="grid-3">
+            <div class="field"><label for="yearAlign">Alinear</label>
+              <select id="yearAlign"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select>
+            </div>
+            <div class="field"><label for="yearColor">Color del año</label><input id="yearColor" type="color" /></div>
+            <div class="field"><label for="yearBold">Grosor</label>
+              <select id="yearBold"><option value="700">Negrita</option><option value="400">Normal</option></select>
+            </div>
+          </div>
+          <p class="hint">X/Y son porcentajes de la credencial (0 = izquierda/arriba). Deja el año en blanco para ocultarlo.</p>
+          </div>
+          <details class="advanced" id="customDetails" open>
+            <summary>Credencial personalizada: posición y tamaño de la foto</summary>
+            <div class="grid-2">
+              <div class="field"><label for="cpX">Foto X %</label><input id="cpX" type="number" min="0" max="100" step="0.25" /></div>
+              <div class="field"><label for="cpY">Foto Y %</label><input id="cpY" type="number" min="0" max="100" step="0.25" /></div>
+              <div class="field"><label for="cpW">Ancho de la foto %</label><input id="cpW" type="number" min="5" max="100" step="0.25" /></div>
+              <div class="field"><label for="cpH">Alto de la foto % (recorte cuadrado)</label><input id="cpH" type="number" min="5" max="100" step="0.25" /></div>
+            </div>
+            <p class="hint" id="cpHint">X/Y son la esquina superior izquierda de la foto, en % de la credencial. El tamaño de un recorte redondo sale de su ancho. La orientación de la credencial, la foto sí/no, la forma del recorte y el lado están en el paso 1.</p>
+          </details>
+          <details class="advanced" id="lineStyleDetails" open>
+            <summary id="lineStyleSummary">Líneas de texto: fuente, tamaño y posición</summary>
+            <div class="field"><label for="lsField" id="lsFieldLabel">Línea a ajustar</label><select id="lsField"></select></div>
+            <div class="grid-3" id="lsCustomOnly">
+              <div class="field"><label for="lsSide">Mostrar en</label>
+                <select id="lsSide"><option value="front">Anverso</option><option value="back">Reverso</option><option value="hidden">Oculto</option></select>
+              </div>
+              <div class="field"><label for="lsDisplay">Mostrar como</label>
+                <select id="lsDisplay"><option value="text">Texto</option><option value="barcode">Código de barras (Code 128)</option></select>
+              </div>
+              <label class="check-inline" title="Imprime el nombre de la columna antes del valor, p. ej., &quot;Cargo: Maestro&quot;"><input type="checkbox" id="lsLabel" /> Mostrar nombre de la columna</label>
+            </div>
+            <div class="grid-3">
+              <div class="field"><label for="lsFont">Fuente</label><select id="lsFont"></select></div>
+              <div class="field"><label for="lsSize">Tamaño (pt)</label><input id="lsSize" type="number" min="3" max="30" step="0.25" /></div>
+              <div class="field"><label for="lsWeight">Grosor</label>
+                <select id="lsWeight"><option value="400">Normal</option><option value="500">Media</option><option value="700">Negrita</option></select>
+              </div>
+            </div>
+            <div class="grid-3">
+              <div class="field"><label for="lsX">X %</label><input id="lsX" type="number" min="0" max="100" step="0.25" /></div>
+              <div class="field"><label for="lsY">Y % (línea base)</label><input id="lsY" type="number" min="0" max="100" step="0.25" /></div>
+              <div class="field"><label for="lsWidth">Ancho máx. %</label><input id="lsWidth" type="number" min="5" max="100" step="0.5" /></div>
+            </div>
+            <div class="grid-3">
+              <div class="field"><label for="lsAlign">Alinear</label>
+                <select id="lsAlign"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select>
+              </div>
+              <label class="check-inline"><input type="checkbox" id="lsItalic" /> Cursiva</label>
+              <label class="check-inline" title="El texto largo pasa a más líneas en vez de achicarse"><input type="checkbox" id="lsWrap" /> Ajustar texto</label>
+            </div>
+            <div class="grid-2">
+              <div class="field"><label for="lsColor">Color de la fuente</label><input id="lsColor" type="color" /></div>
+              <label class="check-inline" title="Activado: al cambiar el color cambian todos los campos. Desactivado: cada campo conserva su propio color."><input type="checkbox" id="lsColorSync" /> Mismo color para todos los campos</label>
+            </div>
+            <div class="btn-row"><button class="btn" type="button" id="lsResetBtn">Restablecer esta línea</button><button class="btn" type="button" id="lsResetAllBtn">Restablecer todas las líneas</button></div>
+            <p class="hint">X es donde se ancla la línea (su centro cuando está centrada) y Y es la línea base del texto, ambos en % de la credencial. El texto más ancho que el Ancho máx. se achica para caber, o pasa a otra línea si Ajustar texto está activado.</p>
+          </details>
+          <details class="advanced" id="backDetails">
+            <summary>Reverso de la credencial: código de barras y texto</summary>
+            <p class="hint" style="margin-top:0;">Posición del código de barras en % de la credencial. El ID# se imprime debajo del código de barras.</p>
+            <div class="grid-2">
+              <div class="field"><label for="barX">Código de barras: centro X %</label><input id="barX" type="number" min="0" max="100" step="0.5" /></div>
+              <div class="field"><label for="barY">Código de barras: arriba Y %</label><input id="barY" type="number" min="0" max="100" step="0.5" /></div>
+              <div class="field"><label for="barW">Código de barras: ancho %</label><input id="barW" type="number" min="10" max="100" step="1" /></div>
+              <div class="field"><label for="barH">Código de barras: alto %</label><input id="barH" type="number" min="3" max="80" step="0.5" /></div>
+            </div>
+            <div id="staffBackTextFields">
+              <div class="field">
+                <label for="staffBackText">Texto del reverso para el personal (opcional)</label>
+                <textarea id="staffBackText" placeholder="p. ej., Esta credencial es propiedad de nuestra escuela. Si la encuentras, por favor devuélvela a nuestra oficina principal."></textarea>
+              </div>
+              <div class="grid-3">
+                <div class="field"><label for="sbtX">Texto X %</label><input id="sbtX" type="number" min="0" max="100" step="0.5" /></div>
+                <div class="field"><label for="sbtY">Texto Y %</label><input id="sbtY" type="number" min="0" max="100" step="0.5" /></div>
+                <div class="field"><label for="sbtSize">Tamaño del texto</label><input id="sbtSize" type="number" min="10" max="120" step="1" title="Píxeles a 300 dpi" /></div>
+              </div>
+              <div class="grid-3">
+                <div class="field"><label for="sbtAlign">Alinear</label>
+                  <select id="sbtAlign"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select>
+                </div>
+                <div class="field"><label for="sbtColor">Color</label><input id="sbtColor" type="color" /></div>
+                <div class="field"><label for="sbtWeight">Grosor</label>
+                  <select id="sbtWeight"><option value="400">Normal</option><option value="500">Media</option><option value="700">Negrita</option></select>
+                </div>
+              </div>
+            </div>
+            <div class="btn-row"><button class="btn" type="button" id="resetBackBtn">Restablecer posición del reverso</button></div>
+          </details>
+          <details class="advanced" id="nudgeDetails">
+            <summary>Ajustar la posición de la foto y el texto</summary>
+            <p class="hint" style="margin-top:0;">Solo hace falta si tu plantilla mueve el marco de la foto o el área del texto. Los desplazamientos son en % de la credencial.</p>
+            <div class="grid-3">
+              <div class="field"><label for="photoDx">Foto X</label><input id="photoDx" type="number" step="0.25" /></div>
+              <div class="field"><label for="photoDy">Foto Y</label><input id="photoDy" type="number" step="0.25" /></div>
+              <div class="field"><label for="photoScale">Tamaño de la foto %</label><input id="photoScale" type="number" min="50" max="150" step="1" /></div>
+            </div>
+            <div class="grid-3">
+              <div class="field"><label for="textDx">Texto X</label><input id="textDx" type="number" step="0.25" /></div>
+              <div class="field"><label for="textDy">Texto Y</label><input id="textDy" type="number" step="0.25" /></div>
+              <div class="field"><label for="textScale">Tamaño del texto %</label><input id="textScale" type="number" min="50" max="200" step="1" /></div>
+            </div>
+            <div class="field"><label for="photoFocus">Recorte predeterminado de la foto (enfoque vertical %)</label><input id="photoFocus" type="number" min="0" max="100" step="5" title="0 = mantener la parte de arriba de la foto, 50 = centro, 100 = abajo" /></div>
+            <div class="btn-row"><button class="btn" type="button" id="resetLayoutBtn">Restablecer posición</button></div>
+          </details>
+        </section>
+      </aside>
+
+      <section class="results">
+        <section class="panel" aria-labelledby="checkHeading">
+          <div class="table-tools">
+            <h2 id="checkHeading">Revisión de datos</h2>
+            <div class="summary" id="summaryChips"></div>
+          </div>
+          <ul class="issues" id="globalIssues"></ul>
+        </section>
+
+        <section class="panel" aria-labelledby="previewHeading">
+          <div class="preview-head">
+            <h2 id="previewHeading">Vista previa</h2>
+            <label class="drag-toggle" title="Activado: arrastra la foto, el texto, el año o el código de barras en la vista previa para moverlo (los números de posición se actualizan). Desactivado: todo se queda donde está; cambia los números en la configuración."><input type="checkbox" id="layoutDragToggle" /> Arrastrar para mover</label>
+            <div class="btn-row" style="margin:0;">
+              <button class="btn" type="button" id="prevBtn">&larr; Anterior</button>
+              <span class="chip info" id="previewPosition">Credencial de muestra</span>
+              <button class="btn" type="button" id="nextBtn">Siguiente &rarr;</button>
+            </div>
+          </div>
+          <p class="hint" id="layoutDragHint" style="display:none;margin:0 0 0.5rem;text-align:center;">Modo de arrastre: arrastra el marco de la foto, una línea de texto, el año o el código de barras para moverlo. Los números X/Y de la configuración se actualizan mientras arrastras. Desactívalo para dejar todo donde está.</p>
+          <div class="preview-cards" id="previewCards">
+            <figure class="card-face" id="frontFigure"><canvas id="frontCanvas" aria-label="Vista previa del anverso de la credencial"></canvas><figcaption>Anverso</figcaption></figure>
+            <figure class="card-face" id="backFigure"><canvas id="backCanvas" aria-label="Vista previa del reverso de la credencial"></canvas><figcaption>Reverso</figcaption></figure>
+          </div>
+          <div class="crop-tools" id="cropTools">
+            <p class="hint"><strong>Foto en el marco:</strong> arrastra la foto en la vista previa del anverso para acomodarla dentro del marco, o usa los controles deslizantes. Solo cambia la foto de esta persona.</p>
+            <div class="grid-3">
+              <div class="field"><label for="cropZoom">Zoom</label><input id="cropZoom" type="range" min="100" max="300" step="1" /></div>
+              <div class="field"><label for="cropX">Izquierda / derecha</label><input id="cropX" type="range" min="0" max="100" step="0.5" /></div>
+              <div class="field"><label for="cropY">Arriba / abajo</label><input id="cropY" type="range" min="0" max="100" step="0.5" /></div>
+            </div>
+            <div class="btn-row" style="margin-bottom:0;"><button class="btn" type="button" id="cropResetBtn">Restablecer esta foto</button></div>
+          </div>
+          <div class="preview-issues" id="previewIssues"></div>
+          <p class="preview-note">La vista previa sale en tamaño CR80 (1012 &times; 638 px a 300 dpi), la resolución nativa de las impresoras de tarjetas Zebra.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="printHeading">
+          <div class="table-tools">
+            <h2 id="printHeading">Imprimir en la impresora de tarjetas Zebra</h2>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label for="printWhich">Credenciales para imprimir</label>
+              <select id="printWhich">
+                <option value="noErrors">Todas las credenciales sin errores</option>
+                <option value="all">Todas las credenciales (incluso con errores)</option>
+                <option value="current">Solo la credencial de la vista previa</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="printSides">Lados</label>
+              <select id="printSides">
+                <option value="both">Anverso y reverso (2 caras)</option>
+                <option value="front">Solo anverso</option>
+                <option value="back">Solo reverso</option>
+              </select>
+            </div>
+          </div>
+          <label class="check-inline" style="margin:0.2rem 0 0.3rem;"><input type="checkbox" id="flipBack" /> Girar el reverso 180&deg; (actívalo o desactívalo si el reverso sale al revés con respecto al anverso)</label>
+          <div class="btn-row">
+            <button class="btn" type="button" id="printBtn" style="background:var(--primary-dark);color:#fff;border-color:transparent;">Imprimir credenciales&hellip;</button>
+            <span class="file-status" id="printStatus" role="status" aria-live="polite"></span>
+          </div>
+          <p class="hint">Abre el cuadro de impresión con una página CR80 por cada lado de la credencial, en orden (anverso, reverso, anverso, reverso&hellip;). Elige la impresora <strong>ZC300</strong>, Tamaño de papel <strong>CR80</strong>, la orientación cuya vista previa muestre <strong>páginas anchas, una por cada lado de la credencial</strong> (en el controlador de la ZC300 para Mac es <strong>Vertical</strong> o <strong>Portrait</strong>; las credenciales del personal se giran automáticamente), Escala <strong>100%</strong> y Márgenes <strong>Ninguno</strong> si tu navegador lo muestra.</p>
+          <details class="advanced" style="margin-top:0.5rem;">
+            <summary>Configuración de la impresora (Windows y macOS)</summary>
+            <p class="hint" style="margin-top:0;"><strong>Configuración de una sola vez en cada computadora:</strong></p>
+            <ol class="hint" style="padding-left:1.1rem;">
+              <li>Descarga el controlador (driver) de la ZC300 desde <a href="https://www.zebra.com/zc300-info" target="_blank" rel="noopener">zebra.com/zc300-info</a> (el controlador para Windows o el controlador ZC100/300 para macOS).</li>
+              <li><strong>Windows:</strong> abre el instalador, elige Ethernet/red y luego escribe la dirección IP de la impresora (puerto 9100 si te lo pide). <strong>macOS:</strong> abre el .pkg y luego agrega la impresora en Configuración del Sistema &rarr; Impresoras y escáneres usando su dirección IP y el controlador Zebra ZC300.</li>
+              <li>En las preferencias de impresión del controlador, activa la <strong>impresión a 2 caras</strong> si imprimes anverso y reverso (modelos ZC300 de 2 caras), y elige la orientación de tarjeta que deje cada lado de la credencial en una sola página ancha en la vista previa de impresión (el controlador de la ZC300 para Mac la llama <strong>Portrait</strong>, o <strong>Vertical</strong>). Las credenciales del personal (verticales) se envían ya giradas, así que la misma <span id="orientationHint">opción</span> sirve para los dos tipos de credencial. Si el reverso sale al revés con respecto al anverso, activa o desactiva <strong>Girar el reverso 180&deg;</strong> arriba (se guarda por separado para el personal y los estudiantes).</li>
+              <li>Imprime una credencial de prueba. Si la imagen sale movida, con otro tamaño o partida en dos hojas, revisa en el cuadro de impresión: Tamaño de papel = CR80, la orientación que muestra una página ancha por lado, Escala = 100% y Márgenes = Ninguno.</li>
+            </ol>
+            <p class="hint">El navegador imprime a través del controlador instalado, que se comunica con la impresora por su dirección IP; la página web nunca se conecta directamente a la impresora.</p>
+          </details>
+        </section>
+
+        <section class="panel" aria-labelledby="recordsHeading">
+          <div class="table-tools">
+            <h2 id="recordsHeading">Credenciales</h2>
+            <label class="check-inline"><input type="checkbox" id="problemsOnly" /> Mostrar solo credenciales con problemas</label>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead id="recordsHead"></thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      /* ---------- Card geometry (CR80 at 300 dpi) ----------
+         Photo and text positions are fractions of the card and match the conference
+         templates (staff circle photo, student rectangle photo), so those templates and
+         the downloadable ones line up without adjustment. */
+      const DPI = 300;
+      const CR80_LONG = Math.round(3.375 * DPI);  // 1013 -> use 1012 for even pixels
+      const CR80_SHORT = Math.round(2.125 * DPI); // 638
+      const SIZES = {
+        staff: { w: CR80_SHORT, h: CR80_LONG - 1 },   // portrait 638 x 1012
+        student: { w: CR80_LONG - 1, h: CR80_SHORT }, // landscape 1012 x 638
+        template1: { w: CR80_LONG - 1, h: CR80_SHORT },
+        custom: { w: CR80_LONG - 1, h: CR80_SHORT } // set from settings.custom.orientation
+      };
+      function isPortrait(type) { return SIZES[type].h > SIZES[type].w; }
+      const LAYOUTS = {
+        staff: {
+          photo: { shape: "circle", cx: 0.4924, cy: 0.3775, r: 0.2875 }, // r is a fraction of width
+          name: { x: 0.5, y: 0.655, size: 0.078, align: "center", maxW: 0.9 },
+          role: { y: 0.705, size: 0.046 },
+          id: { y: 0.752, size: 0.044 },
+          year: { x: 50, y: 81.5, size: 34, align: "center" }
+        },
+        student: {
+          photo: { shape: "rect", x: 0.632, y: 0.3224, w: 0.2819, h: 0.5399 },
+          name: { x: 0.063, y: 0.505, size: 0.05, align: "left", maxW: 0.53 },
+          lines: { y: 0.605, step: 0.08, size: 0.031 },
+          year: { x: 6.3, y: 88.5, size: 32, align: "left" }
+        },
+        template1: {
+          // Bottom-left, running to the card edge; a cut-out PNG (transparent background) blends into the template.
+          photo: { shape: "rect", x: 0.004, y: 0.49, w: 0.251, h: 0.51 }
+        }
+      };
+
+      /* ---------- Numbered templates (placement only) ----------
+         General-purpose layouts that hold no wording of their own: the name comes from the
+         CSV name column, line 1, 2, 3... come from the CSV's other columns in column order
+         (whatever their headers), and "year" is the shared school year from step 4. ID#
+         columns are used only to match photos, never printed. To add Template 2: add an entry
+         here, plus SIZES and LAYOUTS entries and a radio option.
+         Positions are fractions of the card (x = anchor, y = text baseline); pt is the font size in
+         points. These are only the defaults: each line's font, size and position can be changed in
+         step 4 ("Text lines") and is saved per template. */
+      const FONT = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+      const SERIF = 'Georgia, "Times New Roman", serif';
+      /* Fonts offered for numbered-template lines (installed on Windows and macOS; others fall back). */
+      const FONT_CHOICES = [
+        { id: "sans", label: "Sans (del sistema)", css: FONT },
+        { id: "advent", label: "Advent Sans", css: '"Advent Sans", ' + FONT, face: "Advent Sans" },
+        { id: "serif", label: "Serif (Georgia)", css: SERIF },
+        { id: "arial", label: "Arial", css: "Arial, Helvetica, sans-serif" },
+        { id: "verdana", label: "Verdana", css: "Verdana, Geneva, sans-serif" },
+        { id: "trebuchet", label: "Trebuchet MS", css: '"Trebuchet MS", "Segoe UI", sans-serif' },
+        { id: "times", label: "Times New Roman", css: '"Times New Roman", Times, serif' },
+        { id: "garamond", label: "Garamond", css: 'Garamond, "Adobe Garamond Pro", "EB Garamond", Georgia, serif' },
+        { id: "palatino", label: "Palatino", css: '"Palatino Linotype", Palatino, "Book Antiqua", serif' },
+        { id: "courier", label: "Courier New", css: '"Courier New", Courier, monospace' }
+      ];
+      const PT_TO_PX = DPI / 72;
+      const FIELD_TYPES = {
+        template1: {
+          label: "Plantilla 1",
+          back: "template", // the back is only the uploaded back template (no barcode)
+          fields: [
+            { key: "name", label: "Nombre", source: "name", x: 0.5, y: 0.459, pt: 9, weight: 700, family: "sans", maxW: 0.52 },
+            { key: "line1", label: "Línea 1", source: "line", index: 0, x: 0.5, y: 0.525, pt: 8.75, weight: 700, family: "serif", maxW: 0.52 },
+            { key: "line2", label: "Línea 2", source: "line", index: 1, x: 0.5, y: 0.59, pt: 7.75, weight: 700, family: "serif", maxW: 0.52 },
+            { key: "line3", label: "Línea 3", source: "line", index: 2, x: 0.5, y: 0.649, pt: 6, weight: 700, italic: true, family: "sans", maxW: 0.46, wrap: true, lineHeight: 1.5 },
+            { key: "year", label: "Año", source: "year", x: 0.5, y: 0.76, pt: 8, weight: 400, family: "serif", maxW: 0.52 }
+          ],
+          sampleCsv: "Nombre,Línea 1,Línea 2,Línea 3\nJuan Pérez,Texto de la línea 1,Texto de la línea 2,Texto de la línea 3\nMaría Pérez,Texto de la línea 1,Texto de la línea 2,Texto de la línea 3\n"
+        }
+      };
+      function lineSlots(type) { return FIELD_TYPES[type].fields.filter(f => f.source === "line"); }
+      const CARD_TYPES = ["staff", "student", "template1", "custom"];
+      // Display names for messages ("a staff CSV"); the keys above stay the logic values.
+      const TYPE_NAMES = { staff: "de personal", student: "de estudiantes", template1: "para la Plantilla 1", custom: "para la Plantilla personalizada" };
+      function isCustom(type) { return type === "custom"; }
+      /* ---------- Custom Template ----------
+         Free-form: every CSV column is a field that can go on the front, the back, or be hidden,
+         shown as text (optionally "Column: value") or as a Code 128 barcode. Only placement is
+         saved, keyed by column name (settings.custom.fields); the data itself is never stored. */
+      const CUSTOM_DEFAULT_HEADERS = ["Nombre", "ID#", "Cargo"];
+      const CUSTOM_MAX_FIELDS = 60;
+      function defaultCustomPhoto(orientation) {
+        return orientation === "portrait" ? { side: "front", shape: "rect", x: 25, y: 8, w: 50, h: 45 } : { side: "front", shape: "rect", x: 5, y: 20, w: 27, h: 60 };
+      }
+      function defaultCustomField(index, orientation) {
+        const portrait = orientation === "portrait";
+        const back = index >= 8;
+        const i = back ? index - 8 : index;
+        return {
+          x: portrait ? 50 : 37, y: portrait ? 60 + i * 5 : (back ? 15 : 28) + i * 9, width: portrait ? 90 : 58,
+          size: index === 0 ? 10 : 7.5, font: "sans", weight: index === 0 ? "700" : "400", italic: false,
+          align: portrait ? "center" : "left", wrap: false, side: back ? "back" : "front", display: "text", label: false
+        };
+      }
+      function isFieldType(type) { return !!FIELD_TYPES[type]; }
+      const SETTINGS_KEY = "imsda.idCards.v2"; // v2: blank templates, black text defaults
+
+      const DEFAULT_SETTINGS = {
+        cardType: "student",
+        textColor: "#000000",
+        labelColor: "#000000",
+        roleLine: "",
+        yearText: "",
+        yearColor: "#000000",
+        yearBold: "700",
+        year: { staff: { ...LAYOUTS.staff.year }, student: { ...LAYOUTS.student.year }, template1: { ...LAYOUTS.student.year }, custom: { ...LAYOUTS.student.year } },
+        nudge: { staff: defaultNudge(), student: defaultNudge(), template1: defaultNudge(), custom: defaultNudge() },
+        back: { staff: defaultBack("staff"), student: defaultBack("student"), template1: defaultBack("student"), custom: defaultBack("student") },
+        staffBackText: "",
+        // Rotate the back 180° relative to the front when printing (duplex flip direction).
+        flipBack: { staff: true, student: false, template1: false, custom: false },
+        staffBackTextStyle: defaultBackTextStyle(),
+        // Numbered templates: font, size and position of each text line (placement only).
+        lineStyle: { template1: defaultLineStyles("template1") },
+        custom: { orientation: "landscape", photo: defaultCustomPhoto("landscape"), fields: {} },
+        // Per type: whether changing one field's font color changes them all.
+        colorSync: { template1: true, custom: true }
+      };
+      /* Barcode placement on the back, in % of the card: center X, top Y, width, height. */
+      function defaultBack(type) {
+        return type === "student" ? { barX: 50, barY: 36, barW: 62, barH: 20 } : { barX: 50, barY: 42, barW: 86, barH: 12 };
+      }
+      function defaultBackTextStyle() { return { x: 50, y: 14, size: 30, align: "center", color: "#000000", weight: "500" }; }
+      /* Per-line style for numbered templates: x/y/width in % of the card, size in points. */
+      function defaultLineStyle(field) {
+        return {
+          x: +(field.x * 100).toFixed(2), y: +(field.y * 100).toFixed(2), width: +(field.maxW * 100).toFixed(2),
+          size: field.pt, font: field.family, weight: String(field.weight), italic: !!field.italic,
+          align: field.align || "center", wrap: !!field.wrap
+        };
+      }
+      function defaultLineStyles(type) {
+        const out = {};
+        FIELD_TYPES[type].fields.forEach(f => { out[f.key] = defaultLineStyle(f); });
+        return out;
+      }
+      function defaultNudge() { return { photoDx: 0, photoDy: 0, photoScale: 100, textDx: 0, textDy: 0, textScale: 100, photoFocus: 35 }; }
+
+      /* Only placement, colors and options are remembered; card wording (year, role line,
+         back text) is entered each session and never stored. */
+      const UNSAVED_TEXT = ["roleLine", "yearText", "staffBackText"];
+
+      /* ---------- State ---------- */
+      let settings = loadSettings();
+      function applyCustomOrientation() {
+        SIZES.custom = settings.custom.orientation === "portrait" ? { w: CR80_SHORT, h: CR80_LONG - 1 } : { w: CR80_LONG - 1, h: CR80_SHORT };
+      }
+      applyCustomOrientation();
+      const csvByType = { staff: null, student: null, template1: null, custom: null };   // { fileName, headers, rows, mapping, missingColumns }
+      const photos = new Map();                            // normalized ID -> { file, url, name, image, failed }
+      const templates = { front: { staff: null, student: null, template1: null, custom: null }, back: { staff: null, student: null, template1: null, custom: null } }; // Image objects
+      let records = [];
+      let selectedIndex = -1;
+
+      const $ = id => document.getElementById(id);
+      const frontCanvas = $("frontCanvas");
+      const backCanvas = $("backCanvas");
+
+      /* ---------- Settings persistence (no CSV data or photos are stored) ---------- */
+      function loadSettings() {
+        let saved = null;
+        try { saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null"); } catch (_) { saved = null; }
+        const base = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+        if (!saved || typeof saved !== "object") return base;
+        Object.keys(base).forEach(key => {
+          if (["year", "nudge", "back", "staffBackTextStyle", "flipBack", "lineStyle", "custom", "colorSync"].includes(key) || UNSAVED_TEXT.includes(key)) return;
+          if (typeof saved[key] === typeof base[key]) base[key] = saved[key];
+        });
+        CARD_TYPES.forEach(type => {
+          if (saved.year && saved.year[type]) Object.assign(base.year[type], pickNumbers(saved.year[type], ["x", "y", "size"]), saved.year[type].align ? { align: String(saved.year[type].align) } : {});
+          if (saved.nudge && saved.nudge[type]) Object.assign(base.nudge[type], pickNumbers(saved.nudge[type], Object.keys(defaultNudge())));
+          if (saved.flipBack && typeof saved.flipBack[type] === "boolean") base.flipBack[type] = saved.flipBack[type];
+          if (saved.back && saved.back[type]) Object.assign(base.back[type], pickNumbers(saved.back[type], ["barX", "barY", "barW", "barH"]));
+        });
+        if (saved.staffBackTextStyle && typeof saved.staffBackTextStyle === "object") {
+          const s = saved.staffBackTextStyle;
+          Object.assign(base.staffBackTextStyle, pickNumbers(s, ["x", "y", "size"]));
+          if (["left", "center", "right"].includes(s.align)) base.staffBackTextStyle.align = s.align;
+          if (/^#[0-9a-f]{6}$/i.test(s.color)) base.staffBackTextStyle.color = s.color;
+          if (["400", "500", "700"].includes(s.weight)) base.staffBackTextStyle.weight = s.weight;
+        }
+        Object.keys(base.lineStyle).forEach(type => {
+          const savedType = saved.lineStyle && saved.lineStyle[type];
+          if (!savedType || typeof savedType !== "object") return;
+          Object.keys(base.lineStyle[type]).forEach(key => {
+            const v = savedType[key];
+            if (!v || typeof v !== "object") return;
+            const st = base.lineStyle[type][key];
+            Object.assign(st, pickNumbers(v, ["x", "y", "width", "size"]));
+            if (FONT_CHOICES.some(f => f.id === v.font)) st.font = v.font;
+            if (["400", "500", "700"].includes(v.weight)) st.weight = v.weight;
+            if (["left", "center", "right"].includes(v.align)) st.align = v.align;
+            if (typeof v.italic === "boolean") st.italic = v.italic;
+            if (typeof v.wrap === "boolean") st.wrap = v.wrap;
+            if (/^#[0-9a-f]{6}$/i.test(v.color)) st.color = v.color;
+          });
+        });
+        if (saved.custom && typeof saved.custom === "object") {
+          const c = saved.custom;
+          if (["landscape", "portrait"].includes(c.orientation)) base.custom.orientation = c.orientation;
+          if (c.photo && typeof c.photo === "object") {
+            Object.assign(base.custom.photo, pickNumbers(c.photo, ["x", "y", "w", "h"]));
+            if (["front", "back", "none"].includes(c.photo.side)) base.custom.photo.side = c.photo.side;
+            if (["rect", "circle"].includes(c.photo.shape)) base.custom.photo.shape = c.photo.shape;
+            if (["front", "back"].includes(c.photo.lastSide)) base.custom.photo.lastSide = c.photo.lastSide;
+          }
+          if (c.fields && typeof c.fields === "object") {
+            Object.keys(c.fields).slice(0, CUSTOM_MAX_FIELDS).forEach((key, index) => {
+              const v = c.fields[key];
+              if (!v || typeof v !== "object" || !key || key.length > 80) return;
+              const st = defaultCustomField(index, base.custom.orientation);
+              Object.assign(st, pickNumbers(v, ["x", "y", "width", "size"]));
+              if (FONT_CHOICES.some(f => f.id === v.font)) st.font = v.font;
+              if (["400", "500", "700"].includes(v.weight)) st.weight = v.weight;
+              if (["left", "center", "right"].includes(v.align)) st.align = v.align;
+              if (["front", "back", "hidden"].includes(v.side)) st.side = v.side;
+              if (["text", "barcode"].includes(v.display)) st.display = v.display;
+              ["italic", "wrap", "label"].forEach(k => { if (typeof v[k] === "boolean") st[k] = v[k]; });
+              if (/^#[0-9a-f]{6}$/i.test(v.color)) st.color = v.color;
+              base.custom.fields[key] = st;
+            });
+          }
+        }
+        if (saved.colorSync && typeof saved.colorSync === "object") {
+          Object.keys(base.colorSync).forEach(type => { if (typeof saved.colorSync[type] === "boolean") base.colorSync[type] = saved.colorSync[type]; });
+        }
+        if (!CARD_TYPES.includes(base.cardType)) base.cardType = "student";
+        return base;
+      }
+      function pickNumbers(obj, keys) {
+        const out = {};
+        keys.forEach(k => { const n = Number(obj[k]); if (Number.isFinite(n)) out[k] = n; });
+        return out;
+      }
+      function saveSettings() {
+        const stored = { ...settings };
+        UNSAVED_TEXT.forEach(key => delete stored[key]);
+        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(stored)); } catch (_) { /* storage unavailable */ }
+      }
+
+      /* ---------- CSV ---------- */
+      function parseCsv(text) {
+        const rows = [];
+        let row = [];
+        let field = "";
+        let inQuotes = false;
+        const src = text.replace(/^﻿/, "");
+        for (let i = 0; i < src.length; i += 1) {
+          const ch = src[i];
+          if (inQuotes) {
+            if (ch === '"') {
+              if (src[i + 1] === '"') { field += '"'; i += 1; } else inQuotes = false;
+            } else field += ch;
+          } else if (ch === '"') inQuotes = true;
+          else if (ch === ",") { row.push(field); field = ""; }
+          else if (ch === "\n" || ch === "\r") {
+            if (ch === "\r" && src[i + 1] === "\n") i += 1;
+            row.push(field); rows.push(row); row = []; field = "";
+          } else field += ch;
+        }
+        if (field !== "" || row.length) { row.push(field); rows.push(row); }
+        return rows;
+      }
+
+      const COLUMN_ALIASES = {
+        name: ["name", "fullname", "studentname", "staffname", "employeename", "displayname", "personname",
+          "nombre", "nombrecompleto", "nombreyapellido", "nombreyapellidos", "estudiante", "alumno", "alumna", "nombredelestudiante", "nombredelalumno", "nombredelpersonal", "nombredelempleado"],
+        first: ["firstname", "first", "fname", "givenname", "preferredname", "nombres", "primernombre", "nombredepila"],
+        last: ["lastname", "last", "lname", "surname", "familyname", "apellido", "apellidos", "primerapellido"],
+        id: ["id", "idnumber", "idno", "idnum", "studentid", "staffid", "employeeid", "employeenumber", "studentnumber", "badgeid", "badgenumber", "number",
+          "numero", "numeroid", "numerodeid", "iddelestudiante", "iddelalumno", "iddelpersonal", "iddelempleado", "numerodeestudiante", "numerodealumno", "numerodeempleado", "numerodecredencial", "matricula"],
+        dob: ["dob", "dateofbirth", "birthdate", "birthday", "birth", "fechadenacimiento", "fechanacimiento", "fechadenac", "fnac", "nacimiento", "cumpleanos"],
+        grade: ["grade", "gradelevel", "gr", "class", "grado", "curso", "clase", "nivel", "nivelescolar"]
+      };
+      function normalizeHeader(h) { return String(h || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+      function detectColumns(headers) {
+        const norm = headers.map(normalizeHeader);
+        const find = key => norm.findIndex(h => COLUMN_ALIASES[key].includes(h));
+        const mapping = { name: find("name"), first: find("first"), last: find("last"), id: find("id"), dob: find("dob"), grade: find("grade") };
+        // Spanish "Nombre" next to an "Apellido" column is the first name, not the full name.
+        if (mapping.name >= 0 && mapping.last >= 0 && mapping.first < 0 && ["nombre", "nombres"].includes(norm[mapping.name])) {
+          mapping.first = mapping.name;
+          mapping.name = -1;
+        }
+        // Numbered templates: every other non-empty column, in order, fills line 1, 2, 3...
+        const used = [mapping.name, mapping.first, mapping.last, mapping.id];
+        mapping.lines = headers.map((h, i) => i).filter(i => !used.includes(i) && String(headers[i]).trim() !== "");
+        return mapping;
+      }
+
+      function loadCsvText(text, fileName, type) {
+        const rows = parseCsv(text).filter(r => r.some(cell => String(cell).trim() !== ""));
+        if (!rows.length) {
+          csvByType[type] = { fileName, headers: [], rows: [], mapping: null, error: "El archivo CSV está vacío." };
+          return;
+        }
+        const headers = rows[0].map(h => String(h).trim());
+        const mapping = detectColumns(headers);
+        csvByType[type] = { fileName, headers, rows: rows.slice(1), mapping, error: "" };
+      }
+
+      function cell(row, idx) { return idx >= 0 ? String(row[idx] == null ? "" : row[idx]).trim() : ""; }
+
+      function buildRecords() {
+        const type = settings.cardType;
+        const csv = csvByType[type];
+        if (!csv || !csv.mapping) return [];
+        const m = csv.mapping;
+        return csv.rows.map((row, i) => {
+          const fullName = m.name >= 0 ? cell(row, m.name) : [cell(row, m.first), cell(row, m.last)].filter(Boolean).join(" ");
+          return {
+            rowNumber: i + 2, // header is row 1
+            name: fullName.replace(/\s+/g, " "),
+            id: cell(row, m.id),
+            dob: type === "student" ? cell(row, m.dob) : "",
+            grade: type === "student" ? cell(row, m.grade) : "",
+            lines: isFieldType(type) ? m.lines.map(idx => cell(row, idx)) : [],
+            values: isCustom(type) ? Object.fromEntries(csv.headers.map((h, idx) => [h, cell(row, idx)]).filter(([h]) => h)) : {},
+            issues: []
+          };
+        });
+      }
+
+      /* ---------- Photos ---------- */
+      function photoKey(value) { return String(value || "").trim().toLowerCase(); }
+      function strippedKey(value) { return photoKey(value).replace(/^0+(?=\d)/, ""); }
+      /* Photo matching: by ID# (file named with the ID#, or containing it as a separate
+         token, e.g. "100001_John.jpg"), otherwise by name ("John Doe.jpg",
+         "doe_john.jpg", "Doe, John.jpg"; order, case, punctuation and accents
+         are ignored, and a CSV middle name may be missing from the file name). */
+      function nameTokens(value) {
+        return String(value || "")
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .split(/[^a-z]+/)
+          .filter(Boolean);
+      }
+      function idTokens(value) {
+        return String(value || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+      }
+      function photoMatchesId(photo, id) {
+        if (!id) return false;
+        const idKey = photoKey(id);
+        if (photo.key === idKey || strippedKey(photo.key) === strippedKey(idKey)) return true;
+        return idTokens(photo.key).some(token => /\d/.test(token) && (token === idKey || strippedKey(token) === strippedKey(idKey)));
+      }
+      function photoMatchesName(photo, name) {
+        const person = nameTokens(name);
+        if (person.length < 2) return false; // a single word is too ambiguous to match on
+        const file = new Set(nameTokens(photo.key));
+        if (!file.size) return false;
+        const sameSet = file.size === new Set(person).size && person.every(token => file.has(token));
+        const firstLast = file.size === 2 && file.has(person[0]) && file.has(person[person.length - 1]);
+        return sameSet || firstLast;
+      }
+      function addPhotos(fileList) {
+        Array.from(fileList || []).forEach(file => {
+          const base = file.name.replace(/\.[^.]+$/, "");
+          const key = photoKey(base);
+          const existing = photos.get(key);
+          if (existing) URL.revokeObjectURL(existing.url);
+          const unsupported = /\.(heic|heif|tif|tiff)$/i.test(file.name);
+          photos.set(key, { key, file, name: file.name, url: URL.createObjectURL(file), image: null, failed: unsupported, unsupported, loading: null });
+        });
+      }
+      function loadPhotoImage(photo) {
+        if (photo.image || photo.failed) return Promise.resolve(photo);
+        if (!photo.loading) {
+          photo.loading = new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => { photo.image = img; resolve(photo); };
+            img.onerror = () => { photo.failed = true; resolve(photo); };
+            img.src = photo.url;
+          });
+        }
+        return photo.loading;
+      }
+
+      /* ---------- Validation ---------- */
+      function issue(level, text) { return { level, text }; }
+      function canEncode(id) { return /^[\x20-\x7E]+$/.test(id); }
+
+      function validate() {
+        const type = settings.cardType;
+        const csv = csvByType[type];
+        const global = [];
+        records = buildRecords();
+
+        if (!csv) {
+          global.push(issue("warn", `Carga un CSV ${TYPE_NAMES[type]} para crear las credenciales. Mientras tanto, la vista previa muestra una credencial de muestra.`));
+        } else if (csv.error) {
+          global.push(issue("error", csv.error));
+        } else {
+          const m = csv.mapping;
+          if (m.id < 0 && !isFieldType(type) && !isCustom(type)) global.push(issue("error", `No encontramos una columna de ID#. Agrega una columna llamada "ID" o "ID#". Columnas encontradas: ${csv.headers.join(", ") || "(ninguna)"}.`));
+          if (m.name < 0 && m.first < 0 && m.last < 0 && !isCustom(type)) global.push(issue("error", `No encontramos una columna de nombre. Agrega una columna llamada "Nombre" (o las columnas "Nombre" y "Apellido"). Columnas encontradas: ${csv.headers.join(", ") || "(ninguna)"}.`));
+          if (type === "student" && m.dob < 0) global.push(issue("warn", 'No encontramos una columna de fecha de nacimiento (buscamos "Fecha de nacimiento" o "DoB").'));
+          if (type === "student" && m.grade < 0) global.push(issue("warn", 'No encontramos una columna de grado.'));
+          if (isFieldType(type)) {
+            const slots = lineSlots(type).length;
+            const lineCols = m.lines.map(idx => csv.headers[idx]);
+            if (lineCols.length) global.push(issue("info", `Líneas del CSV, en orden: ${lineCols.slice(0, slots).map((h, i) => `${i + 1} = ${h}`).join(", ")}.`));
+            if (lineCols.length > slots) global.push(issue("warn", `${FIELD_TYPES[type].label} tiene ${slots} líneas; estas columnas no se imprimen: ${lineCols.slice(slots).join(", ")}.`));
+          }
+        }
+
+        const idCounts = new Map();
+        records.forEach(r => { if (r.id) idCounts.set(photoKey(r.id), (idCounts.get(photoKey(r.id)) || 0) + 1); });
+        const matchedPhotoKeys = new Set();
+        const allPhotos = [...photos.values()];
+        // How many people each photo's file name matches by name (to catch ambiguous names).
+        const nameClaims = new Map();
+        records.forEach(r => allPhotos.forEach(p => {
+          if (photoMatchesName(p, r.name)) nameClaims.set(p.key, (nameClaims.get(p.key) || 0) + 1);
+        }));
+
+        records.forEach(r => {
+          if (isCustom(type)) {
+            customHeaders().forEach(h => {
+              const st = customStyle(h);
+              if (st.side === "hidden") return;
+              const v = (r.values || {})[h] || "";
+              if (!v) r.issues.push(issue("warn", `${h} en blanco`));
+              else if (st.display === "barcode" && !canEncode(v)) r.issues.push(issue("error", `${h} tiene caracteres que un código de barras no puede codificar`));
+            });
+          } else if (isFieldType(type)) {
+            // Numbered templates don't need an ID# (photos can still be named by ID# if the CSV has one).
+            if (!r.name) r.issues.push(issue("error", "Falta el nombre"));
+            const headers = csv ? csv.headers : [];
+            lineSlots(type).forEach(f => {
+              const idx = csv && csv.mapping ? csv.mapping.lines[f.index] : undefined;
+              if (idx !== undefined && !r.lines[f.index]) r.issues.push(issue("warn", `${headers[idx]} en blanco`));
+            });
+          } else {
+            if (!r.name && r.id) r.issues.push(issue("error", "Falta el nombre"));
+            if (r.name && !r.id) r.issues.push(issue("warn", "Falta el ID# (sin código de barras)"));
+            if (!r.name && !r.id) r.issues.push(issue("error", "Faltan el nombre y el ID#"));
+          }
+          if (r.id && !isCustom(type) && idCounts.get(photoKey(r.id)) > 1) r.issues.push(issue("error", "ID# repetido"));
+          if (r.id && !isFieldType(type) && !isCustom(type) && !canEncode(r.id)) r.issues.push(issue("error", "El ID# tiene caracteres que un código de barras no puede codificar"));
+          if (type === "student") {
+            if (!r.dob && csv && csv.mapping && csv.mapping.dob >= 0) r.issues.push(issue("warn", "Falta la fecha de nacimiento"));
+            if (!r.grade && csv && csv.mapping && csv.mapping.grade >= 0) r.issues.push(issue("warn", "Falta el grado"));
+          }
+          let photo = null;
+          r.photoMatch = "";
+          const byId = r.id ? allPhotos.filter(p => photoMatchesId(p, r.id)) : [];
+          const byName = byId.length ? [] : allPhotos.filter(p => photoMatchesName(p, r.name));
+          if (byId.length) {
+            photo = byId.find(p => p.key === photoKey(r.id)) || byId[0];
+            r.photoMatch = "ID#";
+            if (byId.length > 1) r.issues.push(issue("warn", `${byId.length} fotos coinciden con este ID#; usamos ${photo.name}`));
+          } else if (byName.length === 1 && nameClaims.get(byName[0].key) === 1) {
+            photo = byName[0];
+            r.photoMatch = "name";
+          } else if (byName.length > 1) {
+            r.issues.push(issue("error", `${byName.length} fotos coinciden con este nombre (${byName.map(p => p.name).join(", ")}); cámbiale el nombre a una usando el ID#`));
+            byName.forEach(p => matchedPhotoKeys.add(p.key));
+          } else if (byName.length === 1) {
+            r.issues.push(issue("error", `Foto ${byName[0].name}: coincide con el nombre de más de una persona; cámbiale el nombre usando el ID#`));
+            matchedPhotoKeys.add(byName[0].key);
+          }
+          r.photo = photo;
+          if (photo) {
+            matchedPhotoKeys.add(photo.key);
+            if (photo.unsupported) r.issues.push(issue("error", "Foto: formato no compatible (conviértela a JPG)"));
+            else if (photo.failed) r.issues.push(issue("error", "Foto: no se pudo leer"));
+          } else if ((r.id || r.name) && !(isCustom(type) && settings.custom.photo.side === "none") && !r.issues.some(i => i.text.includes("fotos coinciden") || i.text.includes("más de una persona"))) {
+            r.issues.push(issue("warn", "Sin foto"));
+          }
+        });
+
+        const orphanPhotos = [...photos.values()].filter(p => !matchedPhotoKeys.has(p.key));
+        if (records.length && orphanPhotos.length && !(isCustom(type) && settings.custom.photo.side === "none")) {
+          global.push(issue("warn", `${orphanPhotos.length} ${orphanPhotos.length === 1 ? "foto" : "fotos"} sin un ID# ni un nombre que coincida en el CSV: ${orphanPhotos.slice(0, 12).map(p => p.name).join(", ")}${orphanPhotos.length > 12 ? ", …" : ""}`));
+        }
+        return global;
+      }
+
+      function recordLevel(r) {
+        if (r.issues.some(i => i.level === "error")) return "error";
+        if (r.issues.some(i => i.level === "warn")) return "warn";
+        return "ok";
+      }
+
+      /* ---------- Code 128 barcode ---------- */
+      const CODE128_PATTERNS = [
+        "212222", "222122", "222221", "121223", "121322", "131222", "122213", "122312", "132212", "221213",
+        "221312", "231212", "112232", "122132", "122231", "113222", "123122", "123221", "223211", "221132",
+        "221231", "213212", "223112", "312131", "311222", "321122", "321221", "312212", "322112", "322211",
+        "212123", "212321", "232121", "111323", "131123", "131321", "112313", "132113", "132311", "211313",
+        "231113", "231311", "112133", "112331", "132131", "113123", "113321", "133121", "313121", "211331",
+        "231131", "213113", "213311", "213131", "311123", "311321", "331121", "312113", "312311", "332111",
+        "314111", "221411", "431111", "111224", "111422", "121124", "121421", "141122", "141221", "112214",
+        "112412", "122114", "122411", "142112", "142211", "241211", "221114", "413111", "241112", "134111",
+        "111242", "121142", "121241", "114212", "124112", "124211", "411212", "421112", "421211", "212141",
+        "214121", "412121", "111143", "111341", "131141", "114113", "114311", "411113", "411311", "113141",
+        "114131", "311141", "411131", "211412", "211214", "211232", "2331112"
+      ];
+      const START_B = 104, START_C = 105, CODE_B = 100, CODE_C = 99, STOP = 106;
+
+      /* Encode with Code Set C for runs of digits (denser) and Code Set B otherwise. */
+      function encodeCode128(text) {
+        const values = [];
+        const isDigitRun = (s, i, len) => i + len <= s.length && /^\d+$/.test(s.slice(i, i + len));
+        let i = 0;
+        let set = null;
+        const startC = isDigitRun(text, 0, 4) || (text.length === 2 && isDigitRun(text, 0, 2));
+        if (startC) { values.push(START_C); set = "C"; } else { values.push(START_B); set = "B"; }
+        while (i < text.length) {
+          if (set === "C") {
+            if (isDigitRun(text, i, 2)) { values.push(Number(text.slice(i, i + 2))); i += 2; continue; }
+            values.push(CODE_B); set = "B"; continue;
+          }
+          // Switch to C when a run of 4+ digits starts (and covers an even count) to save space.
+          let run = 0;
+          while (i + run < text.length && /\d/.test(text[i + run])) run += 1;
+          if (run >= 4 && (run % 2 === 0 || i + run === text.length)) {
+            if (run % 2 === 1) { values.push(text.charCodeAt(i) - 32); i += 1; }
+            values.push(CODE_C); set = "C"; continue;
+          }
+          const code = text.charCodeAt(i);
+          if (code < 32 || code > 126) throw new Error("Unsupported character in barcode value");
+          values.push(code - 32);
+          i += 1;
+        }
+        let checksum = values[0];
+        for (let k = 1; k < values.length; k += 1) checksum += values[k] * k;
+        values.push(checksum % 103);
+        values.push(STOP);
+        return values.map(v => CODE128_PATTERNS[v]).join("");
+      }
+
+      /* Draws bars (with 10-module quiet zones on a white box) centered at cx. */
+      function drawBarcode(ctx, text, cx, top, maxWidth, height) {
+        let pattern;
+        try { pattern = encodeCode128(text); } catch (_) { return false; }
+        const modules = pattern.split("").reduce((sum, d) => sum + Number(d), 0);
+        const quiet = 10;
+        const moduleWidth = Math.max(2, Math.floor(maxWidth / (modules + quiet * 2)));
+        const totalWidth = (modules + quiet * 2) * moduleWidth;
+        const left = Math.round(cx - totalWidth / 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(left, top, totalWidth, height);
+        ctx.fillStyle = "#000000";
+        let x = left + quiet * moduleWidth;
+        pattern.split("").forEach((digit, index) => {
+          const w = Number(digit) * moduleWidth;
+          if (index % 2 === 0) ctx.fillRect(x, top, w, height);
+          x += w;
+        });
+        return true;
+      }
+
+      /* ---------- Drawing helpers ---------- */
+      function font(weight, size, style) { return `${style || ""} ${weight} ${Math.round(size)}px ${FONT}`.trim(); }
+      function fitText(ctx, text, weight, size, maxWidth, minScale) {
+        let s = size;
+        const floor = size * (minScale || 0.55);
+        ctx.font = font(weight, s);
+        while (s > floor && ctx.measureText(text).width > maxWidth) { s -= 1; ctx.font = font(weight, s); }
+        return s;
+      }
+      /* Fill the frame with the photo (never stretched). focusX/focusY (0-100) pick which part
+         of the photo shows when it overflows the frame; zoom (>= 100) enlarges it inside the frame. */
+      function coverScale(img, w, h, zoom) {
+        return Math.max(w / img.naturalWidth, h / img.naturalHeight) * Math.max(1, (zoom || 100) / 100);
+      }
+      function drawImageCover(ctx, img, x, y, w, h, focusX, focusY, zoom) {
+        const scale = coverScale(img, w, h, zoom);
+        const sw = w / scale;
+        const sh = h / scale;
+        const clamp = v => Math.max(0, Math.min(100, v));
+        const sx = (img.naturalWidth - sw) * (clamp(focusX) / 100);
+        const sy = (img.naturalHeight - sh) * (clamp(focusY) / 100);
+        ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+      }
+      /* Per-photo position/zoom inside the frame (kept with the photo in memory). */
+      function photoCrop(type, photo) {
+        const c = (photo && photo.crop) || {};
+        return { x: c.x != null ? c.x : 50, y: c.y != null ? c.y : settings.nudge[type].photoFocus, zoom: c.zoom || 100 };
+      }
+      function drawSilhouette(ctx, x, y, w, h, color) {
+        ctx.save();
+        ctx.fillStyle = color;
+        const cx = x + w / 2;
+        const headR = Math.min(w, h) * 0.19;
+        ctx.beginPath();
+        ctx.arc(cx, y + h * 0.4, headR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx, y + h * 0.4 + headR * 3.1, headR * 2.05, headR * 1.75, 0, Math.PI, 0);
+        ctx.fill();
+        ctx.restore();
+      }
+      function wrapLines(ctx, text, maxWidth) {
+        const out = [];
+        String(text || "").split(/\r?\n/).forEach(paragraph => {
+          const words = paragraph.split(/\s+/).filter(Boolean);
+          let line = "";
+          words.forEach(word => {
+            const test = line ? `${line} ${word}` : word;
+            if (ctx.measureText(test).width > maxWidth && line) { out.push(line); line = word; } else line = test;
+          });
+          out.push(line);
+        });
+        return out;
+      }
+      /* Uploaded templates are never stretched: they are scaled evenly to cover the card
+         and centered (edges trimmed if the proportions differ). Photo placement uses the
+         same mapping so the photo stays inside the template's frame and circles stay round. */
+      function templateBox(type, tpl) {
+        const { w: W, h: H } = SIZES[type];
+        if (!tpl) return { x: 0, y: 0, w: W, h: H };
+        const scale = Math.max(W / tpl.naturalWidth, H / tpl.naturalHeight);
+        const w = tpl.naturalWidth * scale;
+        const h = tpl.naturalHeight * scale;
+        return { x: (W - w) / 2, y: (H - h) / 2, w, h };
+      }
+      function drawTemplate(ctx, type, tpl) {
+        const { w: W, h: H } = SIZES[type];
+        const box = templateBox(type, tpl);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, W, H);
+        ctx.drawImage(tpl, box.x, box.y, box.w, box.h);
+      }
+      function photoRect(type) {
+        if (isCustom(type)) {
+          const { w: W, h: H } = SIZES[type];
+          const p = settings.custom.photo;
+          const x = (p.x / 100) * W;
+          const y = (p.y / 100) * H;
+          const w = (p.w / 100) * W;
+          if (p.shape === "circle") return { shape: "circle", cx: x + w / 2, cy: y + w / 2, rx: w / 2, ry: w / 2, x, y, w, h: w };
+          return { shape: "rect", x, y, w, h: (p.h / 100) * H };
+        }
+        const { w: W, h: H } = SIZES[type];
+        const n = settings.nudge[type];
+        const p = LAYOUTS[type].photo;
+        const scale = n.photoScale / 100;
+        const box = templateBox(type, templates.front[type]);
+        const dx = (n.photoDx / 100) * W;
+        const dy = (n.photoDy / 100) * H;
+        if (p.shape === "circle") {
+          const r = p.r * box.w * scale;
+          const cx = box.x + p.cx * box.w + dx;
+          const cy = box.y + p.cy * box.h + dy;
+          return { shape: "circle", cx, cy, rx: r, ry: r, x: cx - r, y: cy - r, w: r * 2, h: r * 2 };
+        }
+        const w = p.w * box.w * scale;
+        const h = p.h * box.h * scale;
+        const x = box.x + p.x * box.w + (p.w * box.w - w) / 2 + dx;
+        const y = box.y + p.y * box.h + (p.h * box.h - h) / 2 + dy;
+        return { shape: "rect", x, y, w, h };
+      }
+
+      /* ---------- Built-in / downloadable templates ----------
+         Intentionally blank: white card with light dashed guides showing where the photo,
+         name/details, year and barcode go. Design on top of the downloaded file (or use your
+         own) and upload it to add color, logos, or text. */
+      const GUIDE = "#b9c3cc";
+      function guideBox(ctx, x, y, w, h, label, round) {
+        ctx.save();
+        ctx.strokeStyle = GUIDE;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([14, 10]);
+        ctx.beginPath();
+        if (round) ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+        else ctx.rect(x, y, w, h);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = GUIDE;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = font(600, Math.max(18, Math.min(w, h) * 0.11));
+        ctx.fillText(label, x + w / 2, y + h / 2);
+        ctx.restore();
+      }
+      function textGuide(type) {
+        const { w: W, h: H } = SIZES[type];
+        const L = LAYOUTS[type];
+        if (type === "staff") {
+          const top = (L.name.y - L.name.size * 1.25 * W / H) * H;
+          return { x: W * 0.05, y: top, w: W * 0.9, h: L.id.y * H + W * 0.02 - top, label: "Nombre / ID#" };
+        }
+        const top = (L.name.y - L.name.size * 1.2 * W / H) * H;
+        const bottom = (L.lines.y + L.lines.step * 2) * H + W * 0.012;
+        return { x: L.name.x * W - W * 0.012, y: top, w: L.name.maxW * W + W * 0.024, h: bottom - top, label: "Nombre / ID# / Fecha de nac. / Grado" };
+      }
+
+      function placeholderRecord(type) {
+        return {
+          sample: true, name: "Nombre", id: "", dob: "", grade: "",
+          lines: lineSlots(type).map(f => `Texto de la línea ${f.index + 1}${f.wrap ? " (el texto largo pasa a una segunda línea)" : ""}`), yearText: "Año escolar", issues: []
+        };
+      }
+
+      /* guides: which placement guides to draw (all by default, e.g. for the download).
+         The preview passes only the guides whose area is still empty. */
+      function drawBuiltInFront(ctx, type, guides) {
+        const { w: W, h: H } = SIZES[type];
+        const show = guides || { photo: true, text: true, year: true };
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, W, H);
+        if (isCustom(type)) { drawBuiltInCustom(ctx, "front", show.photo, show.text); return; }
+        const p = LAYOUTS[type].photo;
+        if (show.photo) {
+          if (p.shape === "circle") guideBox(ctx, (p.cx - p.r) * W, p.cy * H - p.r * W, p.r * 2 * W, p.r * 2 * W, "Foto", true);
+          else guideBox(ctx, p.x * W, p.y * H, p.w * W, p.h * H, "Foto", false);
+        }
+        if (show.text && isFieldType(type)) {
+          // Sample wording in each line's font, size and position so a template can be designed around it.
+          drawFields(ctx, type, placeholderRecord(type), "#8a96a3");
+        } else if (show.text) {
+          const g = textGuide(type);
+          guideBox(ctx, g.x, g.y, g.w, g.h, g.label, false);
+        }
+        if (!show.year || isFieldType(type)) return;
+        const y = LAYOUTS[type].year;
+        const yw = type === "staff" ? W * 0.5 : W * 0.3;
+        const yh = y.size * 1.5;
+        const yx = y.align === "center" ? (y.x / 100) * W - yw / 2 : (y.x / 100) * W - W * 0.012;
+        guideBox(ctx, yx, (y.y / 100) * H - y.size * 1.05, yw, yh, "Año", false);
+      }
+
+      function drawBuiltInCustom(ctx, side, photoGuide, sampleText) {
+        const p = settings.custom.photo;
+        if (photoGuide && p.side === side) {
+          const r = photoRect("custom");
+          guideBox(ctx, r.x, r.y, r.w, r.h, "Foto", r.shape === "circle");
+        }
+        // Sample text: each column's name in its font, size and position.
+        if (sampleText) drawCustomSide(ctx, side, customPlaceholderRecord(), "#8a96a3");
+      }
+
+      function drawBuiltInBack(ctx, type, withGuides) {
+        const { w: W, h: H } = SIZES[type];
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, W, H);
+        if (withGuides === false) return;
+        // Downloads call this without withGuides and get sample text; the preview passes true (photo guide only).
+        if (isCustom(type)) { drawBuiltInCustom(ctx, "back", true, withGuides === undefined); return; }
+        if (isFieldType(type) && FIELD_TYPES[type].back === "template") {
+          guideBox(ctx, W * 0.06, H * 0.1, W * 0.88, H * 0.8, "Plantilla del reverso", false);
+          return;
+        }
+        const B = backLayout(type);
+        guideBox(ctx, B.cx - B.barW / 2, B.barTop, B.barW, B.idY - B.barTop + B.idSize * 0.35, "Código de barras + ID#", false);
+      }
+
+      function backLayout(type) {
+        const { w: W, h: H } = SIZES[type];
+        const b = settings.back[type];
+        const idSize = type === "student" ? H * 0.055 : W * 0.055;
+        const barTop = (b.barY / 100) * H;
+        const barH = Math.max(20, (b.barH / 100) * H);
+        return { cx: (b.barX / 100) * W, barTop, barH, barW: Math.max(60, (b.barW / 100) * W), idY: barTop + barH + idSize * 1.05, idSize };
+      }
+
+      /* ---------- Card rendering ---------- */
+      function formatDob(value) {
+        const v = String(value || "").trim();
+        const iso = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (iso) return `${iso[2].padStart(2, "0")}/${iso[3].padStart(2, "0")}/${iso[1]}`;
+        return v;
+      }
+
+      /* Numbered templates: the text for one slot (nothing is built in). */
+      function fieldValue(type, field, record) {
+        if (field.source === "name") return record.name || "";
+        if (field.source === "year") return record.yearText != null ? record.yearText : settings.yearText.trim();
+        return (record.lines && record.lines[field.index]) || "";
+      }
+      function fieldFont(field, size) {
+        const choice = FONT_CHOICES.find(f => f.id === field.font) || FONT_CHOICES[0];
+        return `${field.italic ? "italic " : ""}${field.weight} ${Math.round(size)}px ${choice.css}`;
+      }
+      /* A field's definition merged with its saved line style. */
+      function styledField(type, field) {
+        const st = (settings.lineStyle[type] && settings.lineStyle[type][field.key]) || defaultLineStyle(field);
+        return {
+          ...field, x: st.x / 100, y: st.y / 100, maxW: st.width / 100, size: st.size * PT_TO_PX,
+          font: st.font, weight: st.weight, italic: st.italic, align: st.align, wrap: st.wrap, lineHeight: field.lineHeight || 1.3,
+          color: st.color || settings.textColor
+        };
+      }
+      function fitFieldLine(ctx, field, text, size, maxWidth) {
+        let s = size;
+        ctx.font = fieldFont(field, s);
+        while (s > size * 0.55 && ctx.measureText(text).width > maxWidth) { s -= 1; ctx.font = fieldFont(field, s); }
+      }
+      /* Custom Template: column names (from the CSV, or examples before one is loaded) and
+         each column's saved placement, created on first sight. */
+      function customHeaders() {
+        const csv = csvByType.custom;
+        const headers = csv && csv.headers && csv.headers.length ? csv.headers.filter(Boolean) : CUSTOM_DEFAULT_HEADERS;
+        return [...new Set(headers)].slice(0, CUSTOM_MAX_FIELDS);
+      }
+      function customStyle(header) {
+        const fields = settings.custom.fields;
+        if (!fields[header]) fields[header] = defaultCustomField(Object.keys(fields).length, settings.custom.orientation);
+        return fields[header];
+      }
+      function customField(header) {
+        const st = customStyle(header);
+        return {
+          key: header, x: st.x / 100, y: st.y / 100, maxW: st.width / 100, size: st.size * PT_TO_PX, font: st.font, weight: st.weight,
+          italic: st.italic, align: st.align, wrap: st.wrap, lineHeight: 1.3, side: st.side, display: st.display, label: st.label,
+          color: st.color || settings.textColor
+        };
+      }
+      function customValue(record, header) { return ((record.values || {})[header] || "").trim(); }
+      function drawCustomSide(ctx, side, record, color) {
+        const { w: W, h: H } = SIZES.custom;
+        customHeaders().map(customField).filter(f => f.side === side).forEach(field => {
+          const value = customValue(record, field.key);
+          if (!value) return;
+          const x = field.x * W;
+          const y = field.y * H;
+          const maxWidth = field.maxW * W;
+          ctx.textBaseline = "alphabetic";
+          if (field.display === "barcode") {
+            // x = center, y = top of the bars; height follows the size setting; value printed below.
+            const barH = field.size * 2.6;
+            if (!drawBarcode(ctx, value, x, y, maxWidth, barH)) return;
+            ctx.fillStyle = color || field.color;
+            ctx.textAlign = "center";
+            const textSize = Math.max(14, field.size * 0.75);
+            ctx.font = fieldFont({ ...field, weight: "500", italic: false }, textSize);
+            const label = field.label ? `${field.key}: ${value}` : value;
+            ctx.fillText(label, x, y + barH + textSize * 1.1);
+            noteBox(ctx, "line", field.key, x - maxWidth / 2, y, x + maxWidth / 2, y + barH + textSize * 1.4);
+            return;
+          }
+          const text = field.label ? `${field.key}: ${value}` : value;
+          ctx.fillStyle = color || field.color;
+          ctx.textAlign = field.align;
+          if (field.wrap) {
+            ctx.font = fieldFont(field, field.size);
+            wrapLines(ctx, text, maxWidth).forEach((line, idx) => {
+              fitFieldLine(ctx, field, line, field.size, maxWidth);
+              fillFieldText(ctx, field, line, x, y + idx * field.size * field.lineHeight, field.size);
+            });
+          } else {
+            fitFieldLine(ctx, field, text, field.size, maxWidth);
+            fillFieldText(ctx, field, text, x, y, field.size);
+          }
+        });
+      }
+      function customPlaceholderRecord() {
+        return { sample: true, name: "", id: "", values: Object.fromEntries(customHeaders().map(h => [h, customStyle(h).display === "barcode" ? "123456" : h])), issues: [] };
+      }
+
+      /* Web fonts (e.g. Advent Sans) load on first use; redraw the preview once they're ready.
+         Printing waits for them in printCards. */
+      const fontLoads = new Map();
+      function fontsReady(type) {
+        if (!document.fonts || !(isFieldType(type) || isCustom(type))) return Promise.resolve();
+        const fontIds = isCustom(type) ? customHeaders().map(h => customStyle(h).font) : FIELD_TYPES[type].fields.map(f => styledField(type, f).font);
+        const faces = new Set(fontIds
+          .map(id => FONT_CHOICES.find(c => c.id === id))
+          .filter(c => c && c.face).map(c => c.face));
+        return Promise.all([...faces].map(face => {
+          if (!fontLoads.has(face)) fontLoads.set(face, document.fonts.load(`400 40px "${face}"`).catch(() => []));
+          return fontLoads.get(face);
+        }));
+      }
+      /* Fonts with a single weight file (Advent Sans) get Medium/Bold by outlining the text. */
+      function fillFieldText(ctx, field, text, x, y, size) {
+        ctx.fillText(text, x, y);
+        noteText(ctx, "line", field.key, text, x, y);
+        const choice = FONT_CHOICES.find(f => f.id === field.font);
+        const extra = choice && choice.face ? { 500: 0.02, 700: 0.045 }[field.weight] : 0;
+        if (!extra) return;
+        ctx.save();
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineJoin = "round";
+        ctx.lineWidth = size * extra;
+        ctx.strokeText(text, x, y);
+        ctx.restore();
+      }
+      function drawFields(ctx, type, record, color) {
+        const { w: W, h: H } = SIZES[type];
+        const n = settings.nudge[type];
+        const scale = n.textScale / 100;
+        const dx = (n.textDx / 100) * W;
+        const dy = (n.textDy / 100) * H;
+        ctx.textBaseline = "alphabetic";
+        FIELD_TYPES[type].fields.map(f => styledField(type, f)).forEach(field => {
+          const text = fieldValue(type, field, record);
+          if (!text) return;
+          ctx.fillStyle = color || field.color;
+          const size = field.size * scale;
+          const maxWidth = field.maxW * W;
+          const x = field.x * W + dx;
+          const y = field.y * H + dy;
+          ctx.textAlign = field.align || "center";
+          if (field.wrap) {
+            ctx.font = fieldFont(field, size);
+            wrapLines(ctx, text, maxWidth).forEach((line, idx) => {
+              fitFieldLine(ctx, field, line, size, maxWidth);
+              fillFieldText(ctx, field, line, x, y + idx * size * field.lineHeight, size);
+            });
+          } else {
+            fitFieldLine(ctx, field, text, size, maxWidth);
+            fillFieldText(ctx, field, text, x, y, size);
+          }
+        });
+      }
+
+      function drawYear(ctx, type) {
+        const text = settings.yearText.trim();
+        if (!text) return;
+        const { w: W, h: H } = SIZES[type];
+        const y = settings.year[type];
+        ctx.fillStyle = settings.yearColor;
+        ctx.textAlign = y.align;
+        ctx.textBaseline = "alphabetic";
+        ctx.font = font(settings.yearBold, y.size);
+        ctx.fillText(text, (y.x / 100) * W, (y.y / 100) * H);
+        noteText(ctx, "year", "year", text, (y.x / 100) * W, (y.y / 100) * H);
+      }
+
+      function drawPhoto(ctx, type, record, forPrint) {
+        const rect = photoRect(type);
+        const img = record && record.photo && record.photo.image;
+        ctx.save();
+        ctx.beginPath();
+        if (rect.shape === "circle") ctx.ellipse(rect.cx, rect.cy, rect.rx, rect.ry, 0, 0, Math.PI * 2);
+        else ctx.rect(rect.x, rect.y, rect.w, rect.h);
+        ctx.clip();
+        if (img) {
+          const crop = photoCrop(type, record.photo);
+          drawImageCover(ctx, img, rect.x, rect.y, rect.w, rect.h, crop.x, crop.y, crop.zoom);
+        } else if (record && !record.sample && !forPrint) {
+          // Missing photo: neutral placeholder so it is obvious in the preview.
+          ctx.fillStyle = "#eef1f4";
+          ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+          drawSilhouette(ctx, rect.x, rect.y, rect.w, rect.h, "#c9d1d8");
+          ctx.fillStyle = "#a12a3a";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.font = font(700, rect.w * 0.09);
+          ctx.fillText("SIN FOTO", rect.x + rect.w / 2, rect.y + rect.h * 0.88);
+        }
+        ctx.restore();
+      }
+
+      /* ---------- Drag-to-move hit areas (preview canvases only) ---------- */
+      const previewHits = { front: [], back: [] };
+      function hitList(ctx) {
+        return ctx.canvas === frontCanvas ? previewHits.front : ctx.canvas === backCanvas ? previewHits.back : null;
+      }
+      function noteBox(ctx, kind, key, x1, y1, x2, y2) {
+        const list = hitList(ctx);
+        if (list) list.push({ kind, key, x1, y1, x2, y2 });
+      }
+      function noteText(ctx, kind, key, text, x, y) {
+        if (!hitList(ctx) || !text) return;
+        const m = ctx.measureText(text);
+        const pad = 6;
+        noteBox(ctx, kind, key, x - m.actualBoundingBoxLeft - pad, y - m.actualBoundingBoxAscent - pad, x + m.actualBoundingBoxRight + pad, y + m.actualBoundingBoxDescent + pad);
+      }
+
+      /* forPrint: no placement guides and no "NO PHOTO"/missing-barcode placeholders. */
+      function drawFront(record, canvas, forPrint) {
+        const target = canvas || frontCanvas;
+        const type = settings.cardType;
+        const { w: W, h: H } = SIZES[type];
+        target.width = W;
+        target.height = H;
+        const ctx = target.getContext("2d");
+        if (target === frontCanvas) previewHits.front = [];
+        const tpl = templates.front[type];
+        if (tpl) {
+          drawTemplate(ctx, type, tpl);
+        } else {
+          const hasPhoto = !!(record.photo && record.photo.image) || !record.sample;
+          drawBuiltInFront(ctx, type, forPrint ? { photo: false, text: false, year: false } : { photo: !hasPhoto, text: !isCustom(type) && !record.name && !record.id, year: !settings.yearText.trim() });
+        }
+        if (isCustom(type)) {
+          if (settings.custom.photo.side === "front") {
+            drawPhoto(ctx, type, record, forPrint);
+            const cr = photoRect(type);
+            noteBox(ctx, "photo", "photo", cr.x, cr.y, cr.x + cr.w, cr.y + cr.h);
+          }
+          drawCustomSide(ctx, "front", record);
+          return;
+        }
+        drawPhoto(ctx, type, record, forPrint);
+        const pr = photoRect(type);
+        noteBox(ctx, "photo", "photo", pr.x, pr.y, pr.x + pr.w, pr.y + pr.h);
+        if (isFieldType(type)) {
+          drawFields(ctx, type, record);
+          return;
+        }
+
+        const L = LAYOUTS[type];
+        const n = settings.nudge[type];
+        const scale = n.textScale / 100;
+        const dx = (n.textDx / 100) * W;
+        const dy = (n.textDy / 100) * H;
+        const nameText = record.name || "";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = settings.textColor;
+        ctx.textAlign = L.name.align;
+
+        if (type === "staff") {
+          const x = L.name.x * W + dx;
+          if (nameText) {
+            fitText(ctx, nameText, 700, L.name.size * W * scale, L.name.maxW * W, 0.5);
+            ctx.fillText(nameText, x, L.name.y * H + dy);
+            noteText(ctx, "text", "block", nameText, x, L.name.y * H + dy);
+          }
+          if (settings.roleLine.trim()) {
+            ctx.fillStyle = settings.labelColor;
+            fitText(ctx, settings.roleLine.trim().toUpperCase(), 700, L.role.size * W * scale, L.name.maxW * W);
+            ctx.fillText(settings.roleLine.trim().toUpperCase(), x, L.role.y * H + dy);
+            noteText(ctx, "text", "block", settings.roleLine.trim().toUpperCase(), x, L.role.y * H + dy);
+          }
+          if (record.id) {
+            ctx.fillStyle = settings.textColor;
+            ctx.font = font(500, L.id.size * W * scale);
+            ctx.fillText(`ID# ${record.id}`, x, (settings.roleLine.trim() ? L.id.y : L.role.y) * H + dy);
+            noteText(ctx, "text", "block", `ID# ${record.id}`, x, (settings.roleLine.trim() ? L.id.y : L.role.y) * H + dy);
+          }
+        } else {
+          const x = L.name.x * W + dx;
+          if (nameText) {
+            fitText(ctx, nameText, 700, L.name.size * W * scale, L.name.maxW * W, 0.5);
+            ctx.fillText(nameText, x, L.name.y * H + dy);
+            noteText(ctx, "text", "block", nameText, x, L.name.y * H + dy);
+          }
+          const lines = [["ID#", record.id], ["Fecha de nac.", formatDob(record.dob)], ["Grado", record.grade]].filter(([, v]) => v);
+          const size = L.lines.size * W * scale;
+          lines.forEach(([label, value], idx) => {
+            const y = (L.lines.y + idx * L.lines.step * scale) * H + dy;
+            ctx.textAlign = "left";
+            ctx.fillStyle = settings.labelColor;
+            ctx.font = font(700, size);
+            const labelText = `${label}:`;
+            ctx.fillText(labelText, x, y);
+            noteText(ctx, "text", "block", labelText, x, y);
+            const labelW = ctx.measureText(labelText).width + size * 0.4;
+            ctx.fillStyle = settings.textColor;
+            fitText(ctx, value, 500, size, L.name.maxW * W - labelW, 0.6);
+            ctx.fillText(value, x + labelW, y);
+            noteText(ctx, "text", "block", value, x + labelW, y);
+          });
+        }
+        drawYear(ctx, type);
+      }
+
+      function drawBack(record, canvas, forPrint) {
+        const target = canvas || backCanvas;
+        const type = settings.cardType;
+        const { w: W, h: H } = SIZES[type];
+        target.width = W;
+        target.height = H;
+        const ctx = target.getContext("2d");
+        if (target === backCanvas) previewHits.back = [];
+        const tpl = templates.back[type];
+        if (tpl) {
+          drawTemplate(ctx, type, tpl);
+        } else if (isCustom(type)) {
+          drawBuiltInBack(ctx, type, !forPrint && !!record.sample);
+        } else drawBuiltInBack(ctx, type, (isFieldType(type) || !record.id) && !forPrint);
+        if (isCustom(type)) {
+          if (settings.custom.photo.side === "back") {
+            drawPhoto(ctx, type, record, forPrint);
+            const cr = photoRect(type);
+            noteBox(ctx, "photo", "photo", cr.x, cr.y, cr.x + cr.w, cr.y + cr.h);
+          }
+          drawCustomSide(ctx, "back", record);
+          return;
+        }
+        if (isFieldType(type)) return; // back is the uploaded template only
+        if (type === "staff") drawStaffBackText(ctx);
+        const B = backLayout(type);
+        noteBox(ctx, "barcode", "barcode", B.cx - B.barW / 2, B.barTop, B.cx + B.barW / 2, B.idY + B.idSize * 0.35);
+        ctx.textAlign = "center";
+        const value = record.id || "";
+        if (value && drawBarcode(ctx, value, B.cx, B.barTop, B.barW, B.barH)) {
+          ctx.fillStyle = "#000000";
+          ctx.textBaseline = "alphabetic";
+          ctx.font = font(600, B.idSize);
+          ctx.fillText(value, B.cx, B.idY);
+        } else if (!forPrint) {
+          ctx.strokeStyle = "#c9d1d8";
+          ctx.setLineDash([10, 8]);
+          ctx.lineWidth = 3;
+          ctx.strokeRect(B.cx - B.barW / 2, B.barTop, B.barW, B.barH);
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#a12a3a";
+          ctx.textBaseline = "middle";
+          ctx.font = font(700, B.idSize * 0.8);
+          ctx.fillText(value ? "El ID# no se puede codificar" : "SIN ID# — SIN CÓDIGO DE BARRAS", B.cx, B.barTop + B.barH / 2);
+        }
+      }
+
+      /* Optional staff back text: multi-line, wrapped to the card width from its anchor. */
+      function drawStaffBackText(ctx) {
+        const text = settings.staffBackText.trim();
+        if (!text) return;
+        const { w: W, h: H } = SIZES.staff;
+        const s = settings.staffBackTextStyle;
+        const x = (s.x / 100) * W;
+        const margin = W * 0.05;
+        const maxWidth = s.align === "center" ? Math.min(x, W - x) * 2 - margin * 2 : (s.align === "left" ? W - x - margin : x - margin);
+        ctx.fillStyle = s.color;
+        ctx.textAlign = s.align;
+        ctx.textBaseline = "top";
+        ctx.font = font(s.weight, s.size);
+        wrapLines(ctx, settings.staffBackText, Math.max(40, maxWidth)).forEach((line, idx) => {
+          ctx.fillText(line, x, (s.y / 100) * H + idx * s.size * 1.3);
+          noteText(ctx, "backtext", "backtext", line, x, (s.y / 100) * H + idx * s.size * 1.3);
+        });
+      }
+
+      /* ---------- UI rendering ---------- */
+      function sampleRecord() {
+        if (isCustom(settings.cardType)) {
+          return { sample: true, name: "", id: "", values: Object.fromEntries(customHeaders().map(h => [h, { Nombre: "Juan Pérez", Name: "Juan Pérez", "ID#": "100001" }[h] || (customStyle(h).display === "barcode" ? "100001" : `Texto de ${h.toLowerCase()}`)])), issues: [] };
+        }
+        if (isFieldType(settings.cardType)) {
+          return { sample: true, name: "Juan Pérez", id: "", dob: "", grade: "", lines: lineSlots(settings.cardType).map(f => `Texto de la ${f.label.toLowerCase()}`), issues: [] };
+        }
+        return settings.cardType === "student"
+          ? { sample: true, name: "Juan Pérez", id: "100001", dob: "2010-01-01", grade: "9", issues: [] }
+          : { sample: true, name: "Juan Pérez", id: "100001", dob: "", grade: "", issues: [] };
+      }
+
+      function visibleRecordIndexes() {
+        const onlyProblems = $("problemsOnly").checked;
+        return records.map((r, i) => i).filter(i => !onlyProblems || recordLevel(records[i]) !== "ok");
+      }
+
+      function renderTable() {
+        const type = settings.cardType;
+        const extraFields = isFieldType(type) ? lineSlots(type) : [];
+        const csvNow = csvByType[type];
+        const lineHeader = f => (csvNow && csvNow.mapping && csvNow.headers[csvNow.mapping.lines[f.index]]) || f.label;
+        const customCols = isCustom(type) ? customHeaders().slice(0, 4) : [];
+        const showPhotoCol = !(isCustom(type) && settings.custom.photo.side === "none");
+        const headCells = isCustom(type)
+          ? ["Fila", ...customCols, ...(showPhotoCol ? ["Foto"] : []), "Estado"]
+          : isFieldType(type)
+          ? ["Fila", "Nombre", ...extraFields.map(lineHeader), "Foto", "Estado"]
+          : ["Fila", "Nombre", "ID#", ...(type === "student" ? ["Fecha de nac.", "Grado"] : []), "Foto", "Estado"];
+        const headRow = document.createElement("tr");
+        headCells.forEach(label => { const th = document.createElement("th"); th.textContent = label; headRow.appendChild(th); });
+        $("recordsHead").textContent = "";
+        $("recordsHead").appendChild(headRow);
+        const body = $("recordsBody");
+        body.textContent = "";
+        const indexes = visibleRecordIndexes();
+        if (!indexes.length) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = headCells.length;
+          td.className = "empty-state";
+          td.textContent = records.length ? "No hay credenciales con problemas." : `Carga un CSV ${TYPE_NAMES[type]} para ver las credenciales aquí.`;
+          tr.appendChild(td);
+          body.appendChild(tr);
+          return;
+        }
+        indexes.forEach(i => {
+          const r = records[i];
+          const tr = document.createElement("tr");
+          const level = recordLevel(r);
+          tr.className = `row-${level}${i === selectedIndex ? " selected" : ""}`;
+          tr.dataset.index = String(i);
+          const cells = isCustom(type)
+            ? [String(r.rowNumber), ...customCols.map(h => customValue(r, h))]
+            : isFieldType(type)
+            ? [String(r.rowNumber), r.name, ...extraFields.map(f => fieldValue(type, f, r))]
+            : [String(r.rowNumber), r.name, r.id];
+          if (type === "student") cells.push(formatDob(r.dob), r.grade);
+          cells.forEach(value => {
+            const td = document.createElement("td");
+            if (value) td.textContent = value; else { td.textContent = "—"; td.className = "empty-cell"; }
+            tr.appendChild(td);
+          });
+          const photoTd = document.createElement("td");
+          photoTd.textContent = r.photo ? (r.photo.failed ? "Ilegible" : (r.photoMatch === "name" ? "Sí (por nombre)" : "Sí")) : "—";
+          if (r.photo) photoTd.title = r.photo.name;
+          if (!r.photo) photoTd.className = "empty-cell";
+          if (showPhotoCol) tr.appendChild(photoTd);
+          const statusTd = document.createElement("td");
+          if (!r.issues.length) statusTd.appendChild(chip("ok", "Lista"));
+          r.issues.forEach(item => statusTd.appendChild(chip(item.level, item.text)));
+          tr.appendChild(statusTd);
+          body.appendChild(tr);
+        });
+      }
+
+      function chip(level, text) {
+        const span = document.createElement("span");
+        span.className = `chip ${level}`;
+        span.textContent = text;
+        return span;
+      }
+
+      function renderSummary(globalIssues) {
+        const wrap = $("summaryChips");
+        wrap.textContent = "";
+        if (records.length) {
+          const counts = { ok: 0, warn: 0, error: 0 };
+          records.forEach(r => { counts[recordLevel(r)] += 1; });
+          wrap.appendChild(chip("info", `${records.length} ${records.length === 1 ? "credencial" : "credenciales"}`));
+          wrap.appendChild(chip("ok", `${counts.ok} ${counts.ok === 1 ? "lista" : "listas"}`));
+          if (counts.warn) wrap.appendChild(chip("warn", `${counts.warn} con advertencias`));
+          if (counts.error) wrap.appendChild(chip("error", `${counts.error} con errores`));
+          wrap.appendChild(chip("info", `${photos.size} ${photos.size === 1 ? "foto cargada" : "fotos cargadas"}`));
+        }
+        const list = $("globalIssues");
+        list.textContent = "";
+        globalIssues.forEach(item => {
+          const li = document.createElement("li");
+          li.className = item.level;
+          li.textContent = item.text;
+          list.appendChild(li);
+        });
+      }
+
+      let renderToken = 0;
+      async function renderPreview() {
+        const token = ++renderToken;
+        const type = settings.cardType;
+        const record = selectedIndex >= 0 && records[selectedIndex] ? records[selectedIndex] : sampleRecord();
+        if (record.photo) await loadPhotoImage(record.photo);
+        await fontsReady(type);
+        if (token !== renderToken) return;
+        if (record.photo && record.photo.failed && !record.issues.some(i => i.text.startsWith("Foto"))) {
+          record.issues.push(issue("error", "Foto: no se pudo leer"));
+          renderTable();
+        }
+        $("frontFigure").className = `card-face ${isPortrait(type) ? "portrait" : "landscape"}`;
+        $("backFigure").className = `card-face ${isPortrait(type) ? "portrait" : "landscape"}`;
+        drawFront(record);
+        drawBack(record);
+        const pos = $("previewPosition");
+        pos.textContent = record.sample ? "Credencial de muestra" : `Credencial ${selectedIndex + 1} de ${records.length}${record.name ? ` · ${record.name}` : ""}`;
+        $("prevBtn").disabled = !records.length;
+        $("nextBtn").disabled = !records.length;
+        syncCropTools(record);
+        const issuesWrap = $("previewIssues");
+        issuesWrap.textContent = "";
+        (record.issues || []).forEach(item => issuesWrap.appendChild(chip(item.level, item.text)));
+      }
+
+      /* ---------- Per-photo position inside the frame ---------- */
+      function previewRecord() {
+        return selectedIndex >= 0 && records[selectedIndex] ? records[selectedIndex] : null;
+      }
+      function previewPhoto() {
+        const record = previewRecord();
+        return record && record.photo && record.photo.image ? record.photo : null;
+      }
+      function syncCropTools(record) {
+        const photo = record && record.photo && record.photo.image ? record.photo : null;
+        $("cropTools").classList.toggle("show", !!photo);
+        frontCanvas.classList.toggle("can-drag", !!photo && !layoutDrag);
+        if (!photo) return;
+        const crop = photoCrop(settings.cardType, photo);
+        $("cropZoom").value = crop.zoom; $("cropX").value = crop.x; $("cropY").value = crop.y;
+      }
+      function setCrop(photo, changes) {
+        photo.crop = { ...photoCrop(settings.cardType, photo), ...changes };
+        syncCropTools(previewRecord());
+        drawFront(previewRecord());
+      }
+      function bindCropTools() {
+        [["cropZoom", "zoom"], ["cropX", "x"], ["cropY", "y"]].forEach(([id, key]) => {
+          $(id).addEventListener("input", () => {
+            const photo = previewPhoto();
+            if (photo) setCrop(photo, { [key]: Number($(id).value) });
+          });
+        });
+        $("cropResetBtn").addEventListener("click", () => {
+          const photo = previewPhoto();
+          if (!photo) return;
+          photo.crop = null;
+          syncCropTools(previewRecord());
+          drawFront(previewRecord());
+        });
+        // Drag the photo inside its frame on the front preview.
+        let drag = null;
+        const toCanvas = event => {
+          const box = frontCanvas.getBoundingClientRect();
+          return { x: (event.clientX - box.left) * (frontCanvas.width / box.width), y: (event.clientY - box.top) * (frontCanvas.height / box.height) };
+        };
+        frontCanvas.addEventListener("pointerdown", event => {
+          if (layoutDrag) return; // drag mode moves the layout instead (bindLayoutDrag)
+          if (isCustom(settings.cardType) && settings.custom.photo.side !== "front") return;
+          const photo = previewPhoto();
+          if (!photo) return;
+          const rect = photoRect(settings.cardType);
+          const pt = toCanvas(event);
+          if (pt.x < rect.x || pt.x > rect.x + rect.w || pt.y < rect.y || pt.y > rect.y + rect.h) return;
+          event.preventDefault();
+          frontCanvas.setPointerCapture(event.pointerId);
+          frontCanvas.classList.add("dragging");
+          drag = { photo, rect, last: pt };
+        });
+        frontCanvas.addEventListener("pointermove", event => {
+          if (!drag) return;
+          const pt = toCanvas(event);
+          const { photo, rect } = drag;
+          const img = photo.image;
+          const crop = photoCrop(settings.cardType, photo);
+          const scale = coverScale(img, rect.w, rect.h, crop.zoom);
+          // How far (in canvas px) the photo can slide in each direction; dragging right shows more of the left side.
+          const spanX = img.naturalWidth * scale - rect.w;
+          const spanY = img.naturalHeight * scale - rect.h;
+          const changes = {};
+          if (spanX > 0.5) changes.x = Math.max(0, Math.min(100, crop.x - ((pt.x - drag.last.x) / spanX) * 100));
+          if (spanY > 0.5) changes.y = Math.max(0, Math.min(100, crop.y - ((pt.y - drag.last.y) / spanY) * 100));
+          drag.last = pt;
+          setCrop(photo, changes);
+        });
+        const endDrag = () => { drag = null; frontCanvas.classList.remove("dragging"); };
+        frontCanvas.addEventListener("pointerup", endDrag);
+        frontCanvas.addEventListener("pointercancel", endDrag);
+      }
+
+      /* ---------- Drag to move (layout placement) ----------
+         With the toggle on, dragging an item on a preview changes its placement settings
+         (the same numbers shown in the settings, which update live). Turning it off just
+         stops dragging; everything stays where it was placed. */
+      let layoutDrag = false;
+      function round2(n) { return Math.round(n * 100) / 100; }
+      function clampPct(n) { return Math.max(0, Math.min(100, n)); }
+      function moveLayoutItem(hit, dx, dy) {
+        const type = settings.cardType;
+        const n = settings.nudge[type];
+        if (isCustom(type) && hit.kind === "photo") { const ph = settings.custom.photo; ph.x = round2(clampPct(ph.x + dx)); ph.y = round2(clampPct(ph.y + dy)); return; }
+        if (isCustom(type) && hit.kind === "line") { const st = customStyle(hit.key); st.x = round2(clampPct(st.x + dx)); st.y = round2(clampPct(st.y + dy)); return; }
+        if (hit.kind === "photo") { n.photoDx = round2(n.photoDx + dx); n.photoDy = round2(n.photoDy + dy); }
+        else if (hit.kind === "text") { n.textDx = round2(n.textDx + dx); n.textDy = round2(n.textDy + dy); }
+        else if (hit.kind === "year") { const y = settings.year[type]; y.x = round2(clampPct(y.x + dx)); y.y = round2(clampPct(y.y + dy)); }
+        else if (hit.kind === "line") { const st = settings.lineStyle[type][hit.key]; st.x = round2(clampPct(st.x + dx)); st.y = round2(clampPct(st.y + dy)); }
+        else if (hit.kind === "barcode") { const b = settings.back[type]; b.barX = round2(clampPct(b.barX + dx)); b.barY = round2(clampPct(b.barY + dy)); }
+        else if (hit.kind === "backtext") { const t = settings.staffBackTextStyle; t.x = round2(clampPct(t.x + dx)); t.y = round2(clampPct(t.y + dy)); }
+      }
+      function bindLayoutDrag() {
+        const toggle = $("layoutDragToggle");
+        toggle.addEventListener("change", () => {
+          layoutDrag = toggle.checked;
+          $("previewCards").classList.toggle("layout-drag", layoutDrag);
+          $("layoutDragHint").style.display = layoutDrag ? "" : "none";
+          [frontCanvas, backCanvas].forEach(c => { c.style.cursor = ""; });
+          syncCropTools(previewRecord());
+        });
+        let drag = null;
+        const toCanvas = (canvas, event) => {
+          const box = canvas.getBoundingClientRect();
+          return { x: (event.clientX - box.left) * (canvas.width / box.width), y: (event.clientY - box.top) * (canvas.height / box.height) };
+        };
+        // Items drawn last (text) sit on top of the photo, so search from the end.
+        const hitAt = (side, pt) => [...previewHits[side]].reverse().find(h => pt.x >= h.x1 && pt.x <= h.x2 && pt.y >= h.y1 && pt.y <= h.y2) || null;
+        [["front", frontCanvas], ["back", backCanvas]].forEach(([side, canvas]) => {
+          canvas.addEventListener("pointerdown", event => {
+            if (!layoutDrag) return;
+            const pt = toCanvas(canvas, event);
+            const hit = hitAt(side, pt);
+            if (!hit) return;
+            event.preventDefault();
+            canvas.setPointerCapture(event.pointerId);
+            drag = { canvas, hit, last: pt };
+            if (hit.kind === "line") { $("lsField").value = hit.key; syncLineStyleControls(); }
+          });
+          canvas.addEventListener("pointermove", event => {
+            if (!layoutDrag) return;
+            const pt = toCanvas(canvas, event);
+            if (!drag || drag.canvas !== canvas) {
+              canvas.style.cursor = hitAt(side, pt) ? "move" : "";
+              return;
+            }
+            moveLayoutItem(drag.hit, ((pt.x - drag.last.x) / canvas.width) * 100, ((pt.y - drag.last.y) / canvas.height) * 100);
+            drag.last = pt;
+            syncControlsFromSettings();
+            renderPreview();
+          });
+          const end = () => {
+            if (!drag) return;
+            drag = null;
+            saveSettings();
+          };
+          canvas.addEventListener("pointerup", end);
+          canvas.addEventListener("pointercancel", end);
+        });
+      }
+
+      function refreshAll() {
+        const globalIssues = validate();
+        if (selectedIndex >= records.length) selectedIndex = records.length ? 0 : -1;
+        if (selectedIndex < 0 && records.length) selectedIndex = 0;
+        renderSummary(globalIssues);
+        renderTable();
+        renderPreview();
+        renderTypeDependentUi();
+      }
+
+      function renderTypeDependentUi() {
+        const type = settings.cardType;
+        const { w: W, h: H } = SIZES[type];
+        $("roleField").style.display = type === "staff" ? "" : "none";
+        const custom = isCustom(type);
+        const photosOff = custom && settings.custom.photo.side === "none";
+        $("yearPlacement").style.display = isFieldType(type) || custom ? "none" : "";
+        $("yearTextField").style.display = custom ? "none" : "";
+        $("lineStyleDetails").style.display = isFieldType(type) || custom ? "" : "none";
+        if (custom) syncLineStyleControls();
+        $("lsCustomOnly").style.display = custom ? "" : "none";
+        $("lineStyleSummary").textContent = custom ? "Campos: lado, fuente, tamaño y posición" : "Líneas de texto: fuente, tamaño y posición";
+        $("lsFieldLabel").textContent = custom ? "Campo (columna del CSV)" : "Línea a ajustar";
+        $("nudgeDetails").style.display = custom ? "none" : "";
+        $("photoField").style.display = photosOff ? "none" : "";
+        $("customOptions").classList.toggle("show", custom);
+        $("customDetails").style.display = custom && !photosOff ? "" : "none";
+        document.querySelectorAll('input[name="cpShape"], input[name="cpSide"]').forEach(input => { input.disabled = photosOff; });
+        $("backDetails").style.display = (isFieldType(type) && FIELD_TYPES[type].back === "template") || custom ? "none" : "";
+        $("labelColor").closest(".field").style.display = isFieldType(type) || custom ? "none" : "";
+        $("textColor").closest(".field").style.display = isFieldType(type) || custom ? "none" : "";
+        $("orientationHint").textContent = "opción";
+        $("csvHint").innerHTML = custom
+          ? "CSV de la Plantilla personalizada: las columnas que quieras. Cada columna se vuelve un campo; en el paso 4 eliges si aparece en el anverso, en el reverso o en ninguno, como texto o como código de barras. Si hay una columna Nombre (Name) o ID#, también la usamos para encontrar las fotos."
+          : isFieldType(type)
+          ? `CSV de la ${FIELD_TYPES[type].label}: una columna <strong>Nombre</strong> (o Name) y luego hasta ${lineSlots(type).length} columnas más (con cualquier encabezado) que se imprimen como las líneas 1&ndash;${lineSlots(type).length} en el orden de las columnas. La columna ID# es opcional y solo la usamos para encontrar las fotos. El año sale del campo Año escolar.`
+          : type === "staff"
+          ? "Columnas del CSV de personal: <strong>Nombre</strong> e <strong>ID#</strong> (también sirven en inglés: Name, ID#). También funcionan columnas separadas de Nombre y Apellido (First/Last Name)."
+          : "Columnas del CSV de estudiantes: <strong>Nombre</strong>, <strong>ID#</strong>, <strong>Fecha de nacimiento</strong>, <strong>Grado</strong> (también sirven en inglés: Name, ID#, DoB, Grade). También funcionan columnas separadas de Nombre y Apellido (First/Last Name).";
+        const csv = csvByType[type];
+        const status = $("csvStatus");
+        status.classList.toggle("bad", !!(csv && csv.error));
+        status.textContent = csv ? (csv.error || `${csv.fileName}: ${csv.rows.length} ${csv.rows.length === 1 ? "fila" : "filas"}`) : "Aún no hay un CSV cargado.";
+        $("photoStatus").textContent = photos.size ? `${photos.size} ${photos.size === 1 ? "foto cargada" : "fotos cargadas"}.` : "Aún no hay fotos cargadas.";
+        $("templateHint").textContent = `Haz las plantillas de ${W} × ${H} px (CR80 ${isPortrait(type) ? "vertical" : "horizontal"} a 300 dpi). La plantilla que descargas está en blanco, con guías punteadas para la foto, el texto y el año; diseña alrededor de ellas y luego súbela. Las guías solo sirven para ubicar todo.`;
+        ["front", "back"].forEach(side => {
+          const tpl = templates[side][type];
+          const el = $(`${side}TemplateStatus`);
+          el.classList.remove("bad");
+          if (!tpl) { el.textContent = side === "front" ? "Usando la plantilla integrada." : "Usando el reverso integrado."; return; }
+          const ratio = (tpl.naturalWidth / tpl.naturalHeight) / (W / H);
+          const name = tpl.dataset.fileName || "Imagen subida";
+          if (Math.abs(ratio - 1) > 0.04) {
+            el.classList.add("bad");
+            el.textContent = `${name}: ${tpl.naturalWidth} × ${tpl.naturalHeight} px no tiene las proporciones de CR80 ${isPortrait(type) ? "vertical" : "horizontal"}, así que la escalamos de forma pareja y recortamos los bordes para que quepa (sin estirarla). Usa ${W} × ${H} px para que quede exacta.`;
+          } else el.textContent = `${name} (${tpl.naturalWidth} × ${tpl.naturalHeight} px)`;
+        });
+      }
+
+      /* ---------- Controls binding ---------- */
+      function syncControlsFromSettings() {
+        const type = settings.cardType;
+        document.querySelectorAll('input[name="cardType"]').forEach(input => { input.checked = input.value === type; });
+        ["textColor", "labelColor", "roleLine", "yearText", "yearColor", "yearBold"].forEach(key => { $(key).value = settings[key]; });
+        const y = settings.year[type];
+        $("yearX").value = y.x; $("yearY").value = y.y; $("yearSize").value = y.size; $("yearAlign").value = y.align;
+        const n = settings.nudge[type];
+        Object.keys(defaultNudge()).forEach(key => { $(key).value = n[key]; });
+        const b = settings.back[type];
+        ["barX", "barY", "barW", "barH"].forEach(key => { $(key).value = b[key]; });
+        $("staffBackTextFields").style.display = type === "staff" ? "" : "none";
+        syncLineStyleControls();
+        syncCustomControls();
+        $("flipBack").checked = !!settings.flipBack[type];
+        $("staffBackText").value = settings.staffBackText;
+        const s = settings.staffBackTextStyle;
+        $("sbtX").value = s.x; $("sbtY").value = s.y; $("sbtSize").value = s.size;
+        $("sbtAlign").value = s.align; $("sbtColor").value = s.color; $("sbtWeight").value = s.weight;
+      }
+
+      /* ---------- Numbered templates: per-line font/size/position controls ---------- */
+      /* The "Text lines" / "Fields" panel edits one style at a time: Template 1's lines, or the
+         Custom Template's CSV columns (which also have side, display and label). */
+      const LINE_STYLE_INPUTS = {
+        lsFont: "font", lsSize: "size", lsWeight: "weight", lsX: "x", lsY: "y", lsWidth: "width", lsAlign: "align", lsItalic: "italic", lsWrap: "wrap",
+        lsSide: "side", lsDisplay: "display", lsLabel: "label"
+      };
+      function styleKeys(type) {
+        if (isCustom(type)) return customHeaders().map(h => ({ key: h, label: h }));
+        if (isFieldType(type)) return FIELD_TYPES[type].fields.map(f => ({ key: f.key, label: f.label }));
+        return [];
+      }
+      function styleOf(type, key) {
+        return isCustom(type) ? customStyle(key) : settings.lineStyle[type][key];
+      }
+      function syncLineStyleControls() {
+        const type = settings.cardType;
+        const keys = styleKeys(type);
+        if (!keys.length) return;
+        const select = $("lsField");
+        const current = keys.some(k => k.key === select.value) ? select.value : keys[0].key;
+        select.textContent = "";
+        keys.forEach(k => select.appendChild(new Option(k.label, k.key)));
+        select.value = current;
+        const st = styleOf(type, current);
+        Object.entries(LINE_STYLE_INPUTS).forEach(([id, key]) => {
+          if (st[key] === undefined) return;
+          if (typeof st[key] === "boolean") $(id).checked = st[key]; else $(id).value = st[key];
+        });
+        $("lsColor").value = st.color || settings.textColor;
+        $("lsColorSync").checked = settings.colorSync[type] !== false;
+      }
+      /* Font color: one field, or every field when "Same color for all fields" is on. */
+      function setFieldColor(type, color) {
+        const keys = settings.colorSync[type] !== false ? styleKeys(type).map(k => k.key) : [$("lsField").value];
+        keys.forEach(key => { styleOf(type, key).color = color; });
+      }
+      function bindLineStyleControls() {
+        const fontSelect = $("lsFont");
+        FONT_CHOICES.forEach(f => fontSelect.appendChild(new Option(f.label, f.id)));
+        $("lsField").addEventListener("change", syncLineStyleControls);
+        $("lsColor").addEventListener("input", () => {
+          const type = settings.cardType;
+          if (!styleKeys(type).length) return;
+          setFieldColor(type, $("lsColor").value);
+          saveSettings();
+          renderPreview();
+        });
+        $("lsColorSync").addEventListener("change", () => {
+          const type = settings.cardType;
+          if (!styleKeys(type).length) return;
+          settings.colorSync[type] = $("lsColorSync").checked;
+          // Turning sync on gives every field the color shown for the current one.
+          if (settings.colorSync[type]) setFieldColor(type, $("lsColor").value);
+          saveSettings();
+          renderPreview();
+        });
+        Object.entries(LINE_STYLE_INPUTS).forEach(([id, key]) => {
+          $(id).addEventListener($(id).type === "checkbox" || $(id).tagName === "SELECT" ? "change" : "input", () => {
+            const type = settings.cardType;
+            if (!styleKeys(type).length) return;
+            const st = styleOf(type, $("lsField").value);
+            const el = $(id);
+            if (el.type === "checkbox") st[key] = el.checked;
+            else if (el.type === "number") { const n = Number(el.value); if (!Number.isFinite(n) || el.value === "") return; st[key] = n; }
+            else st[key] = el.value;
+            saveSettings();
+            // Side and display change which checks apply, so re-validate; other edits only redraw.
+            if (key === "side" || key === "display") refreshAll(); else renderPreview();
+          });
+        });
+        $("lsResetBtn").addEventListener("click", () => {
+          const type = settings.cardType;
+          const key = $("lsField").value;
+          const color = styleOf(type, key).color; // reset is placement/font; keep the color
+          if (isCustom(type)) {
+            const index = Object.keys(settings.custom.fields).indexOf(key);
+            settings.custom.fields[key] = defaultCustomField(Math.max(0, index), settings.custom.orientation);
+          } else {
+            const field = FIELD_TYPES[type].fields.find(f => f.key === key);
+            settings.lineStyle[type][field.key] = defaultLineStyle(field);
+          }
+          if (color) styleOf(type, key).color = color;
+          saveSettings();
+          syncLineStyleControls();
+          refreshAll();
+        });
+        $("lsResetAllBtn").addEventListener("click", () => {
+          const type = settings.cardType;
+          if (isCustom(type)) {
+            settings.custom.fields = {};
+            settings.custom.photo = { ...defaultCustomPhoto(settings.custom.orientation), side: settings.custom.photo.side };
+            customHeaders().forEach(customStyle);
+          } else settings.lineStyle[type] = defaultLineStyles(type);
+          saveSettings();
+          syncLineStyleControls();
+          refreshAll();
+        });
+        syncLineStyleControls();
+      }
+
+      /* Custom Template: orientation and photo controls. */
+      const CUSTOM_PHOTO_INPUTS = { cpX: "x", cpY: "y", cpW: "w", cpH: "h" };
+      const checkRadio = (name, value) => document.querySelectorAll(`input[name="${name}"]`).forEach(input => { input.checked = input.value === value; });
+      function syncCustomControls() {
+        const photo = settings.custom.photo;
+        checkRadio("customOrient", settings.custom.orientation);
+        checkRadio("cpEnabled", photo.side === "none" ? "off" : "on");
+        checkRadio("cpShape", photo.shape);
+        checkRadio("cpSide", photo.side === "none" ? (photo.lastSide || "front") : photo.side);
+        Object.entries(CUSTOM_PHOTO_INPUTS).forEach(([id, key]) => { $(id).value = photo[key]; });
+      }
+      function onRadio(name, handler) {
+        document.querySelectorAll(`input[name="${name}"]`).forEach(input => input.addEventListener("change", () => { if (input.checked) handler(input.value); }));
+      }
+      function bindCustomControls() {
+        onRadio("customOrient", orientation => {
+          // New orientation: lay fields and photo out again for that shape, keeping each field's
+          // side, display, label and font choices (and the photo's on/off, side and crop).
+          settings.custom.orientation = orientation;
+          Object.keys(settings.custom.fields).forEach((key, index) => {
+            const old = settings.custom.fields[key];
+            const fresh = defaultCustomField(index, orientation);
+            settings.custom.fields[key] = { ...old, x: fresh.x, y: fresh.y, width: fresh.width, align: fresh.align };
+          });
+          const old = settings.custom.photo;
+          settings.custom.photo = { ...defaultCustomPhoto(orientation), side: old.side, shape: old.shape, lastSide: old.lastSide };
+          applyCustomOrientation();
+          saveSettings();
+          refreshAll();
+        });
+        onRadio("cpEnabled", value => {
+          const photo = settings.custom.photo;
+          if (value === "off") { if (photo.side !== "none") photo.lastSide = photo.side; photo.side = "none"; }
+          else photo.side = photo.lastSide || "front";
+          saveSettings();
+          refreshAll();
+        });
+        onRadio("cpShape", shape => { settings.custom.photo.shape = shape; saveSettings(); renderPreview(); });
+        onRadio("cpSide", side => {
+          const photo = settings.custom.photo;
+          photo.lastSide = side;
+          if (photo.side !== "none") photo.side = side;
+          saveSettings();
+          refreshAll();
+        });
+        Object.entries(CUSTOM_PHOTO_INPUTS).forEach(([id, key]) => {
+          $(id).addEventListener("input", () => {
+            const n = Number($(id).value);
+            if (!Number.isFinite(n) || $(id).value === "") return;
+            settings.custom.photo[key] = n;
+            saveSettings();
+            renderPreview();
+          });
+        });
+        syncCustomControls();
+      }
+
+      function readImageFile(file) {
+        return new Promise((resolve, reject) => {
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => { img.dataset.fileName = file.name; resolve(img); };
+          img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`No pudimos leer ${file.name} como imagen.`)); };
+          img.src = url;
+        });
+      }
+
+      /* PDF templates: rendered with PDF.js (loaded on first use) to an image covering the card at 300 dpi. */
+      const PDFJS_BASE = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+      let pdfJsLoading = null;
+      function loadPdfJs() {
+        if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+        if (!pdfJsLoading) {
+          pdfJsLoading = new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = `${PDFJS_BASE}pdf.min.js`;
+            script.crossOrigin = "anonymous";
+            script.referrerPolicy = "no-referrer";
+            script.onload = () => {
+              if (!window.pdfjsLib) { reject(new Error("El lector de PDF no cargó.")); return; }
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.min.js`;
+              resolve(window.pdfjsLib);
+            };
+            script.onerror = () => reject(new Error("No pudimos cargar el lector de PDF (necesita conexión a internet). Mejor guarda la plantilla como PNG o JPG."));
+            document.head.appendChild(script);
+          }).catch(error => { pdfJsLoading = null; throw error; });
+        }
+        return pdfJsLoading;
+      }
+      function isPdfFile(file) { return file.type === "application/pdf" || /\.pdf$/i.test(file.name); }
+      async function readPdfPages(file, type, maxPages) {
+        const pdfjs = await loadPdfJs();
+        let doc;
+        try {
+          doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+        } catch (_) {
+          throw new Error(`No pudimos leer ${file.name} como PDF.`);
+        }
+        const { w: W, h: H } = SIZES[type];
+        const pages = [];
+        try {
+          for (let n = 1; n <= Math.min(doc.numPages, maxPages); n += 1) {
+            const page = await doc.getPage(n);
+            const base = page.getViewport({ scale: 1 });
+            const viewport = page.getViewport({ scale: Math.max(W / base.width, H / base.height) });
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(viewport.width);
+            canvas.height = Math.round(viewport.height);
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+            const img = await readImageFile(new File([blob], `${file.name}${doc.numPages > 1 ? ` (página ${n})` : ""}`, { type: "image/png" }));
+            pages.push(img);
+          }
+        } finally {
+          doc.destroy();
+        }
+        return pages;
+      }
+
+      function downloadCanvas(canvas, fileName) {
+        canvas.toBlob(blob => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }, "image/png");
+      }
+
+      function downloadText(text, fileName, mime) {
+        const url = URL.createObjectURL(new Blob([text], { type: mime }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+
+      function bind() {
+        document.querySelectorAll('input[name="cardType"]').forEach(input => input.addEventListener("change", () => {
+          if (!input.checked) return;
+          settings.cardType = input.value;
+          selectedIndex = -1;
+          saveSettings();
+          syncControlsFromSettings();
+          refreshAll();
+        }));
+
+        $("csvInput").addEventListener("change", async event => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+          try {
+            loadCsvText(await file.text(), file.name, settings.cardType);
+          } catch (_) {
+            csvByType[settings.cardType] = { fileName: file.name, headers: [], rows: [], mapping: null, error: "No pudimos leer ese archivo." };
+          }
+          selectedIndex = -1;
+          event.target.value = "";
+          refreshAll();
+        });
+
+        $("photoInput").addEventListener("change", event => {
+          addPhotos(event.target.files);
+          event.target.value = "";
+          refreshAll();
+        });
+        $("clearCsvBtn").addEventListener("click", () => {
+          csvByType[settings.cardType] = null;
+          selectedIndex = -1;
+          refreshAll();
+        });
+        $("clearPhotosBtn").addEventListener("click", () => {
+          photos.forEach(p => URL.revokeObjectURL(p.url));
+          photos.clear();
+          refreshAll();
+        });
+
+        $("sampleCsvBtn").addEventListener("click", () => {
+          const csv = isCustom(settings.cardType) ? "Nombre,ID#,Cargo\nJuan Pérez,100001,Texto del cargo\nMaría Pérez,100002,Texto del cargo\n"
+            : isFieldType(settings.cardType) ? FIELD_TYPES[settings.cardType].sampleCsv : settings.cardType === "staff"
+            ? "Nombre,ID#\nJuan Pérez,100001\nMaría Pérez,100002\n"
+            : "Nombre,ID#,Fecha de nacimiento,Grado\nJuan Pérez,100001,2010-01-01,9\nMaría Pérez,100002,2010-01-01,10\n";
+          downloadText("\uFEFF" + csv, `${settings.cardType}-id-cards-sample.csv`, "text/csv");
+        });
+
+        ["front", "back"].forEach(side => {
+          $(`${side}TemplateInput`).addEventListener("change", async event => {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const type = settings.cardType;
+            const status = $(`${side}TemplateStatus`);
+            try {
+              if (isPdfFile(file)) {
+                status.classList.remove("bad");
+                status.textContent = `Leyendo ${file.name}…`;
+                const pages = await readPdfPages(file, type, side === "front" ? 2 : 1);
+                templates[side][type] = pages[0];
+                if (side === "front" && pages[1]) templates.back[type] = pages[1];
+              } else {
+                templates[side][type] = await readImageFile(file);
+              }
+            } catch (error) {
+              alert(error.message);
+            }
+            event.target.value = "";
+            refreshAll();
+          });
+        });
+        $("resetTemplatesBtn").addEventListener("click", () => {
+          templates.front[settings.cardType] = null;
+          templates.back[settings.cardType] = null;
+          refreshAll();
+        });
+        $("downloadFrontTemplateBtn").addEventListener("click", async () => {
+          const type = settings.cardType;
+          await fontsReady(type);
+          const c = document.createElement("canvas");
+          c.width = SIZES[type].w; c.height = SIZES[type].h;
+          drawBuiltInFront(c.getContext("2d"), type);
+          downloadCanvas(c, `${type}-id-front-template-${c.width}x${c.height}.png`);
+        });
+        $("downloadBackTemplateBtn").addEventListener("click", () => {
+          const type = settings.cardType;
+          const c = document.createElement("canvas");
+          c.width = SIZES[type].w; c.height = SIZES[type].h;
+          drawBuiltInBack(c.getContext("2d"), type);
+          downloadCanvas(c, `${type}-id-back-template-${c.width}x${c.height}.png`);
+        });
+
+        const textKeys = ["textColor", "labelColor", "roleLine", "yearText", "yearColor", "yearBold"];
+        textKeys.forEach(key => $(key).addEventListener("input", () => {
+          settings[key] = $(key).value;
+          saveSettings();
+          renderPreview();
+        }));
+        $("yearAlign").addEventListener("change", () => {
+          settings.year[settings.cardType].align = $("yearAlign").value;
+          saveSettings();
+          renderPreview();
+        });
+        [["yearX", "x"], ["yearY", "y"], ["yearSize", "size"]].forEach(([id, key]) => $(id).addEventListener("input", () => {
+          const n = Number($(id).value);
+          if (!Number.isFinite(n)) return;
+          settings.year[settings.cardType][key] = n;
+          saveSettings();
+          renderPreview();
+        }));
+        Object.keys(defaultNudge()).forEach(key => $(key).addEventListener("input", () => {
+          const n = Number($(key).value);
+          if (!Number.isFinite(n)) return;
+          settings.nudge[settings.cardType][key] = n;
+          saveSettings();
+          renderPreview();
+        }));
+        ["barX", "barY", "barW", "barH"].forEach(key => $(key).addEventListener("input", () => {
+          const n = Number($(key).value);
+          if (!Number.isFinite(n)) return;
+          settings.back[settings.cardType][key] = n;
+          saveSettings();
+          renderPreview();
+        }));
+        $("staffBackText").addEventListener("input", () => {
+          settings.staffBackText = $("staffBackText").value;
+          saveSettings();
+          renderPreview();
+        });
+        [["sbtX", "x"], ["sbtY", "y"], ["sbtSize", "size"]].forEach(([id, key]) => $(id).addEventListener("input", () => {
+          const n = Number($(id).value);
+          if (!Number.isFinite(n)) return;
+          settings.staffBackTextStyle[key] = n;
+          saveSettings();
+          renderPreview();
+        }));
+        [["sbtAlign", "align"], ["sbtColor", "color"], ["sbtWeight", "weight"]].forEach(([id, key]) => $(id).addEventListener("input", () => {
+          settings.staffBackTextStyle[key] = $(id).value;
+          saveSettings();
+          renderPreview();
+        }));
+        $("resetBackBtn").addEventListener("click", () => {
+          const type = settings.cardType;
+          settings.back[type] = defaultBack(type);
+          if (type === "staff") settings.staffBackTextStyle = defaultBackTextStyle();
+          saveSettings();
+          syncControlsFromSettings();
+          renderPreview();
+        });
+        $("resetLayoutBtn").addEventListener("click", () => {
+          const type = settings.cardType;
+          settings.nudge[type] = defaultNudge();
+          if (LAYOUTS[type].year) settings.year[type] = { ...LAYOUTS[type].year };
+          saveSettings();
+          syncControlsFromSettings();
+          renderPreview();
+        });
+
+        bindCropTools();
+        bindLayoutDrag();
+        bindLineStyleControls();
+        bindCustomControls();
+        $("problemsOnly").addEventListener("change", renderTable);
+        $("printBtn").addEventListener("click", printCards);
+        $("flipBack").addEventListener("change", () => {
+          settings.flipBack[settings.cardType] = $("flipBack").checked;
+          saveSettings();
+        });
+        $("recordsBody").addEventListener("click", event => {
+          const tr = event.target.closest("tr[data-index]");
+          if (!tr) return;
+          selectedIndex = Number(tr.dataset.index);
+          renderTable();
+          renderPreview();
+        });
+        const step = delta => {
+          const indexes = visibleRecordIndexes();
+          if (!indexes.length) return;
+          const pos = indexes.indexOf(selectedIndex);
+          const next = indexes[(pos + delta + indexes.length) % indexes.length];
+          selectedIndex = next === undefined ? indexes[0] : next;
+          renderTable();
+          renderPreview();
+        };
+        $("prevBtn").addEventListener("click", () => step(-1));
+        $("nextBtn").addEventListener("click", () => step(1));
+      }
+
+      /* ---------- Printing (through the OS printer driver) ----------
+         Each side is rendered at 300 dpi and placed on its own CR80-sized page with no
+         margins. The ZC300 driver (Windows or macOS) handles duplex and the network
+         connection to the printer's IP address. */
+      let printObjectUrls = [];
+      function canvasToUrl(canvas, mime, quality) {
+        return new Promise(resolve => canvas.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : canvas.toDataURL(mime, quality)), mime, quality));
+      }
+      function cardsToPrint() {
+        const which = $("printWhich").value;
+        if (which === "current") {
+          const rec = selectedIndex >= 0 ? records[selectedIndex] : null;
+          return rec ? [rec] : [];
+        }
+        return records.filter(r => which === "all" || recordLevel(r) !== "error");
+      }
+      async function printCards() {
+        const status = $("printStatus");
+        const list = cardsToPrint();
+        if (!list.length) {
+          status.textContent = records.length ? "Ninguna credencial coincide con esa selección." : "Primero carga un CSV.";
+          return;
+        }
+        // Open synchronously (inside the click) so pop-up blockers allow it.
+        const win = window.open("", "_blank");
+        if (!win) { status.textContent = "Permite las ventanas emergentes de este sitio para imprimir."; return; }
+        win.document.write('<!DOCTYPE html><html lang="es"><title>Preparando credenciales…</title><p style="font:16px system-ui,sans-serif;padding:1.5rem">Estamos preparando las credenciales para imprimir…</p>');
+        printObjectUrls.forEach(url => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
+        printObjectUrls = [];
+        const type = settings.cardType;
+        const sides = $("printSides").value;
+        // Every page is a landscape CR80 card (ISO 85.6 x 54 mm, what the ZC300 driver
+        // reports). Safari ignores CSS page sizes and uses the driver's landscape CR80
+        // paper, so portrait (staff) cards are rotated 90° onto that page instead of
+        // asking for a portrait page. The card itself comes out the same.
+        const portrait = isPortrait(type);
+        const pageW = "85.6mm";
+        const pageH = "54mm";
+        const canvas = document.createElement("canvas");
+        const rotated = document.createElement("canvas");
+        // Fronts: staff rotate 90° clockwise. Backs: same, plus 180° when "Flip back side"
+        // is on, so the back reads upright after the printer flips the card.
+        const flipBack = !!settings.flipBack[type];
+        const orient = (source, isBack) => {
+          const extra = isBack && flipBack ? Math.PI : 0;
+          const angle = (portrait ? Math.PI / 2 : 0) + extra;
+          if (!angle) return source;
+          rotated.width = portrait ? source.height : source.width;
+          rotated.height = portrait ? source.width : source.height;
+          const rctx = rotated.getContext("2d");
+          rctx.save();
+          rctx.translate(rotated.width / 2, rotated.height / 2);
+          rctx.rotate(angle);
+          rctx.drawImage(source, -source.width / 2, -source.height / 2);
+          rctx.restore();
+          return rotated;
+        };
+        await fontsReady(type);
+        const pages = [];
+        try {
+          for (let i = 0; i < list.length; i += 1) {
+            if (win.closed) return;
+            status.textContent = `Preparando la credencial ${i + 1} de ${list.length}…`;
+            const rec = list[i];
+            if (rec.photo) await loadPhotoImage(rec.photo);
+            if (sides !== "back") {
+              drawFront(rec, canvas, true);
+              pages.push(await canvasToUrl(orient(canvas, false), "image/jpeg", 0.95));
+            }
+            if (sides !== "front") {
+              drawBack(rec, canvas, true);
+              pages.push(await canvasToUrl(orient(canvas, true), "image/png"));
+            }
+          }
+        } catch (error) {
+          win.close();
+          status.textContent = "No pudimos preparar las credenciales.";
+          return;
+        }
+        printObjectUrls = pages;
+        const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Credenciales (${list.length})</title><style>
+          @page { size: ${pageW} ${pageH} landscape; margin: 0; }
+          html, body { margin: 0; padding: 0; background: #fff; }
+          .page { width: ${pageW}; height: calc(${pageH} - 0.3mm); overflow: hidden; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
+          .page:last-child { page-break-after: auto; break-after: auto; }
+          .page img { display: block; width: 100%; height: 100%; }
+          @media screen { body { background: #888; } .page { margin: 12px auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); } }
+        </style></head><body>${pages.map(src => `<div class="page"><img src="${src}" alt=""></div>`).join("")}<scr` + `ipt>
+          (function () {
+            var imgs = Array.prototype.slice.call(document.images);
+            var waits = imgs.map(function (img) {
+              if (img.complete) return Promise.resolve();
+              return new Promise(function (res) { img.onload = img.onerror = res; });
+            });
+            Promise.all(waits).then(function () { setTimeout(function () { window.focus(); window.print(); }, 250); });
+          })();
+        </scr` + `ipt></body></html>`;
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        const sideCount = sides === "both" ? 2 : 1;
+        status.textContent = `Enviamos ${list.length} ${list.length === 1 ? "credencial" : "credenciales"} (${list.length * sideCount} ${list.length * sideCount === 1 ? "página" : "páginas"}) al cuadro de impresión.`;
+      }
+
+      // Exposed for automated checks of the barcode encoder.
+      window.__idCardTest = { encodeCode128 };
+
+      syncControlsFromSettings();
+      bind();
+      refreshAll();
+    })();
+  </script>
+  <script defer src="tools-nav.js?v=20260928"></script>
+</body>
+</html>
