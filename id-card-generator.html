@@ -2,7 +2,8 @@
 <!--
   DEPENDENCIES
   Local files (same folder):
-    - fonts/AdventSans-Beta.otf  (optional - "Advent Sans" font choice for Template 1 lines; loaded only when chosen)
+    - fonts/AdventSans-Beta.otf  (optional - "Advent Sans" font choice for Template 1 / Custom fields; loaded only when chosen)
+    - fonts/BebasNeue-Regular.woff2  (optional - "Bebas Neue" font choice, SIL OFL license in fonts/BebasNeue-OFL.txt; loaded only when chosen)
     - tools-nav.css  (optional - shared top nav styling; page works without it)
     - tools-nav.js  (optional - shared top nav + tool list; page works without it)
   External (internet):
@@ -20,6 +21,13 @@
     @font-face {
       font-family: 'Advent Sans';
       src: url('fonts/AdventSans-Beta.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: block;
+    }
+    @font-face {
+      font-family: 'Bebas Neue';
+      src: url('fonts/BebasNeue-Regular.woff2') format('woff2');
       font-weight: 400;
       font-style: normal;
       font-display: block;
@@ -156,6 +164,9 @@
     .seg input:checked + span { background: var(--primary-dark); color: #fff; }
     .seg input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: -2px; }
     .seg input:disabled + span { opacity: 0.45; cursor: not-allowed; }
+    .snap-controls { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .snap-controls[hidden] { display: none; }
+    .snap-controls select { font: inherit; font-size: 0.8rem; padding: 0.2rem 0.35rem; border: 1px solid var(--border); border-radius: 8px; }
     .drag-toggle { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 700; color: var(--primary-dark); cursor: pointer; }
     .drag-toggle input { width: 1.05rem; height: 1.05rem; }
     #frontCanvas.dragging { cursor: grabbing; }
@@ -242,6 +253,13 @@
                 <label><input type="radio" name="cpSide" value="back" /><span>Back</span></label>
               </div>
             </div>
+            <div class="opt-row"><span class="opt-label">Barcode</span>
+              <div class="seg" role="radiogroup" aria-label="ID barcode on the back">
+                <label><input type="radio" name="customBarcode" value="off" /><span>Off</span></label>
+                <label><input type="radio" name="customBarcode" value="on" /><span>On (ID# barcode)</span></label>
+              </div>
+            </div>
+            <p class="hint" id="customBarcodeNote" style="margin:0;"></p>
           </div>
         </section>
 
@@ -286,23 +304,61 @@
 
         <section class="step">
           <h2><span class="step-num">4</span> Card text</h2>
+          <div class="grid-2">
+            <div class="field">
+              <label for="defaultFont">Default font</label>
+              <select id="defaultFont" title="Used by every line whose font is left on Default"></select>
+            </div>
+            <div class="field">
+              <label for="sizeUnit">Font sizes in</label>
+              <select id="sizeUnit"><option value="pt">Points (pt)</option><option value="px">Pixels (px at 300 dpi)</option></select>
+            </div>
+          </div>
           <div class="field" id="roleField">
             <label for="roleLine">Line under staff name (optional)</label>
             <input id="roleLine" type="text" placeholder="e.g. STAFF or FACULTY" />
+          </div>
+          <div class="field" id="photoSizeField">
+            <label for="photoScale">Photo size %</label>
+            <input id="photoScale" type="number" min="30" max="300" step="1" />
+            <p class="hint" style="margin:0.25rem 0 0;">100% fits the template's photo frame. You can also turn on <strong>Drag to move</strong> and drag the square handle on the photo's corner.</p>
+          </div>
+          <div id="textSizeFields">
+            <div class="grid-2">
+              <div class="field"><label for="tfName">Name font</label><select id="tfName" class="font-select"></select></div>
+              <div class="field"><label for="tsName">Name size <span class="size-unit">(pt)</span></label><input id="tsName" type="number" min="2" step="0.25" /></div>
+            </div>
+            <div class="grid-2" data-for="staff">
+              <div class="field"><label for="tfRole">Role line font</label><select id="tfRole" class="font-select"></select></div>
+              <div class="field"><label for="tsRole">Role line size <span class="size-unit">(pt)</span></label><input id="tsRole" type="number" min="2" step="0.25" /></div>
+            </div>
+            <div class="grid-2" data-for="staff">
+              <div class="field"><label for="tfId">ID# font</label><select id="tfId" class="font-select"></select></div>
+              <div class="field"><label for="tsId">ID# size <span class="size-unit">(pt)</span></label><input id="tsId" type="number" min="2" step="0.25" /></div>
+            </div>
+            <div class="grid-2" data-for="student">
+              <div class="field"><label for="tfInfo">ID# / DOB / Grade font</label><select id="tfInfo" class="font-select"></select></div>
+              <div class="field"><label for="tsInfo">ID# / DOB / Grade size <span class="size-unit">(pt)</span></label><input id="tsInfo" type="number" min="2" step="0.25" /></div>
+            </div>
           </div>
           <div class="grid-2">
             <div class="field"><label for="textColor">Text color</label><input id="textColor" type="color" /></div>
             <div class="field"><label for="labelColor">Label color</label><input id="labelColor" type="color" /></div>
           </div>
           <div class="field" id="yearTextField">
-            <label for="yearText">School year</label>
+            <label for="yearText">Year</label>
             <input id="yearText" type="text" placeholder="e.g. 2026–2027" />
+          </div>
+          <div class="field" id="customNoteField">
+            <label for="customNote">Note (same on every card, optional)</label>
+            <textarea id="customNote" placeholder="e.g. If found, please return to the main office."></textarea>
+            <p class="hint" style="margin:0.25rem 0 0;">Shows as the <strong>Note</strong> field (on the back to start). Place and style it in Fields like any column.</p>
           </div>
           <div id="yearPlacement">
           <div class="grid-3">
             <div class="field"><label for="yearX">Year X %</label><input id="yearX" type="number" min="0" max="100" step="0.5" /></div>
             <div class="field"><label for="yearY">Year Y %</label><input id="yearY" type="number" min="0" max="100" step="0.5" /></div>
-            <div class="field"><label for="yearSize">Year size</label><input id="yearSize" type="number" min="10" max="160" step="1" title="Pixels at 300 dpi" /></div>
+            <div class="field"><label for="yearSize">Year size <span class="size-unit">(pt)</span></label><input id="yearSize" type="number" min="2" step="0.25" /></div>
           </div>
           <div class="grid-3">
             <div class="field"><label for="yearAlign">Align</label>
@@ -313,8 +369,24 @@
               <select id="yearBold"><option value="700">Bold</option><option value="400">Regular</option></select>
             </div>
           </div>
+          <div class="field"><label for="yearFont">Year font</label><select id="yearFont" class="font-select"></select></div>
           <p class="hint">X/Y are percentages of the card (0 = left/top). Leave the year blank to hide it.</p>
           </div>
+          <details class="advanced" id="customBarcodeDetails" open>
+            <summary>Custom card: barcode position &amp; size</summary>
+            <div class="grid-3">
+              <div class="field"><label for="cbSide">Barcode on</label>
+                <select id="cbSide"><option value="back">Back</option><option value="front">Front</option></select>
+              </div>
+              <div class="field"><label for="cbX">Center X %</label><input id="cbX" type="number" min="0" max="100" step="0.25" /></div>
+              <div class="field"><label for="cbY">Top Y %</label><input id="cbY" type="number" min="0" max="100" step="0.25" /></div>
+            </div>
+            <div class="grid-2">
+              <div class="field"><label for="cbW">Width %</label><input id="cbW" type="number" min="10" max="100" step="0.5" /></div>
+              <div class="field"><label for="cbH">Bar height %</label><input id="cbH" type="number" min="3" max="80" step="0.5" /></div>
+            </div>
+            <p class="hint">The barcode and its ID number are always black so scanners can read them, and they're separate from the ID column's text field (which keeps its own place and style). Drag it with Drag to move.</p>
+          </details>
           <details class="advanced" id="customDetails" open>
             <summary>Custom card: photo position &amp; size</summary>
             <div class="grid-2">
@@ -323,7 +395,7 @@
               <div class="field"><label for="cpW">Photo width %</label><input id="cpW" type="number" min="5" max="100" step="0.25" /></div>
               <div class="field"><label for="cpH">Photo height % (square crop)</label><input id="cpH" type="number" min="5" max="100" step="0.25" /></div>
             </div>
-            <p class="hint" id="cpHint">X/Y are the photo's top-left corner in % of the card. A round crop's size comes from its width. Card orientation, photo on/off, crop shape and side are in step 1.</p>
+            <p class="hint" id="cpHint">X/Y are the photo's top-left corner in % of the card. A round crop's size comes from its width. With Drag to move on, drag the square handle on the photo's corner to resize it. Card orientation, photo on/off, crop shape and side are in step 1.</p>
           </details>
           <details class="advanced" id="lineStyleDetails" open>
             <summary id="lineStyleSummary">Text lines: font, size &amp; position</summary>
@@ -335,11 +407,19 @@
               <div class="field"><label for="lsDisplay">Display as</label>
                 <select id="lsDisplay"><option value="text">Text</option><option value="barcode">Barcode (Code 128)</option></select>
               </div>
-              <label class="check-inline" title="Print the column name before the value, e.g. &quot;Title: Teacher&quot;"><input type="checkbox" id="lsLabel" /> Show column name</label>
+              <label class="check-inline" title="Print the column name before the value, e.g. &quot;DoB: 01/02/2010&quot;"><input type="checkbox" id="lsLabel" /> <span>Show &ldquo;<span id="lsLabelExample">Column</span>:&rdquo; before the value</span></label>
+            </div>
+            <div class="grid-2" id="lsLabelColorRow">
+              <div class="field"><label for="lsLabelColor">Column name color</label><input id="lsLabelColor" type="color" /></div>
+              <label class="check-inline" title="On: the &quot;Column:&quot; part uses the same color as the value."><input type="checkbox" id="lsLabelColorSame" /> Same as text color</label>
+            </div>
+            <div class="btn-row" id="lsLabelAll" style="margin-top:0.2rem;">
+              <button class="btn" type="button" id="labelsOnBtn">Show column names on all fields</button>
+              <button class="btn" type="button" id="labelsOffBtn">Hide column names on all fields</button>
             </div>
             <div class="grid-3">
-              <div class="field"><label for="lsFont">Font</label><select id="lsFont"></select></div>
-              <div class="field"><label for="lsSize">Size (pt)</label><input id="lsSize" type="number" min="3" max="30" step="0.25" /></div>
+              <div class="field"><label for="lsFont">Font</label><select id="lsFont" class="font-select"></select></div>
+              <div class="field"><label for="lsSize">Size <span class="size-unit">(pt)</span></label><input id="lsSize" type="number" min="2" step="0.25" /></div>
               <div class="field"><label for="lsWeight">Weight</label>
                 <select id="lsWeight"><option value="400">Regular</option><option value="500">Medium</option><option value="700">Bold</option></select>
               </div>
@@ -380,7 +460,7 @@
               <div class="grid-3">
                 <div class="field"><label for="sbtX">Text X %</label><input id="sbtX" type="number" min="0" max="100" step="0.5" /></div>
                 <div class="field"><label for="sbtY">Text Y %</label><input id="sbtY" type="number" min="0" max="100" step="0.5" /></div>
-                <div class="field"><label for="sbtSize">Text size</label><input id="sbtSize" type="number" min="10" max="120" step="1" title="Pixels at 300 dpi" /></div>
+                <div class="field"><label for="sbtSize">Text size <span class="size-unit">(pt)</span></label><input id="sbtSize" type="number" min="2" step="0.25" /></div>
               </div>
               <div class="grid-3">
                 <div class="field"><label for="sbtAlign">Align</label>
@@ -391,6 +471,7 @@
                   <select id="sbtWeight"><option value="400">Regular</option><option value="500">Medium</option><option value="700">Bold</option></select>
                 </div>
               </div>
+              <div class="field"><label for="sbtFont">Back text font</label><select id="sbtFont" class="font-select"></select></div>
             </div>
             <div class="btn-row"><button class="btn" type="button" id="resetBackBtn">Reset back placement</button></div>
           </details>
@@ -400,12 +481,11 @@
             <div class="grid-3">
               <div class="field"><label for="photoDx">Photo X</label><input id="photoDx" type="number" step="0.25" /></div>
               <div class="field"><label for="photoDy">Photo Y</label><input id="photoDy" type="number" step="0.25" /></div>
-              <div class="field"><label for="photoScale">Photo size %</label><input id="photoScale" type="number" min="50" max="150" step="1" /></div>
             </div>
             <div class="grid-3">
               <div class="field"><label for="textDx">Text X</label><input id="textDx" type="number" step="0.25" /></div>
               <div class="field"><label for="textDy">Text Y</label><input id="textDy" type="number" step="0.25" /></div>
-              <div class="field"><label for="textScale">Text size %</label><input id="textScale" type="number" min="50" max="200" step="1" /></div>
+              <div class="field" hidden><label for="textScale">Text size %</label><input id="textScale" type="number" min="50" max="200" step="1" /></div>
             </div>
             <div class="field"><label for="photoFocus">Default photo crop (vertical focus %)</label><input id="photoFocus" type="number" min="0" max="100" step="5" title="0 = keep top of photo, 50 = center, 100 = bottom" /></div>
             <div class="btn-row"><button class="btn" type="button" id="resetLayoutBtn">Reset placement</button></div>
@@ -426,13 +506,25 @@
           <div class="preview-head">
             <h2 id="previewHeading">Preview</h2>
             <label class="drag-toggle" title="On: drag the photo, text, year or barcode on the preview to move it (the placement numbers update). Off: placement stays where it is; edit the numbers in the settings."><input type="checkbox" id="layoutDragToggle" /> Drag to move</label>
+            <span class="snap-controls" id="snapControls" hidden>
+              <label class="drag-toggle" title="Snap dragged items to a grid (positions land on grid lines)."><input type="checkbox" id="snapToggle" /> Snap to grid</label>
+              <select id="snapStep" aria-label="Grid size">
+                <option value="0.03125">1/32 in</option>
+                <option value="0.0625">1/16 in</option>
+                <option value="0.125">1/8 in</option>
+                <option value="0.25">1/4 in</option>
+                <option value="0.5">1/2 in</option>
+                <option value="0.0393700787">1 mm</option>
+                <option value="0.0787401575">2 mm</option>
+              </select>
+            </span>
             <div class="btn-row" style="margin:0;">
               <button class="btn" type="button" id="prevBtn">&larr; Previous</button>
               <span class="chip info" id="previewPosition">Sample card</span>
               <button class="btn" type="button" id="nextBtn">Next &rarr;</button>
             </div>
           </div>
-          <p class="hint" id="layoutDragHint" style="display:none;margin:0 0 0.5rem;text-align:center;">Drag mode: drag the photo frame, a text line, the year, or the barcode to move it. The X/Y numbers in the settings update as you drag. Turn it off to keep everything where it is.</p>
+          <p class="hint" id="layoutDragHint" style="display:none;margin:0 0 0.5rem;text-align:center;">Drag mode: drag the photo frame, a text line, the year, or the barcode to move it; drag the square handle on the photo’s corner to resize the photo. The X/Y numbers in the settings update as you drag. Snap to grid makes items land on the grid (darker lines every 1/4 in). Turn drag off to keep everything where it is.</p>
           <div class="preview-cards" id="previewCards">
             <figure class="card-face" id="frontFigure"><canvas id="frontCanvas" aria-label="Card front preview"></canvas><figcaption>Front</figcaption></figure>
             <figure class="card-face" id="backFigure"><canvas id="backCanvas" aria-label="Card back preview"></canvas><figcaption>Back</figcaption></figure>
@@ -548,7 +640,7 @@
       /* ---------- Numbered templates (placement only) ----------
          General-purpose layouts that hold no wording of their own: the name comes from the
          CSV name column, line 1, 2, 3... come from the CSV's other columns in column order
-         (whatever their headers), and "year" is the shared school year from step 4. ID#
+         (whatever their headers), and "year" is the shared Year from step 4. ID#
          columns are used only to match photos, never printed. To add Template 2: add an entry
          here, plus SIZES and LAYOUTS entries and a radio option.
          Positions are fractions of the card (x = anchor, y = text baseline); pt is the font size in
@@ -559,7 +651,9 @@
       /* Fonts offered for numbered-template lines (installed on Windows and macOS; others fall back). */
       const FONT_CHOICES = [
         { id: "sans", label: "Sans (system)", css: FONT },
-        { id: "advent", label: "Advent Sans", css: '"Advent Sans", ' + FONT, face: "Advent Sans" },
+        { id: "advent", label: "Advent Sans", css: '"Advent Sans", ' + FONT, face: "Advent Sans", bold: { 500: 0.02, 700: 0.045 } },
+        // Bebas Neue's only weight is already heavy, so Medium/Bold add less.
+        { id: "bebas", label: "Bebas Neue", css: '"Bebas Neue", ' + FONT, face: "Bebas Neue", bold: { 500: 0.008, 700: 0.018 } },
         { id: "serif", label: "Serif (Georgia)", css: SERIF },
         { id: "arial", label: "Arial", css: "Arial, Helvetica, sans-serif" },
         { id: "verdana", label: "Verdana", css: "Verdana, Geneva, sans-serif" },
@@ -570,6 +664,20 @@
         { id: "courier", label: "Courier New", css: '"Courier New", Courier, monospace' }
       ];
       const PT_TO_PX = DPI / 72;
+      /* A line's font id; "" means "use the Default font". */
+      function isFontId(id) { return id === "" || FONT_CHOICES.some(f => f.id === id); }
+      function fontChoice(id) {
+        return FONT_CHOICES.find(f => f.id === (id || settings.defaultFont)) || FONT_CHOICES[0];
+      }
+      /* Font size boxes show points or pixels at 300 dpi (settings.sizeUnit); this only changes
+         the numbers shown and typed, never the stored sizes (year/back text in px, fields in pt). */
+      function round2s(n) { return Math.round(n * 100) / 100; }
+      function pxToUnit(px) { return round2s(settings.sizeUnit === "px" ? px : px / PT_TO_PX); }
+      function unitToPx(n) { return settings.sizeUnit === "px" ? n : n * PT_TO_PX; }
+      function ptToUnit(pt) { return round2s(settings.sizeUnit === "px" ? pt * PT_TO_PX : pt); }
+      const TEXT_SIZE_INPUTS = [["tsName", "name"], ["tsRole", "role"], ["tsId", "id"], ["tsInfo", "info"]];
+      const TEXT_FONT_INPUTS = [["tfName", "name"], ["tfRole", "role"], ["tfId", "id"], ["tfInfo", "info"]];
+      function unitToPt(n) { return settings.sizeUnit === "px" ? n / PT_TO_PX : n; }
       const FIELD_TYPES = {
         template1: {
           label: "Template 1",
@@ -593,6 +701,10 @@
          saved, keyed by column name (settings.custom.fields); the data itself is never stored. */
       const CUSTOM_DEFAULT_HEADERS = ["Name", "ID#", "Title"];
       const CUSTOM_MAX_FIELDS = 60;
+      /* Custom barcode (its own item): side, center X / top Y, width and bar height in % of the card. */
+      function defaultCustomBarcode(orientation) {
+        return orientation === "portrait" ? { side: "back", x: 50, y: 40, w: 84, h: 10 } : { side: "back", x: 50, y: 36, w: 62, h: 18 };
+      }
       function defaultCustomPhoto(orientation) {
         return orientation === "portrait" ? { side: "front", shape: "rect", x: 25, y: 8, w: 50, h: 45 } : { side: "front", shape: "rect", x: 5, y: 20, w: 27, h: 60 };
       }
@@ -602,7 +714,7 @@
         const i = back ? index - 8 : index;
         return {
           x: portrait ? 50 : 37, y: portrait ? 60 + i * 5 : (back ? 15 : 28) + i * 9, width: portrait ? 90 : 58,
-          size: index === 0 ? 10 : 7.5, font: "sans", weight: index === 0 ? "700" : "400", italic: false,
+          size: index === 0 ? 10 : 7.5, font: "", weight: index === 0 ? "700" : "400", italic: false,
           align: portrait ? "center" : "left", wrap: false, side: back ? "back" : "front", display: "text", label: false
         };
       }
@@ -621,20 +733,31 @@
         nudge: { staff: defaultNudge(), student: defaultNudge(), template1: defaultNudge(), custom: defaultNudge() },
         back: { staff: defaultBack("staff"), student: defaultBack("student"), template1: defaultBack("student"), custom: defaultBack("student") },
         staffBackText: "",
+        customNote: "",
         // Rotate the back 180° relative to the front when printing (duplex flip direction).
         flipBack: { staff: true, student: false, template1: false, custom: false },
         staffBackTextStyle: defaultBackTextStyle(),
         // Numbered templates: font, size and position of each text line (placement only).
         lineStyle: { template1: defaultLineStyles("template1") },
-        custom: { orientation: "landscape", photo: defaultCustomPhoto("landscape"), fields: {} },
+        custom: { orientation: "landscape", photo: defaultCustomPhoto("landscape"), fields: {}, barcode: false, bc: defaultCustomBarcode("landscape") },
         // Per type: whether changing one field's font color changes them all.
-        colorSync: { template1: true, custom: true }
+        colorSync: { template1: true, custom: true },
+        // Drag-to-move snap grid (inches; 1/16 in by default).
+        snap: { on: false, step: 0.0625 },
+        // Units the font size boxes use: "pt" or "px" (pixels at 300 dpi).
+        sizeUnit: "pt",
+        // Font for every line left on "Default" ("" in a line's font).
+        defaultFont: "sans",
+        // Staff/Student per-line fonts ("" = Default font).
+        textFont: { staff: { name: "", role: "", id: "" }, student: { name: "", info: "" } },
+        // Staff/Student text sizes in px at 300 dpi (shown in pt or px).
+        textSize: { staff: defaultTextSizes("staff"), student: defaultTextSizes("student") }
       };
       /* Barcode placement on the back, in % of the card: center X, top Y, width, height. */
       function defaultBack(type) {
         return type === "student" ? { barX: 50, barY: 36, barW: 62, barH: 20 } : { barX: 50, barY: 42, barW: 86, barH: 12 };
       }
-      function defaultBackTextStyle() { return { x: 50, y: 14, size: 30, align: "center", color: "#000000", weight: "500" }; }
+      function defaultBackTextStyle() { return { x: 50, y: 14, size: 30, align: "center", color: "#000000", weight: "500", font: "" }; }
       /* Per-line style for numbered templates: x/y/width in % of the card, size in points. */
       function defaultLineStyle(field) {
         return {
@@ -648,11 +771,17 @@
         FIELD_TYPES[type].fields.forEach(f => { out[f.key] = defaultLineStyle(f); });
         return out;
       }
+      function defaultTextSizes(type) {
+        const r = n => Math.round(n * 100) / 100;
+        return type === "staff"
+          ? { name: r(LAYOUTS.staff.name.size * SIZES.staff.w), role: r(LAYOUTS.staff.role.size * SIZES.staff.w), id: r(LAYOUTS.staff.id.size * SIZES.staff.w) }
+          : { name: r(LAYOUTS.student.name.size * SIZES.student.w), info: r(LAYOUTS.student.lines.size * SIZES.student.w) };
+      }
       function defaultNudge() { return { photoDx: 0, photoDy: 0, photoScale: 100, textDx: 0, textDy: 0, textScale: 100, photoFocus: 35 }; }
 
       /* Only placement, colors and options are remembered; card wording (year, role line,
          back text) is entered each session and never stored. */
-      const UNSAVED_TEXT = ["roleLine", "yearText", "staffBackText"];
+      const UNSAVED_TEXT = ["roleLine", "yearText", "staffBackText", "customNote"];
 
       /* ---------- State ---------- */
       let settings = loadSettings();
@@ -677,7 +806,7 @@
         const base = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
         if (!saved || typeof saved !== "object") return base;
         Object.keys(base).forEach(key => {
-          if (["year", "nudge", "back", "staffBackTextStyle", "flipBack", "lineStyle", "custom", "colorSync"].includes(key) || UNSAVED_TEXT.includes(key)) return;
+          if (["year", "nudge", "back", "staffBackTextStyle", "flipBack", "lineStyle", "custom", "colorSync", "snap", "textSize", "textFont"].includes(key) || UNSAVED_TEXT.includes(key)) return;
           if (typeof saved[key] === typeof base[key]) base[key] = saved[key];
         });
         CARD_TYPES.forEach(type => {
@@ -701,7 +830,7 @@
             if (!v || typeof v !== "object") return;
             const st = base.lineStyle[type][key];
             Object.assign(st, pickNumbers(v, ["x", "y", "width", "size"]));
-            if (FONT_CHOICES.some(f => f.id === v.font)) st.font = v.font;
+            if (isFontId(v.font)) st.font = v.font;
             if (["400", "500", "700"].includes(v.weight)) st.weight = v.weight;
             if (["left", "center", "right"].includes(v.align)) st.align = v.align;
             if (typeof v.italic === "boolean") st.italic = v.italic;
@@ -712,6 +841,11 @@
         if (saved.custom && typeof saved.custom === "object") {
           const c = saved.custom;
           if (["landscape", "portrait"].includes(c.orientation)) base.custom.orientation = c.orientation;
+          if (typeof c.barcode === "boolean") base.custom.barcode = c.barcode;
+          if (c.bc && typeof c.bc === "object") {
+            Object.assign(base.custom.bc, pickNumbers(c.bc, ["x", "y", "w", "h"]));
+            if (["front", "back"].includes(c.bc.side)) base.custom.bc.side = c.bc.side;
+          }
           if (c.photo && typeof c.photo === "object") {
             Object.assign(base.custom.photo, pickNumbers(c.photo, ["x", "y", "w", "h"]));
             if (["front", "back", "none"].includes(c.photo.side)) base.custom.photo.side = c.photo.side;
@@ -724,20 +858,45 @@
               if (!v || typeof v !== "object" || !key || key.length > 80) return;
               const st = defaultCustomField(index, base.custom.orientation);
               Object.assign(st, pickNumbers(v, ["x", "y", "width", "size"]));
-              if (FONT_CHOICES.some(f => f.id === v.font)) st.font = v.font;
+              if (isFontId(v.font)) st.font = v.font;
               if (["400", "500", "700"].includes(v.weight)) st.weight = v.weight;
               if (["left", "center", "right"].includes(v.align)) st.align = v.align;
               if (["front", "back", "hidden"].includes(v.side)) st.side = v.side;
               if (["text", "barcode"].includes(v.display)) st.display = v.display;
               ["italic", "wrap", "label"].forEach(k => { if (typeof v[k] === "boolean") st[k] = v[k]; });
               if (/^#[0-9a-f]{6}$/i.test(v.color)) st.color = v.color;
+              if (/^#[0-9a-f]{6}$/i.test(v.labelColor)) st.labelColor = v.labelColor;
               base.custom.fields[key] = st;
             });
           }
         }
+        if (saved.snap && typeof saved.snap === "object") {
+          if (typeof saved.snap.on === "boolean") base.snap.on = saved.snap.on;
+          const step = Number(saved.snap.step);
+          if (Number.isFinite(step) && step > 0.01 && step <= 1) base.snap.step = step;
+        }
         if (saved.colorSync && typeof saved.colorSync === "object") {
           Object.keys(base.colorSync).forEach(type => { if (typeof saved.colorSync[type] === "boolean") base.colorSync[type] = saved.colorSync[type]; });
         }
+        if (!["pt", "px"].includes(base.sizeUnit)) base.sizeUnit = "pt";
+        if (!FONT_CHOICES.some(f => f.id === base.defaultFont)) base.defaultFont = "sans";
+        ["staff", "student"].forEach(type => {
+          const sf = saved.textFont && saved.textFont[type];
+          if (sf) Object.keys(base.textFont[type]).forEach(k => { if (isFontId(sf[k])) base.textFont[type][k] = sf[k]; });
+          if (saved.year && saved.year[type] && isFontId(saved.year[type].font)) base.year[type].font = saved.year[type].font;
+        });
+        if (saved.staffBackTextStyle && isFontId(saved.staffBackTextStyle.font)) base.staffBackTextStyle.font = saved.staffBackTextStyle.font;
+        ["staff", "student"].forEach(type => {
+          if (saved.textSize && saved.textSize[type]) Object.assign(base.textSize[type], pickNumbers(saved.textSize[type], Object.keys(base.textSize[type])));
+        });
+        /* Older layouts used one "Text size %" per type; fold it into the real sizes once. */
+        CARD_TYPES.forEach(type => {
+          const scale = base.nudge[type].textScale / 100;
+          if (!(scale > 0) || scale === 1) return;
+          if (base.textSize[type] && !(saved.textSize && saved.textSize[type])) Object.keys(base.textSize[type]).forEach(k => { base.textSize[type][k] = Math.round(base.textSize[type][k] * scale * 100) / 100; });
+          if (base.lineStyle[type]) Object.values(base.lineStyle[type]).forEach(st => { st.size = Math.round(st.size * scale * 100) / 100; });
+          base.nudge[type].textScale = 100;
+        });
         if (!CARD_TYPES.includes(base.cardType)) base.cardType = "student";
         return base;
       }
@@ -923,6 +1082,12 @@
 
         records.forEach(r => {
           if (isCustom(type)) {
+            if (settings.custom.barcode) {
+              const idHeader = customIdHeader();
+              const v = idHeader ? customValue(r, idHeader) : "";
+              if (idHeader && !v) r.issues.push(issue("warn", "Missing ID# (no barcode)"));
+              else if (v && !canEncode(v)) r.issues.push(issue("error", "ID# has characters a barcode can't encode"));
+            }
             customHeaders().forEach(h => {
               const st = customStyle(h);
               if (st.side === "hidden") return;
@@ -1060,13 +1225,30 @@
       }
 
       /* ---------- Drawing helpers ---------- */
-      function font(weight, size, style) { return `${style || ""} ${weight} ${Math.round(size)}px ${FONT}`.trim(); }
-      function fitText(ctx, text, weight, size, maxWidth, minScale) {
+      /* fontId: a card line's font ("" = Default font); omit it for the tool's own labels and guides. */
+      function font(weight, size, style, fontId) {
+        const css = fontId === undefined ? FONT : fontChoice(fontId).css;
+        return `${style || ""} ${weight} ${Math.round(size)}px ${css}`.trim();
+      }
+      function fitText(ctx, text, weight, size, maxWidth, minScale, fontId) {
         let s = size;
         const floor = size * (minScale || 0.55);
-        ctx.font = font(weight, s);
-        while (s > floor && ctx.measureText(text).width > maxWidth) { s -= 1; ctx.font = font(weight, s); }
+        ctx.font = font(weight, s, "", fontId);
+        while (s > floor && ctx.measureText(text).width > maxWidth) { s -= 1; ctx.font = font(weight, s, "", fontId); }
         return s;
+      }
+      /* Fill a Staff/Student line; single-weight fonts get Medium/Bold by outlining (as for fields). */
+      function fillLine(ctx, text, x, y, weight, size, fontId) {
+        ctx.fillText(text, x, y);
+        const choice = fontChoice(fontId);
+        const extra = choice.bold ? choice.bold[weight] : 0;
+        if (!extra) return;
+        ctx.save();
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineJoin = "round";
+        ctx.lineWidth = size * extra;
+        ctx.strokeText(text, x, y);
+        ctx.restore();
       }
       /* Fill the frame with the photo (never stretched). focusX/focusY (0-100) pick which part
          of the photo shows when it overflows the frame; zoom (>= 100) enlarges it inside the frame. */
@@ -1198,7 +1380,7 @@
       function placeholderRecord(type) {
         return {
           sample: true, name: "Name", id: "", dob: "", grade: "",
-          lines: lineSlots(type).map(f => `Text on line ${f.index + 1}${f.wrap ? " (long text wraps onto a second line)" : ""}`), yearText: "School year", issues: []
+          lines: lineSlots(type).map(f => `Text on line ${f.index + 1}${f.wrap ? " (long text wraps onto a second line)" : ""}`), yearText: "Year", issues: []
         };
       }
 
@@ -1237,7 +1419,10 @@
           guideBox(ctx, r.x, r.y, r.w, r.h, "Photo", r.shape === "circle");
         }
         // Sample text: each column's name in its font, size and position.
-        if (sampleText) drawCustomSide(ctx, side, customPlaceholderRecord(), "#8a96a3");
+        if (sampleText) {
+          drawCustomSide(ctx, side, customPlaceholderRecord(), "#8a96a3");
+          drawCustomBarcode(ctx, side, {}, false, true);
+        }
       }
 
       function drawBuiltInBack(ctx, type, withGuides) {
@@ -1279,8 +1464,7 @@
         return (record.lines && record.lines[field.index]) || "";
       }
       function fieldFont(field, size) {
-        const choice = FONT_CHOICES.find(f => f.id === field.font) || FONT_CHOICES[0];
-        return `${field.italic ? "italic " : ""}${field.weight} ${Math.round(size)}px ${choice.css}`;
+        return `${field.italic ? "italic " : ""}${field.weight} ${Math.round(size)}px ${fontChoice(field.font).css}`;
       }
       /* A field's definition merged with its saved line style. */
       function styledField(type, field) {
@@ -1303,9 +1487,64 @@
         const headers = csv && csv.headers && csv.headers.length ? csv.headers.filter(Boolean) : CUSTOM_DEFAULT_HEADERS;
         return [...new Set(headers)].slice(0, CUSTOM_MAX_FIELDS);
       }
+      /* The Year and the Note (both typed once in step 4) are extra Custom fields, so they aren't needed in the CSV. */
+      const CUSTOM_YEAR_KEY = "__year";
+      const CUSTOM_NOTE_KEY = "__note";
+      function customKeys() { return [...customHeaders(), CUSTOM_YEAR_KEY, CUSTOM_NOTE_KEY]; }
+      function defaultCustomNote(orientation) {
+        return orientation === "portrait"
+          ? { ...defaultCustomField(0, orientation), x: 50, y: 78, width: 88, size: 7, weight: "400", align: "center", wrap: true, side: "back" }
+          : { ...defaultCustomField(0, orientation), x: 50, y: 78, width: 88, size: 7, weight: "400", align: "center", wrap: true, side: "back" };
+      }
+      /* The CSV's ID column: a recognised ID# header ("ID", "ID#", "Student ID", "Employee Number"...),
+         or else any header with "ID" as its own word. */
+      function customIdHeader() {
+        const csv = csvByType.custom;
+        const headers = customHeaders();
+        if (csv && csv.mapping && csv.mapping.id >= 0 && csv.headers[csv.mapping.id]) return csv.headers[csv.mapping.id];
+        return headers.find(h => /(^|[^a-z])id([^a-z]|$)/i.test(h)) || "";
+      }
+      /* The Custom barcode: Code 128 of the ID column with the number under it, always black. */
+      function customBarcodeLayout() {
+        const { w: W, h: H } = SIZES.custom;
+        const bc = settings.custom.bc;
+        const barH = Math.max(20, (bc.h / 100) * H);
+        const idSize = Math.max(18, Math.min(W, H) * 0.05);
+        const top = (bc.y / 100) * H;
+        return { cx: (bc.x / 100) * W, top, barW: Math.max(60, (bc.w / 100) * W), barH, idSize, idY: top + barH + idSize * 1.05 };
+      }
+      function drawCustomBarcode(ctx, side, record, forPrint, guideOnly) {
+        if (!settings.custom.barcode || settings.custom.bc.side !== side) return;
+        const B = customBarcodeLayout();
+        const header = customIdHeader();
+        const value = !guideOnly && header ? customValue(record, header) : "";
+        noteBox(ctx, "cbarcode", "barcode", B.cx - B.barW / 2, B.top, B.cx + B.barW / 2, B.idY + B.idSize * 0.35);
+        if (value && drawBarcode(ctx, value, B.cx, B.top, B.barW, B.barH)) {
+          ctx.fillStyle = "#000000";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "alphabetic";
+          ctx.font = font(600, B.idSize);
+          ctx.fillText(value, B.cx, B.idY);
+          return;
+        }
+        if (forPrint) return;
+        guideBox(ctx, B.cx - B.barW / 2, B.top, B.barW, B.idY - B.top + B.idSize * 0.35, guideOnly ? "Barcode + ID#" : (value ? "ID# can't be encoded" : "No ID# — no barcode"), false);
+      }
+      function customKeyLabel(key) { return key === CUSTOM_YEAR_KEY ? "Year" : key === CUSTOM_NOTE_KEY ? "Note (same on every card)" : key; }
+      function defaultCustomYear(orientation) {
+        return orientation === "portrait"
+          ? { ...defaultCustomField(0, orientation), x: 50, y: 94, size: 8, weight: "700", align: "center" }
+          : { ...defaultCustomField(0, orientation), x: 37, y: 90, size: 8, weight: "700", align: "left" };
+      }
       function customStyle(header) {
         const fields = settings.custom.fields;
-        if (!fields[header]) fields[header] = defaultCustomField(Object.keys(fields).length, settings.custom.orientation);
+        if (!fields[header]) {
+          // New columns get the default spot for their position in the current CSV.
+          const index = customHeaders().indexOf(header);
+          fields[header] = header === CUSTOM_YEAR_KEY ? defaultCustomYear(settings.custom.orientation)
+            : header === CUSTOM_NOTE_KEY ? defaultCustomNote(settings.custom.orientation)
+            : defaultCustomField(index >= 0 ? index : Object.keys(fields).length, settings.custom.orientation);
+        }
         return fields[header];
       }
       function customField(header) {
@@ -1313,13 +1552,37 @@
         return {
           key: header, x: st.x / 100, y: st.y / 100, maxW: st.width / 100, size: st.size * PT_TO_PX, font: st.font, weight: st.weight,
           italic: st.italic, align: st.align, wrap: st.wrap, lineHeight: 1.3, side: st.side, display: st.display, label: st.label,
-          color: st.color || settings.textColor
+          color: st.color || settings.textColor, labelColor: st.labelColor || "",
+          labelText: `${header === CUSTOM_YEAR_KEY ? "Year" : header === CUSTOM_NOTE_KEY ? "Note" : header}: `
         };
       }
-      function customValue(record, header) { return ((record.values || {})[header] || "").trim(); }
+      function customValue(record, header) {
+        if (header === CUSTOM_YEAR_KEY) return (record.yearText != null ? record.yearText : settings.yearText).trim();
+        if (header === CUSTOM_NOTE_KEY) return (record.noteText != null ? record.noteText : settings.customNote).trim();
+        return ((record.values || {})[header] || "").trim();
+      }
+      /* One line of a Custom field: "Column: " (in its own color when set) followed by the value. */
+      function fillLabeledLine(ctx, field, line, label, x, y, size, valueColor, labelColor) {
+        if (!label || !labelColor || labelColor === valueColor || !line.startsWith(label)) {
+          ctx.fillStyle = valueColor;
+          fillFieldText(ctx, field, line, x, y, size);
+          return;
+        }
+        const total = ctx.measureText(line).width;
+        const left = ctx.textAlign === "center" ? x - total / 2 : ctx.textAlign === "right" ? x - total : x;
+        const align = ctx.textAlign;
+        ctx.textAlign = "left";
+        ctx.fillStyle = labelColor;
+        fillFieldText(ctx, field, label, left, y, size, false);
+        ctx.fillStyle = valueColor;
+        fillFieldText(ctx, field, line.slice(label.length), left + ctx.measureText(label).width, y, size, false);
+        const m = ctx.measureText(line);
+        noteBox(ctx, "line", field.key, left - 6, y - m.actualBoundingBoxAscent - 6, left + total + 6, y + m.actualBoundingBoxDescent + 6);
+        ctx.textAlign = align;
+      }
       function drawCustomSide(ctx, side, record, color) {
         const { w: W, h: H } = SIZES.custom;
-        customHeaders().map(customField).filter(f => f.side === side).forEach(field => {
+        customKeys().map(customField).filter(f => f.side === side).forEach(field => {
           const value = customValue(record, field.key);
           if (!value) return;
           const x = field.x * W;
@@ -1330,54 +1593,57 @@
             // x = center, y = top of the bars; height follows the size setting; value printed below.
             const barH = field.size * 2.6;
             if (!drawBarcode(ctx, value, x, y, maxWidth, barH)) return;
-            ctx.fillStyle = color || field.color;
             ctx.textAlign = "center";
             const textSize = Math.max(14, field.size * 0.75);
-            ctx.font = fieldFont({ ...field, weight: "500", italic: false }, textSize);
-            const label = field.label ? `${field.key}: ${value}` : value;
-            ctx.fillText(label, x, y + barH + textSize * 1.1);
+            const plain = { ...field, weight: "500", italic: false };
+            ctx.font = fieldFont(plain, textSize);
+            const label = field.label ? field.labelText : "";
+            fillLabeledLine(ctx, plain, label + value, label, x, y + barH + textSize * 1.1, textSize, color || field.color, color || field.labelColor);
             noteBox(ctx, "line", field.key, x - maxWidth / 2, y, x + maxWidth / 2, y + barH + textSize * 1.4);
             return;
           }
-          const text = field.label ? `${field.key}: ${value}` : value;
-          ctx.fillStyle = color || field.color;
+          const label = field.label ? field.labelText : "";
+          const text = label + value;
+          const valueColor = color || field.color;
+          const labelColor = color || field.labelColor;
           ctx.textAlign = field.align;
           if (field.wrap) {
             ctx.font = fieldFont(field, field.size);
             wrapLines(ctx, text, maxWidth).forEach((line, idx) => {
               fitFieldLine(ctx, field, line, field.size, maxWidth);
-              fillFieldText(ctx, field, line, x, y + idx * field.size * field.lineHeight, field.size);
+              fillLabeledLine(ctx, field, line, idx === 0 ? label : "", x, y + idx * field.size * field.lineHeight, field.size, valueColor, labelColor);
             });
           } else {
             fitFieldLine(ctx, field, text, field.size, maxWidth);
-            fillFieldText(ctx, field, text, x, y, field.size);
+            fillLabeledLine(ctx, field, text, label, x, y, field.size, valueColor, labelColor);
           }
         });
       }
       function customPlaceholderRecord() {
-        return { sample: true, name: "", id: "", values: Object.fromEntries(customHeaders().map(h => [h, customStyle(h).display === "barcode" ? "123456" : h])), issues: [] };
+        return { sample: true, name: "", id: "", yearText: "Year", noteText: "Note text", values: Object.fromEntries(customHeaders().map(h => [h, customStyle(h).display === "barcode" ? "123456" : h])), issues: [] };
       }
 
-      /* Web fonts (e.g. Advent Sans) load on first use; redraw the preview once they're ready.
+      /* Web fonts (Advent Sans, Bebas Neue) load on first use; redraw the preview once they're ready.
          Printing waits for them in printCards. */
       const fontLoads = new Map();
       function fontsReady(type) {
-        if (!document.fonts || !(isFieldType(type) || isCustom(type))) return Promise.resolve();
-        const fontIds = isCustom(type) ? customHeaders().map(h => customStyle(h).font) : FIELD_TYPES[type].fields.map(f => styledField(type, f).font);
-        const faces = new Set(fontIds
-          .map(id => FONT_CHOICES.find(c => c.id === id))
-          .filter(c => c && c.face).map(c => c.face));
+        if (!document.fonts) return Promise.resolve();
+        let fontIds;
+        if (isCustom(type)) fontIds = customKeys().map(h => customStyle(h).font);
+        else if (isFieldType(type)) fontIds = FIELD_TYPES[type].fields.map(f => styledField(type, f).font);
+        else fontIds = [...Object.values(settings.textFont[type]), settings.year[type].font, type === "staff" ? settings.staffBackTextStyle.font : ""];
+        const faces = new Set(fontIds.map(fontChoice).filter(c => c.face).map(c => c.face));
         return Promise.all([...faces].map(face => {
           if (!fontLoads.has(face)) fontLoads.set(face, document.fonts.load(`400 40px "${face}"`).catch(() => []));
           return fontLoads.get(face);
         }));
       }
-      /* Fonts with a single weight file (Advent Sans) get Medium/Bold by outlining the text. */
-      function fillFieldText(ctx, field, text, x, y, size) {
+      /* Fonts with a single weight file (Advent Sans, Bebas Neue) get Medium/Bold by outlining the text. */
+      function fillFieldText(ctx, field, text, x, y, size, note) {
         ctx.fillText(text, x, y);
-        noteText(ctx, "line", field.key, text, x, y);
-        const choice = FONT_CHOICES.find(f => f.id === field.font);
-        const extra = choice && choice.face ? { 500: 0.02, 700: 0.045 }[field.weight] : 0;
+        if (note !== false) noteText(ctx, "line", field.key, text, x, y);
+        const choice = fontChoice(field.font);
+        const extra = choice.bold ? choice.bold[field.weight] : 0;
         if (!extra) return;
         ctx.save();
         ctx.strokeStyle = ctx.fillStyle;
@@ -1423,8 +1689,8 @@
         ctx.fillStyle = settings.yearColor;
         ctx.textAlign = y.align;
         ctx.textBaseline = "alphabetic";
-        ctx.font = font(settings.yearBold, y.size);
-        ctx.fillText(text, (y.x / 100) * W, (y.y / 100) * H);
+        ctx.font = font(settings.yearBold, y.size, "", y.font || "");
+        fillLine(ctx, text, (y.x / 100) * W, (y.y / 100) * H, settings.yearBold, y.size, y.font || "");
         noteText(ctx, "year", "year", text, (y.x / 100) * W, (y.y / 100) * H);
       }
 
@@ -1492,6 +1758,7 @@
             noteBox(ctx, "photo", "photo", cr.x, cr.y, cr.x + cr.w, cr.y + cr.h);
           }
           drawCustomSide(ctx, "front", record);
+          drawCustomBarcode(ctx, "front", record, forPrint);
           return;
         }
         drawPhoto(ctx, type, record, forPrint);
@@ -1504,7 +1771,8 @@
 
         const L = LAYOUTS[type];
         const n = settings.nudge[type];
-        const scale = n.textScale / 100;
+        const ts = settings.textSize[type];
+        const tf = settings.textFont[type];
         const dx = (n.textDx / 100) * W;
         const dy = (n.textDy / 100) * H;
         const nameText = record.name || "";
@@ -1515,43 +1783,45 @@
         if (type === "staff") {
           const x = L.name.x * W + dx;
           if (nameText) {
-            fitText(ctx, nameText, 700, L.name.size * W * scale, L.name.maxW * W, 0.5);
-            ctx.fillText(nameText, x, L.name.y * H + dy);
+            const s1 = fitText(ctx, nameText, 700, ts.name, L.name.maxW * W, 0.5, tf.name);
+            fillLine(ctx, nameText, x, L.name.y * H + dy, 700, s1, tf.name);
             noteText(ctx, "text", "block", nameText, x, L.name.y * H + dy);
           }
           if (settings.roleLine.trim()) {
             ctx.fillStyle = settings.labelColor;
-            fitText(ctx, settings.roleLine.trim().toUpperCase(), 700, L.role.size * W * scale, L.name.maxW * W);
-            ctx.fillText(settings.roleLine.trim().toUpperCase(), x, L.role.y * H + dy);
+            const s2 = fitText(ctx, settings.roleLine.trim().toUpperCase(), 700, ts.role, L.name.maxW * W, 0.55, tf.role);
+            fillLine(ctx, settings.roleLine.trim().toUpperCase(), x, L.role.y * H + dy, 700, s2, tf.role);
             noteText(ctx, "text", "block", settings.roleLine.trim().toUpperCase(), x, L.role.y * H + dy);
           }
           if (record.id) {
             ctx.fillStyle = settings.textColor;
-            ctx.font = font(500, L.id.size * W * scale);
-            ctx.fillText(`ID# ${record.id}`, x, (settings.roleLine.trim() ? L.id.y : L.role.y) * H + dy);
+            ctx.font = font(500, ts.id, "", tf.id);
+            fillLine(ctx, `ID# ${record.id}`, x, (settings.roleLine.trim() ? L.id.y : L.role.y) * H + dy, "500", ts.id, tf.id);
             noteText(ctx, "text", "block", `ID# ${record.id}`, x, (settings.roleLine.trim() ? L.id.y : L.role.y) * H + dy);
           }
         } else {
           const x = L.name.x * W + dx;
           if (nameText) {
-            fitText(ctx, nameText, 700, L.name.size * W * scale, L.name.maxW * W, 0.5);
-            ctx.fillText(nameText, x, L.name.y * H + dy);
+            const s1 = fitText(ctx, nameText, 700, ts.name, L.name.maxW * W, 0.5, tf.name);
+            fillLine(ctx, nameText, x, L.name.y * H + dy, 700, s1, tf.name);
             noteText(ctx, "text", "block", nameText, x, L.name.y * H + dy);
           }
           const lines = [["ID#", record.id], ["DOB", formatDob(record.dob)], ["Grade", record.grade]].filter(([, v]) => v);
-          const size = L.lines.size * W * scale;
+          const size = ts.info;
+          // Line spacing grows with the text size.
+          const step = L.lines.step * (size / (L.lines.size * W));
           lines.forEach(([label, value], idx) => {
-            const y = (L.lines.y + idx * L.lines.step * scale) * H + dy;
+            const y = (L.lines.y + idx * step) * H + dy;
             ctx.textAlign = "left";
             ctx.fillStyle = settings.labelColor;
-            ctx.font = font(700, size);
+            ctx.font = font(700, size, "", tf.info);
             const labelText = `${label}:`;
-            ctx.fillText(labelText, x, y);
+            fillLine(ctx, labelText, x, y, 700, size, tf.info);
             noteText(ctx, "text", "block", labelText, x, y);
             const labelW = ctx.measureText(labelText).width + size * 0.4;
             ctx.fillStyle = settings.textColor;
-            fitText(ctx, value, 500, size, L.name.maxW * W - labelW, 0.6);
-            ctx.fillText(value, x + labelW, y);
+            const s3 = fitText(ctx, value, 500, size, L.name.maxW * W - labelW, 0.6, tf.info);
+            fillLine(ctx, value, x + labelW, y, "500", s3, tf.info);
             noteText(ctx, "text", "block", value, x + labelW, y);
           });
         }
@@ -1579,6 +1849,7 @@
             noteBox(ctx, "photo", "photo", cr.x, cr.y, cr.x + cr.w, cr.y + cr.h);
           }
           drawCustomSide(ctx, "back", record);
+          drawCustomBarcode(ctx, "back", record, forPrint);
           return;
         }
         if (isFieldType(type)) return; // back is the uploaded template only
@@ -1617,9 +1888,9 @@
         ctx.fillStyle = s.color;
         ctx.textAlign = s.align;
         ctx.textBaseline = "top";
-        ctx.font = font(s.weight, s.size);
+        ctx.font = font(s.weight, s.size, "", s.font || "");
         wrapLines(ctx, settings.staffBackText, Math.max(40, maxWidth)).forEach((line, idx) => {
-          ctx.fillText(line, x, (s.y / 100) * H + idx * s.size * 1.3);
+          fillLine(ctx, line, x, (s.y / 100) * H + idx * s.size * 1.3, s.weight, s.size, s.font || "");
           noteText(ctx, "backtext", "backtext", line, x, (s.y / 100) * H + idx * s.size * 1.3);
         });
       }
@@ -1746,6 +2017,9 @@
         $("backFigure").className = `card-face ${isPortrait(type) ? "portrait" : "landscape"}`;
         drawFront(record);
         drawBack(record);
+        drawSnapGrid(frontCanvas);
+        drawSnapGrid(backCanvas);
+        drawPhotoHandle();
         const pos = $("previewPosition");
         pos.textContent = record.sample ? "Sample card" : `Card ${selectedIndex + 1} of ${records.length}${record.name ? ` · ${record.name}` : ""}`;
         $("prevBtn").disabled = !records.length;
@@ -1838,27 +2112,113 @@
       let layoutDrag = false;
       function round2(n) { return Math.round(n * 100) / 100; }
       function clampPct(n) { return Math.max(0, Math.min(100, n)); }
-      function moveLayoutItem(hit, dx, dy) {
+      /* Where each draggable item keeps its position: an object, its X/Y keys (% of the card)
+         and whether the value is an absolute position (clamped to the card) or an offset. */
+      function layoutPosition(hit) {
         const type = settings.cardType;
         const n = settings.nudge[type];
-        if (isCustom(type) && hit.kind === "photo") { const ph = settings.custom.photo; ph.x = round2(clampPct(ph.x + dx)); ph.y = round2(clampPct(ph.y + dy)); return; }
-        if (isCustom(type) && hit.kind === "line") { const st = customStyle(hit.key); st.x = round2(clampPct(st.x + dx)); st.y = round2(clampPct(st.y + dy)); return; }
-        if (hit.kind === "photo") { n.photoDx = round2(n.photoDx + dx); n.photoDy = round2(n.photoDy + dy); }
-        else if (hit.kind === "text") { n.textDx = round2(n.textDx + dx); n.textDy = round2(n.textDy + dy); }
-        else if (hit.kind === "year") { const y = settings.year[type]; y.x = round2(clampPct(y.x + dx)); y.y = round2(clampPct(y.y + dy)); }
-        else if (hit.kind === "line") { const st = settings.lineStyle[type][hit.key]; st.x = round2(clampPct(st.x + dx)); st.y = round2(clampPct(st.y + dy)); }
-        else if (hit.kind === "barcode") { const b = settings.back[type]; b.barX = round2(clampPct(b.barX + dx)); b.barY = round2(clampPct(b.barY + dy)); }
-        else if (hit.kind === "backtext") { const t = settings.staffBackTextStyle; t.x = round2(clampPct(t.x + dx)); t.y = round2(clampPct(t.y + dy)); }
+        if (isCustom(type) && hit.kind === "cbarcode") return { obj: settings.custom.bc, kx: "x", ky: "y", abs: true };
+        if (isCustom(type) && hit.kind === "photo") return { obj: settings.custom.photo, kx: "x", ky: "y", abs: true };
+        if (isCustom(type) && hit.kind === "line") return { obj: customStyle(hit.key), kx: "x", ky: "y", abs: true };
+        if (hit.kind === "photo") return { obj: n, kx: "photoDx", ky: "photoDy", abs: false };
+        if (hit.kind === "text") return { obj: n, kx: "textDx", ky: "textDy", abs: false };
+        if (hit.kind === "year") return { obj: settings.year[type], kx: "x", ky: "y", abs: true };
+        if (hit.kind === "line") return { obj: settings.lineStyle[type][hit.key], kx: "x", ky: "y", abs: true };
+        if (hit.kind === "barcode") return { obj: settings.back[type], kx: "barX", ky: "barY", abs: true };
+        if (hit.kind === "backtext") return { obj: settings.staffBackTextStyle, kx: "x", ky: "y", abs: true };
+        return null;
+      }
+      /* Snap a position (% of one card dimension that is `sizePx` long) to the grid. */
+      function snapPct(pct, sizePx) {
+        if (!settings.snap.on) return pct;
+        const stepPx = settings.snap.step * DPI;
+        return (Math.round(((pct / 100) * sizePx) / stepPx) * stepPx / sizePx) * 100;
+      }
+      /* Move a dragged item to its start position plus the total drag (dx/dy in % of the card). */
+      function placeLayoutItem(pos, start, dx, dy) {
+        const { w: W, h: H } = SIZES[settings.cardType];
+        const fix = v => round2(pos.abs ? clampPct(v) : v);
+        pos.obj[pos.kx] = fix(snapPct(start.x + dx, W));
+        pos.obj[pos.ky] = fix(snapPct(start.y + dy, H));
+      }
+      /* Drag to move: a square handle on the photo's bottom-right corner resizes it. */
+      const PHOTO_HANDLE = 34; // canvas px
+      function photoSide(type) { return isCustom(type) ? settings.custom.photo.side : "front"; }
+      function drawPhotoHandle() {
+        const type = settings.cardType;
+        const side = photoSide(type);
+        if (!layoutDrag || side === "none") return;
+        const canvas = side === "front" ? frontCanvas : backCanvas;
+        const r = photoRect(type);
+        // Keep the handle on the card even when the photo runs to the edge.
+        const x = Math.min(r.x + r.w, canvas.width - PHOTO_HANDLE / 2);
+        const y = Math.min(r.y + r.h, canvas.height - PHOTO_HANDLE / 2);
+        const ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.fillStyle = "#0b3954";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 4;
+        ctx.fillRect(x - PHOTO_HANDLE / 2, y - PHOTO_HANDLE / 2, PHOTO_HANDLE, PHOTO_HANDLE);
+        ctx.strokeRect(x - PHOTO_HANDLE / 2, y - PHOTO_HANDLE / 2, PHOTO_HANDLE, PHOTO_HANDLE);
+        ctx.restore();
+        previewHits[side].push({ kind: "photo-resize", key: "photo", x1: x - PHOTO_HANDLE, y1: y - PHOTO_HANDLE, x2: x + PHOTO_HANDLE, y2: y + PHOTO_HANDLE });
+      }
+      /* Resize from the drag's total move (dx/dy in canvas px). Staff/Student/Template 1 photos
+         scale evenly around their center (Photo size %); Custom photos change width/height. */
+      function resizePhoto(start, dx, dy) {
+        const type = settings.cardType;
+        const { w: W, h: H } = SIZES[type];
+        if (isCustom(type)) {
+          const ph = settings.custom.photo;
+          const lim = v => round2(Math.max(3, Math.min(100, v)));
+          if (ph.shape === "circle") ph.w = lim(snapPct(start.w + (((dx + dy) / 2) / W) * 100, W));
+          else { ph.w = lim(snapPct(start.w + (dx / W) * 100, W)); ph.h = lim(snapPct(start.h + (dy / H) * 100, H)); }
+          return;
+        }
+        const grow = (dx + dy) / 2;
+        const scale = start.scale * Math.max(0.05, (start.w + 2 * grow) / start.w);
+        settings.nudge[type].photoScale = Math.round(Math.max(30, Math.min(300, scale)));
+      }
+
+      /* Light grid over the preview cards while dragging with Snap to grid on (never printed). */
+      function drawSnapGrid(canvas) {
+        if (!layoutDrag || !settings.snap.on) return;
+        const ctx = canvas.getContext("2d");
+        const stepPx = settings.snap.step * DPI;
+        const majorPx = 0.25 * DPI;
+        // Very fine grids would grey out the card at preview size; show only every few lines then.
+        const every = Math.max(1, Math.ceil(9 / stepPx));
+        ctx.save();
+        ctx.lineWidth = 1;
+        for (let axis = 0; axis < 2; axis += 1) {
+          const len = axis === 0 ? canvas.width : canvas.height;
+          for (let i = 1; i * stepPx < len; i += every) {
+            const v = Math.round(i * stepPx) + 0.5;
+            const major = Math.abs((i * stepPx) / majorPx - Math.round((i * stepPx) / majorPx)) < 0.001;
+            ctx.strokeStyle = major ? "rgba(13, 110, 140, 0.35)" : "rgba(13, 110, 140, 0.14)";
+            ctx.beginPath();
+            if (axis === 0) { ctx.moveTo(v, 0); ctx.lineTo(v, canvas.height); } else { ctx.moveTo(0, v); ctx.lineTo(canvas.width, v); }
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
       }
       function bindLayoutDrag() {
         const toggle = $("layoutDragToggle");
         toggle.addEventListener("change", () => {
           layoutDrag = toggle.checked;
+          $("snapControls").hidden = !layoutDrag;
           $("previewCards").classList.toggle("layout-drag", layoutDrag);
           $("layoutDragHint").style.display = layoutDrag ? "" : "none";
           [frontCanvas, backCanvas].forEach(c => { c.style.cursor = ""; });
           syncCropTools(previewRecord());
+          renderPreview();
         });
+        $("snapToggle").checked = settings.snap.on;
+        $("snapStep").value = String(settings.snap.step);
+        if ($("snapStep").selectedIndex < 0) $("snapStep").value = "0.0625";
+        $("snapToggle").addEventListener("change", () => { settings.snap.on = $("snapToggle").checked; saveSettings(); renderPreview(); });
+        $("snapStep").addEventListener("change", () => { settings.snap.step = Number($("snapStep").value); saveSettings(); renderPreview(); });
         let drag = null;
         const toCanvas = (canvas, event) => {
           const box = canvas.getBoundingClientRect();
@@ -1874,18 +2234,32 @@
             if (!hit) return;
             event.preventDefault();
             canvas.setPointerCapture(event.pointerId);
-            drag = { canvas, hit, last: pt };
+            if (hit.kind === "photo-resize") {
+              const type = settings.cardType;
+              const ph = settings.custom.photo;
+              drag = { canvas, resize: true, startPt: pt, start: isCustom(type) ? { w: ph.w, h: ph.h } : { scale: settings.nudge[type].photoScale, w: photoRect(type).w } };
+              return;
+            }
+            const pos = layoutPosition(hit);
+            if (!pos) return;
+            drag = { canvas, pos, startPt: pt, start: { x: pos.obj[pos.kx], y: pos.obj[pos.ky] } };
             if (hit.kind === "line") { $("lsField").value = hit.key; syncLineStyleControls(); }
           });
           canvas.addEventListener("pointermove", event => {
             if (!layoutDrag) return;
             const pt = toCanvas(canvas, event);
             if (!drag || drag.canvas !== canvas) {
-              canvas.style.cursor = hitAt(side, pt) ? "move" : "";
+              const over = hitAt(side, pt);
+              canvas.style.cursor = over ? (over.kind === "photo-resize" ? "nwse-resize" : "move") : "";
               return;
             }
-            moveLayoutItem(drag.hit, ((pt.x - drag.last.x) / canvas.width) * 100, ((pt.y - drag.last.y) / canvas.height) * 100);
-            drag.last = pt;
+            if (drag.resize) {
+              resizePhoto(drag.start, pt.x - drag.startPt.x, pt.y - drag.startPt.y);
+              syncControlsFromSettings();
+              renderPreview();
+              return;
+            }
+            placeLayoutItem(drag.pos, drag.start, ((pt.x - drag.startPt.x) / canvas.width) * 100, ((pt.y - drag.startPt.y) / canvas.height) * 100);
             syncControlsFromSettings();
             renderPreview();
           });
@@ -1916,13 +2290,18 @@
         const custom = isCustom(type);
         const photosOff = custom && settings.custom.photo.side === "none";
         $("yearPlacement").style.display = isFieldType(type) || custom ? "none" : "";
-        $("yearTextField").style.display = custom ? "none" : "";
+        $("yearTextField").style.display = "";
+        $("customNoteField").style.display = custom ? "" : "none";
         $("lineStyleDetails").style.display = isFieldType(type) || custom ? "" : "none";
         if (custom) syncLineStyleControls();
         $("lsCustomOnly").style.display = custom ? "" : "none";
+        $("lsLabelAll").style.display = custom ? "" : "none";
+        $("lsLabelColorRow").style.display = custom ? "" : "none";
+        if (custom) syncCustomControls(); // keeps the barcode note in step with the loaded CSV
         $("lineStyleSummary").textContent = custom ? "Fields: side, font, size & position" : "Text lines: font, size & position";
         $("lsFieldLabel").textContent = custom ? "Field (CSV column)" : "Line to adjust";
         $("nudgeDetails").style.display = custom ? "none" : "";
+        $("photoSizeField").style.display = custom ? "none" : "";
         $("photoField").style.display = photosOff ? "none" : "";
         $("customOptions").classList.toggle("show", custom);
         $("customDetails").style.display = custom && !photosOff ? "" : "none";
@@ -1934,7 +2313,7 @@
         $("csvHint").innerHTML = custom
           ? "Custom Template CSV: any columns you like. Each column becomes a field; in step 4 choose whether it shows on the front, the back, or not at all, as text or a barcode. If there is a Name or ID# column, it is also used to match photos."
           : isFieldType(type)
-          ? `${FIELD_TYPES[type].label} CSV: a <strong>Name</strong> column, then up to ${lineSlots(type).length} more columns (any headers) that print as lines 1&ndash;${lineSlots(type).length} in column order. An ID# column is optional and only used to match photos. The year comes from the School year field.`
+          ? `${FIELD_TYPES[type].label} CSV: a <strong>Name</strong> column, then up to ${lineSlots(type).length} more columns (any headers) that print as lines 1&ndash;${lineSlots(type).length} in column order. An ID# column is optional and only used to match photos. The year comes from the Year field.`
           : type === "staff"
           ? "Staff CSV columns: <strong>Name</strong> and <strong>ID#</strong>. First/Last Name columns also work."
           : "Student CSV columns: <strong>Name</strong>, <strong>ID#</strong>, <strong>DoB</strong>, <strong>Grade</strong>. First/Last Name columns also work.";
@@ -1962,9 +2341,20 @@
       function syncControlsFromSettings() {
         const type = settings.cardType;
         document.querySelectorAll('input[name="cardType"]').forEach(input => { input.checked = input.value === type; });
-        ["textColor", "labelColor", "roleLine", "yearText", "yearColor", "yearBold"].forEach(key => { $(key).value = settings[key]; });
+        ["textColor", "labelColor", "roleLine", "yearText", "yearColor", "yearBold", "customNote"].forEach(key => { $(key).value = settings[key]; });
         const y = settings.year[type];
-        $("yearX").value = y.x; $("yearY").value = y.y; $("yearSize").value = y.size; $("yearAlign").value = y.align;
+        $("sizeUnit").value = settings.sizeUnit;
+        $("defaultFont").value = settings.defaultFont;
+        if (settings.textFont[type]) TEXT_FONT_INPUTS.forEach(([id, key]) => { if (key in settings.textFont[type]) $(id).value = settings.textFont[type][key]; });
+        $("yearFont").value = settings.year[type].font || "";
+        $("sbtFont").value = settings.staffBackTextStyle.font || "";
+        const legacy = type === "staff" || type === "student";
+        $("textSizeFields").style.display = legacy ? "" : "none";
+        document.querySelectorAll("#textSizeFields [data-for]").forEach(el => { el.style.display = el.dataset.for === type ? "" : "none"; });
+        if (legacy) TEXT_SIZE_INPUTS.forEach(([id, key]) => { if (key in settings.textSize[type]) $(id).value = pxToUnit(settings.textSize[type][key]); });
+        document.querySelectorAll(".size-unit").forEach(el => { el.textContent = `(${settings.sizeUnit})`; });
+        ["yearSize", "sbtSize", "lsSize", "tsName", "tsRole", "tsId", "tsInfo"].forEach(id => { $(id).step = settings.sizeUnit === "px" ? "1" : "0.25"; });
+        $("yearX").value = y.x; $("yearY").value = y.y; $("yearSize").value = pxToUnit(y.size); $("yearAlign").value = y.align;
         const n = settings.nudge[type];
         Object.keys(defaultNudge()).forEach(key => { $(key).value = n[key]; });
         const b = settings.back[type];
@@ -1975,7 +2365,7 @@
         $("flipBack").checked = !!settings.flipBack[type];
         $("staffBackText").value = settings.staffBackText;
         const s = settings.staffBackTextStyle;
-        $("sbtX").value = s.x; $("sbtY").value = s.y; $("sbtSize").value = s.size;
+        $("sbtX").value = s.x; $("sbtY").value = s.y; $("sbtSize").value = pxToUnit(s.size);
         $("sbtAlign").value = s.align; $("sbtColor").value = s.color; $("sbtWeight").value = s.weight;
       }
 
@@ -1987,7 +2377,7 @@
         lsSide: "side", lsDisplay: "display", lsLabel: "label"
       };
       function styleKeys(type) {
-        if (isCustom(type)) return customHeaders().map(h => ({ key: h, label: h }));
+        if (isCustom(type)) return customKeys().map(h => ({ key: h, label: customKeyLabel(h) }));
         if (isFieldType(type)) return FIELD_TYPES[type].fields.map(f => ({ key: f.key, label: f.label }));
         return [];
       }
@@ -2006,9 +2396,13 @@
         const st = styleOf(type, current);
         Object.entries(LINE_STYLE_INPUTS).forEach(([id, key]) => {
           if (st[key] === undefined) return;
-          if (typeof st[key] === "boolean") $(id).checked = st[key]; else $(id).value = st[key];
+          if (typeof st[key] === "boolean") $(id).checked = st[key]; else $(id).value = key === "size" ? ptToUnit(st[key]) : st[key];
         });
         $("lsColor").value = st.color || settings.textColor;
+        $("lsLabelExample").textContent = current === CUSTOM_YEAR_KEY ? "Year" : current === CUSTOM_NOTE_KEY ? "Note" : current;
+        $("lsLabelColorSame").checked = !st.labelColor;
+        $("lsLabelColor").value = st.labelColor || st.color || settings.textColor;
+        $("lsLabelColor").disabled = !st.labelColor;
         $("lsColorSync").checked = settings.colorSync[type] !== false;
       }
       /* Font color: one field, or every field when "Same color for all fields" is on. */
@@ -2017,9 +2411,28 @@
         keys.forEach(key => { styleOf(type, key).color = color; });
       }
       function bindLineStyleControls() {
-        const fontSelect = $("lsFont");
-        FONT_CHOICES.forEach(f => fontSelect.appendChild(new Option(f.label, f.id)));
         $("lsField").addEventListener("change", syncLineStyleControls);
+        [["labelsOnBtn", true], ["labelsOffBtn", false]].forEach(([id, on]) => $(id).addEventListener("click", () => {
+          if (!isCustom(settings.cardType)) return;
+          customKeys().forEach(h => { customStyle(h).label = on; });
+          saveSettings();
+          syncLineStyleControls();
+          renderPreview();
+        }));
+        /* Column-name color: blank = same as the value's color. Follows "Same color for all fields". */
+        const setLabelColor = color => {
+          const type = settings.cardType;
+          const keys = settings.colorSync[type] !== false ? styleKeys(type).map(k => k.key) : [$("lsField").value];
+          keys.forEach(key => { styleOf(type, key).labelColor = color; });
+          saveSettings();
+          syncLineStyleControls();
+          renderPreview();
+        };
+        $("lsLabelColor").addEventListener("input", () => { if (isCustom(settings.cardType)) setLabelColor($("lsLabelColor").value); });
+        $("lsLabelColorSame").addEventListener("change", () => {
+          if (!isCustom(settings.cardType)) return;
+          setLabelColor($("lsLabelColorSame").checked ? "" : $("lsLabelColor").value);
+        });
         $("lsColor").addEventListener("input", () => {
           const type = settings.cardType;
           if (!styleKeys(type).length) return;
@@ -2043,7 +2456,7 @@
             const st = styleOf(type, $("lsField").value);
             const el = $(id);
             if (el.type === "checkbox") st[key] = el.checked;
-            else if (el.type === "number") { const n = Number(el.value); if (!Number.isFinite(n) || el.value === "") return; st[key] = n; }
+            else if (el.type === "number") { const n = Number(el.value); if (!Number.isFinite(n) || el.value === "") return; st[key] = key === "size" ? unitToPt(n) : n; }
             else st[key] = el.value;
             saveSettings();
             // Side and display change which checks apply, so re-validate; other edits only redraw.
@@ -2055,8 +2468,9 @@
           const key = $("lsField").value;
           const color = styleOf(type, key).color; // reset is placement/font; keep the color
           if (isCustom(type)) {
-            const index = Object.keys(settings.custom.fields).indexOf(key);
-            settings.custom.fields[key] = defaultCustomField(Math.max(0, index), settings.custom.orientation);
+            const index = customHeaders().indexOf(key);
+            settings.custom.fields[key] = key === CUSTOM_YEAR_KEY ? defaultCustomYear(settings.custom.orientation)
+              : key === CUSTOM_NOTE_KEY ? defaultCustomNote(settings.custom.orientation) : defaultCustomField(Math.max(0, index), settings.custom.orientation);
           } else {
             const field = FIELD_TYPES[type].fields.find(f => f.key === key);
             settings.lineStyle[type][field.key] = defaultLineStyle(field);
@@ -2071,7 +2485,7 @@
           if (isCustom(type)) {
             settings.custom.fields = {};
             settings.custom.photo = { ...defaultCustomPhoto(settings.custom.orientation), side: settings.custom.photo.side };
-            customHeaders().forEach(customStyle);
+            customKeys().forEach(customStyle);
           } else settings.lineStyle[type] = defaultLineStyles(type);
           saveSettings();
           syncLineStyleControls();
@@ -2089,8 +2503,16 @@
         checkRadio("cpEnabled", photo.side === "none" ? "off" : "on");
         checkRadio("cpShape", photo.shape);
         checkRadio("cpSide", photo.side === "none" ? (photo.lastSide || "front") : photo.side);
+        checkRadio("customBarcode", settings.custom.barcode ? "on" : "off");
+        const idHeader = customIdHeader();
+        $("customBarcodeNote").textContent = !settings.custom.barcode ? ""
+          : idHeader ? `Barcode of the "${idHeader}" column. Its own position and size are in step 4; the "${idHeader}" text field is separate.`
+          : "No ID column found. Add a column named ID, ID#, Student ID, Employee ID or similar.";
         Object.entries(CUSTOM_PHOTO_INPUTS).forEach(([id, key]) => { $(id).value = photo[key]; });
+        Object.entries(CUSTOM_BC_INPUTS).forEach(([id, key]) => { $(id).value = settings.custom.bc[key]; });
+        $("customBarcodeDetails").style.display = isCustom(settings.cardType) && settings.custom.barcode ? "" : "none";
       }
+      const CUSTOM_BC_INPUTS = { cbSide: "side", cbX: "x", cbY: "y", cbW: "w", cbH: "h" };
       function onRadio(name, handler) {
         document.querySelectorAll(`input[name="${name}"]`).forEach(input => input.addEventListener("change", () => { if (input.checked) handler(input.value); }));
       }
@@ -2099,13 +2521,15 @@
           // New orientation: lay fields and photo out again for that shape, keeping each field's
           // side, display, label and font choices (and the photo's on/off, side and crop).
           settings.custom.orientation = orientation;
-          Object.keys(settings.custom.fields).forEach((key, index) => {
+          Object.keys(settings.custom.fields).forEach(key => {
             const old = settings.custom.fields[key];
-            const fresh = defaultCustomField(index, orientation);
+            const index = Math.max(0, customHeaders().indexOf(key));
+            const fresh = key === CUSTOM_YEAR_KEY ? defaultCustomYear(orientation) : key === CUSTOM_NOTE_KEY ? defaultCustomNote(orientation) : defaultCustomField(index, orientation);
             settings.custom.fields[key] = { ...old, x: fresh.x, y: fresh.y, width: fresh.width, align: fresh.align };
           });
           const old = settings.custom.photo;
           settings.custom.photo = { ...defaultCustomPhoto(orientation), side: old.side, shape: old.shape, lastSide: old.lastSide };
+          settings.custom.bc = { ...defaultCustomBarcode(orientation), side: settings.custom.bc.side };
           applyCustomOrientation();
           saveSettings();
           refreshAll();
@@ -2118,6 +2542,21 @@
           refreshAll();
         });
         onRadio("cpShape", shape => { settings.custom.photo.shape = shape; saveSettings(); renderPreview(); });
+        onRadio("customBarcode", value => {
+          settings.custom.barcode = value === "on";
+          saveSettings();
+          syncLineStyleControls();
+          refreshAll();
+        });
+        Object.entries(CUSTOM_BC_INPUTS).forEach(([id, key]) => {
+          const el = $(id);
+          el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+            if (el.tagName === "SELECT") settings.custom.bc[key] = el.value;
+            else { const n = Number(el.value); if (!Number.isFinite(n) || el.value === "") return; settings.custom.bc[key] = n; }
+            saveSettings();
+            renderPreview();
+          });
+        });
         onRadio("cpSide", side => {
           const photo = settings.custom.photo;
           photo.lastSide = side;
@@ -2318,7 +2757,7 @@
           downloadCanvas(c, `${type}-id-back-template-${c.width}x${c.height}.png`);
         });
 
-        const textKeys = ["textColor", "labelColor", "roleLine", "yearText", "yearColor", "yearBold"];
+        const textKeys = ["textColor", "labelColor", "roleLine", "yearText", "yearColor", "yearBold", "customNote"];
         textKeys.forEach(key => $(key).addEventListener("input", () => {
           settings[key] = $(key).value;
           saveSettings();
@@ -2332,7 +2771,7 @@
         [["yearX", "x"], ["yearY", "y"], ["yearSize", "size"]].forEach(([id, key]) => $(id).addEventListener("input", () => {
           const n = Number($(id).value);
           if (!Number.isFinite(n)) return;
-          settings.year[settings.cardType][key] = n;
+          settings.year[settings.cardType][key] = key === "size" ? unitToPx(n) : n;
           saveSettings();
           renderPreview();
         }));
@@ -2358,7 +2797,7 @@
         [["sbtX", "x"], ["sbtY", "y"], ["sbtSize", "size"]].forEach(([id, key]) => $(id).addEventListener("input", () => {
           const n = Number($(id).value);
           if (!Number.isFinite(n)) return;
-          settings.staffBackTextStyle[key] = n;
+          settings.staffBackTextStyle[key] = key === "size" ? unitToPx(n) : n;
           saveSettings();
           renderPreview();
         }));
@@ -2378,12 +2817,36 @@
         $("resetLayoutBtn").addEventListener("click", () => {
           const type = settings.cardType;
           settings.nudge[type] = defaultNudge();
-          if (LAYOUTS[type].year) settings.year[type] = { ...LAYOUTS[type].year };
+          if (settings.textSize[type]) settings.textSize[type] = defaultTextSizes(type);
+          if (LAYOUTS[type].year) settings.year[type] = { ...LAYOUTS[type].year, font: settings.year[type].font || "" };
           saveSettings();
           syncControlsFromSettings();
           renderPreview();
         });
 
+        TEXT_SIZE_INPUTS.forEach(([id, key]) => $(id).addEventListener("input", () => {
+          const type = settings.cardType;
+          const n = Number($(id).value);
+          if (!settings.textSize[type] || !Number.isFinite(n) || n <= 0 || $(id).value === "") return;
+          settings.textSize[type][key] = unitToPx(n);
+          saveSettings();
+          renderPreview();
+        }));
+        $("defaultFont").addEventListener("change", () => { settings.defaultFont = $("defaultFont").value; saveSettings(); renderPreview(); });
+        TEXT_FONT_INPUTS.forEach(([id, key]) => $(id).addEventListener("change", () => {
+          const type = settings.cardType;
+          if (!settings.textFont[type]) return;
+          settings.textFont[type][key] = $(id).value;
+          saveSettings();
+          renderPreview();
+        }));
+        $("yearFont").addEventListener("change", () => { settings.year[settings.cardType].font = $("yearFont").value; saveSettings(); renderPreview(); });
+        $("sbtFont").addEventListener("change", () => { settings.staffBackTextStyle.font = $("sbtFont").value; saveSettings(); renderPreview(); });
+        $("sizeUnit").addEventListener("change", () => {
+          settings.sizeUnit = $("sizeUnit").value;
+          saveSettings();
+          syncControlsFromSettings();
+        });
         bindCropTools();
         bindLayoutDrag();
         bindLineStyleControls();
@@ -2520,6 +2983,13 @@
 
       // Exposed for automated checks of the barcode encoder.
       window.__idCardTest = { encodeCode128 };
+
+      /* Font menus: each line's menu starts with "Default font"; the Default font menu lists the fonts. */
+      document.querySelectorAll("select.font-select").forEach(select => {
+        select.appendChild(new Option("Default font", ""));
+        FONT_CHOICES.forEach(f => select.appendChild(new Option(f.label, f.id)));
+      });
+      FONT_CHOICES.forEach(f => $("defaultFont").appendChild(new Option(f.label, f.id)));
 
       syncControlsFromSettings();
       bind();
