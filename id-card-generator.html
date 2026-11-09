@@ -167,6 +167,10 @@
     .snap-controls { display: inline-flex; align-items: center; gap: 0.4rem; }
     .snap-controls[hidden] { display: none; }
     .snap-controls select { font: inherit; font-size: 0.8rem; padding: 0.2rem 0.35rem; border: 1px solid var(--border); border-radius: 8px; }
+    .photo-drop { border: 2px dashed transparent; border-radius: 10px; padding: 0.15rem; transition: border-color 0.15s, background 0.15s; }
+    .photo-drop.over { border-color: var(--primary); background: #eef7f8; }
+    .card-search { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 0.55rem; }
+    .card-search input { flex: 1; max-width: 420px; font: inherit; padding: 0.45rem 0.65rem; border: 1px solid var(--border); border-radius: 10px; }
     .drag-toggle { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 700; color: var(--primary-dark); cursor: pointer; }
     .drag-toggle input { width: 1.05rem; height: 1.05rem; }
     #frontCanvas.dragging { cursor: grabbing; }
@@ -274,9 +278,14 @@
           </div>
           <div class="field" id="photoField">
             <label for="photoInput">Photos</label>
-            <input id="photoInput" type="file" accept="image/*" multiple />
+            <div class="photo-drop" id="photoDrop">
+              <input id="photoInput" type="file" accept="image/*" multiple />
+              <input id="photoFolderInput" type="file" webkitdirectory multiple hidden />
+              <div class="btn-row" style="margin:0.35rem 0 0;"><button class="btn" type="button" id="photoFolderBtn">Choose a folder&hellip;</button></div>
+              <p class="hint" style="margin:0.35rem 0 0;">Or drag photos or a whole folder here.</p>
+            </div>
             <div class="file-status" id="photoStatus">No photos loaded.</div>
-            <p class="hint">Name each photo with the person's ID# (<code>100001.jpg</code>) or name (<code>John Doe.jpg</code>; order, case and punctuation don't matter). ID# is checked first. Select them all at once (you can add more later). JPG or PNG.</p>
+            <p class="hint">Name each photo with the person's ID# (<code>100001.jpg</code>, <code>100001-John-Doe.jpg</code>) or name (<code>John Doe.jpg</code>, <code>john-doe.jpg</code>; order, case, dashes and other punctuation don't matter). A matching ID# always wins over a name match. Pick files, a folder (subfolders included), or drag them in; you can add more later. JPG or PNG.</p>
             <div class="btn-row"><button class="btn" type="button" id="clearPhotosBtn">Clear photos</button></div>
           </div>
         </section>
@@ -587,6 +596,10 @@
           <div class="table-tools">
             <h2 id="recordsHeading">Cards</h2>
             <label class="check-inline"><input type="checkbox" id="problemsOnly" /> Show only cards with problems</label>
+          </div>
+          <div class="card-search">
+            <input id="cardSearch" type="search" placeholder="Search by name, ID# or any column&hellip;" aria-label="Search cards" autocomplete="off" />
+            <span class="file-status" id="cardSearchCount" aria-live="polite"></span>
           </div>
           <div class="table-wrap">
             <table>
@@ -948,6 +961,12 @@
         const norm = headers.map(normalizeHeader);
         const find = key => norm.findIndex(h => COLUMN_ALIASES[key].includes(h));
         const mapping = { name: find("name"), first: find("first"), last: find("last"), id: find("id"), dob: find("dob"), grade: find("grade") };
+        // Any header with "ID" as a word ("Badge ID", "ID No.") counts as the ID# column.
+        if (mapping.id < 0) mapping.id = headers.findIndex(h => /(^|[^a-z])id([^a-z]|$)/i.test(h));
+        // Any other header with "name" in it ("Person Name", "Name (Legal)") counts as the name column.
+        if (mapping.name < 0 && mapping.first < 0 && mapping.last < 0) {
+          mapping.name = headers.findIndex(h => /name/i.test(h) && !/(first|last|middle|nick|user|file|school|church|org|company)/i.test(h));
+        }
         // Numbered templates: every other non-empty column, in order, fills line 1, 2, 3...
         const used = [mapping.name, mapping.first, mapping.last, mapping.id];
         mapping.lines = headers.map((h, i) => i).filter(i => !used.includes(i) && String(headers[i]).trim() !== "");
@@ -1008,7 +1027,13 @@
         if (!id) return false;
         const idKey = photoKey(id);
         if (photo.key === idKey || strippedKey(photo.key) === strippedKey(idKey)) return true;
-        return idTokens(photo.key).some(token => /\d/.test(token) && (token === idKey || strippedKey(token) === strippedKey(idKey)));
+        if (idTokens(photo.key).some(token => /\d/.test(token) && (token === idKey || strippedKey(token) === strippedKey(idKey)))) return true;
+        // IDs with dashes/spaces ("CM26-0037") also match in any spacing inside a longer file
+        // name ("CM26 0037 John", "cm26_0037-john"): its parts must appear in a row.
+        const parts = idTokens(idKey);
+        if (parts.length < 2 || !parts.some(t => /\d/.test(t))) return false;
+        const file = idTokens(photo.key);
+        return file.some((_, i) => parts.every((t, j) => file[i + j] === t));
       }
       function photoMatchesName(photo, name) {
         const person = nameTokens(name);
@@ -1019,8 +1044,10 @@
         const firstLast = file.size === 2 && file.has(person[0]) && file.has(person[person.length - 1]);
         return sameSet || firstLast;
       }
+      const PHOTO_EXT = /\.(jpe?g|png|gif|webp|bmp|heic|heif|tiff?)$/i;
       function addPhotos(fileList) {
-        Array.from(fileList || []).forEach(file => {
+        // Folders can bring other files along (.DS_Store, spreadsheets...); keep only images.
+        Array.from(fileList || []).filter(file => PHOTO_EXT.test(file.name) || /^image\//.test(file.type)).filter(file => !file.name.startsWith(".")).forEach(file => {
           const base = file.name.replace(/\.[^.]+$/, "");
           const key = photoKey(base);
           const existing = photos.get(key);
@@ -1076,9 +1103,13 @@
         const allPhotos = [...photos.values()];
         // How many people each photo's file name matches by name (to catch ambiguous names).
         const nameClaims = new Map();
-        records.forEach(r => allPhotos.forEach(p => {
-          if (photoMatchesName(p, r.name)) nameClaims.set(p.key, (nameClaims.get(p.key) || 0) + 1);
-        }));
+        const idClaimed = new Set();
+        const hasIdPhoto = new Set();
+        records.forEach((r, i) => { if (r.id) allPhotos.forEach(p => { if (photoMatchesId(p, r.id)) { idClaimed.add(p.key); hasIdPhoto.add(i); } }); });
+        // Only people who will fall back to a name match compete for name-matched photos.
+        records.forEach((r, i) => { if (!hasIdPhoto.has(i)) allPhotos.forEach(p => {
+          if (!idClaimed.has(p.key) && photoMatchesName(p, r.name)) nameClaims.set(p.key, (nameClaims.get(p.key) || 0) + 1);
+        }); });
 
         records.forEach(r => {
           if (isCustom(type)) {
@@ -1116,21 +1147,20 @@
           }
           let photo = null;
           r.photoMatch = "";
+          // A photo whose name has someone's ID# belongs to that person, so it is never used
+          // for anyone else by name. ID# matches always win; name matches are the fallback.
           const byId = r.id ? allPhotos.filter(p => photoMatchesId(p, r.id)) : [];
-          const byName = byId.length ? [] : allPhotos.filter(p => photoMatchesName(p, r.name));
+          const byName = byId.length ? [] : allPhotos.filter(p => !idClaimed.has(p.key) && photoMatchesName(p, r.name));
           if (byId.length) {
             photo = byId.find(p => p.key === photoKey(r.id)) || byId[0];
             r.photoMatch = "ID#";
             if (byId.length > 1) r.issues.push(issue("warn", `${byId.length} photos match this ID#; using ${photo.name}`));
-          } else if (byName.length === 1 && nameClaims.get(byName[0].key) === 1) {
+          } else if (byName.length) {
             photo = byName[0];
             r.photoMatch = "name";
-          } else if (byName.length > 1) {
-            r.issues.push(issue("error", `${byName.length} photos match this name (${byName.map(p => p.name).join(", ")}); rename one with the ID#`));
-            byName.forEach(p => matchedPhotoKeys.add(p.key));
-          } else if (byName.length === 1) {
-            r.issues.push(issue("error", `Photo ${byName[0].name} matches more than one person's name; rename it with the ID#`));
-            matchedPhotoKeys.add(byName[0].key);
+            byName.forEach(p => matchedPhotoKeys.add(p.key)); // the extras are reported here, not as unmatched
+            if (byName.length > 1) r.issues.push(issue("warn", `${byName.length} photos match this name; using ${photo.name} (add the ID# to a file name to choose)`));
+            else if (nameClaims.get(photo.key) > 1) r.issues.push(issue("warn", `Photo ${photo.name} also matches another person's name; check it's the right one`));
           }
           r.photo = photo;
           if (photo) {
@@ -1908,9 +1938,20 @@
           : { sample: true, name: "John Doe", id: "100001", dob: "", grade: "", issues: [] };
       }
 
+      /* Card search: every word typed must appear in the card's name, ID#, DoB, grade, lines or columns. */
+      function recordSearchText(r) {
+        return [r.rowNumber, r.name, r.id, r.dob, formatDob(r.dob), r.grade, ...(r.lines || []), ...Object.values(r.values || {})]
+          .filter(v => v != null && v !== "").join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      }
+      function matchesSearch(r) {
+        const words = $("cardSearch").value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/\s+/).filter(Boolean);
+        if (!words.length) return true;
+        const text = recordSearchText(r);
+        return words.every(w => text.includes(w));
+      }
       function visibleRecordIndexes() {
         const onlyProblems = $("problemsOnly").checked;
-        return records.map((r, i) => i).filter(i => !onlyProblems || recordLevel(records[i]) !== "ok");
+        return records.map((r, i) => i).filter(i => (!onlyProblems || recordLevel(records[i]) !== "ok") && matchesSearch(records[i]));
       }
 
       function renderTable() {
@@ -1937,7 +1978,8 @@
           const td = document.createElement("td");
           td.colSpan = headCells.length;
           td.className = "empty-state";
-          td.textContent = records.length ? "No cards with problems." : `Load a ${type} CSV to list cards here.`;
+          td.textContent = !records.length ? `Load a ${type} CSV to list cards here.`
+            : $("cardSearch").value.trim() ? "No cards match your search." : "No cards with problems.";
           tr.appendChild(td);
           body.appendChild(tr);
           return;
@@ -2694,6 +2736,36 @@
           event.target.value = "";
           refreshAll();
         });
+        $("photoFolderBtn").addEventListener("click", () => $("photoFolderInput").click());
+        $("photoFolderInput").addEventListener("change", event => {
+          addPhotos(event.target.files);
+          event.target.value = "";
+          refreshAll();
+        });
+        // Drag and drop: files, or folders (read recursively).
+        const drop = $("photoDrop");
+        const readEntry = entry => new Promise(resolve => {
+          if (entry.isFile) { entry.file(file => resolve([file]), () => resolve([])); return; }
+          if (!entry.isDirectory) { resolve([]); return; }
+          const reader = entry.createReader();
+          const all = [];
+          const next = () => reader.readEntries(async batch => {
+            if (!batch.length) { resolve((await Promise.all(all.map(readEntry))).flat()); return; }
+            all.push(...batch);
+            next();
+          }, () => resolve([]));
+          next();
+        });
+        ["dragenter", "dragover"].forEach(type => drop.addEventListener(type, event => { event.preventDefault(); drop.classList.add("over"); }));
+        ["dragleave", "drop"].forEach(type => drop.addEventListener(type, () => drop.classList.remove("over")));
+        drop.addEventListener("drop", async event => {
+          event.preventDefault();
+          const items = Array.from(event.dataTransfer.items || []);
+          const entries = items.map(item => item.webkitGetAsEntry && item.webkitGetAsEntry()).filter(Boolean);
+          const files = entries.length ? (await Promise.all(entries.map(readEntry))).flat() : Array.from(event.dataTransfer.files || []);
+          addPhotos(files);
+          refreshAll();
+        });
         $("clearCsvBtn").addEventListener("click", () => {
           csvByType[settings.cardType] = null;
           selectedIndex = -1;
@@ -2852,6 +2924,23 @@
         bindLineStyleControls();
         bindCustomControls();
         $("problemsOnly").addEventListener("change", renderTable);
+        $("cardSearch").addEventListener("input", () => {
+          renderTable();
+          const query = $("cardSearch").value.trim();
+          const shown = visibleRecordIndexes();
+          $("cardSearchCount").textContent = query && records.length ? `${shown.length} of ${records.length}` : "";
+          // One match: show that card right away.
+          if (query && shown.length === 1 && shown[0] !== selectedIndex) { selectedIndex = shown[0]; renderTable(); renderPreview(); }
+        });
+        $("cardSearch").addEventListener("keydown", event => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          const shown = visibleRecordIndexes();
+          if (!shown.length) return;
+          selectedIndex = shown[0];
+          renderTable();
+          renderPreview();
+        });
         $("printBtn").addEventListener("click", printCards);
         $("flipBack").addEventListener("change", () => {
           settings.flipBack[settings.cardType] = $("flipBack").checked;
