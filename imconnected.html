@@ -482,7 +482,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
 .focal-surface > img { width:100%; height:auto; display:block; pointer-events:none; }
 .focal-dot { position:absolute; width:22px; height:22px; border:3px solid white; background:rgba(8,126,139,.7); border-radius:50%; box-shadow:0 0 0 2px #087e8b,0 2px 8px #0008; transform:translate(-50%,-50%); pointer-events:none; }
 .focal-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:8px 0; font-size:12px; }
-.focal-crop { height:130px; border-radius:9px; overflow:hidden; background:#e8ecee; }
+.focal-crop { position:relative; height:130px; border-radius:9px; overflow:hidden; background:#e8ecee; }
 .focal-crop img { width:100%; height:100%; object-fit:cover; display:block; }
 .focal-crop.portrait { width:96px; height:96px; border-radius:50%; }
 
@@ -1057,8 +1057,6 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       const read = function (key, min, max, fallback) { const v = photo && photo[key]; return typeof v === 'number' && Number.isFinite(v) ? Math.round(Math.max(min, Math.min(max, v)) * 100) / 100 : fallback; };
       return { focalX: read('focalX', 0, 100, 50), focalY: read('focalY', 0, 100, 50), zoom: read('zoom', 0.5, 3, 1) };
     },
-    // Zooming out (below 100%) shrinks the photo toward the centre of its frame, so the transform origin follows.
-    cropOrigin: function (crop) { return crop.zoom < 1 ? '50% 50%' : crop.focalX + '% ' + crop.focalY + '%'; },
     blockLabel: blockLabel,
     blockSummary: blockSummary
   };
@@ -2269,10 +2267,38 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     let parsed;
     try { parsed = new URL(src); } catch (error) { return ''; }
     if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) return '';
-    if (/^i[0-3]\.wp\.com$/i.test(parsed.hostname) || /^(localhost|127\.|10\.|192\.168\.)/.test(parsed.hostname)) return '';
+    const host = parsed.hostname.toLowerCase();
+    if (parsed.port || /^i[0-3]\.wp\.com$/.test(host) || host.indexOf('.') < 0 || host.indexOf(':') >= 0 || host.charAt(0) === '['
+      || /^\d+(\.\d+){3}$/.test(host) || /\.(local|localhost|internal|lan|home|test|example|invalid)$/.test(host)) return ''; // Photon can only fetch public names on 443
     if (!/\.(jpe?g|png|webp|gif)$/i.test(parsed.pathname)) return ''; // Photon does not convert AVIF or HEIC originals
     const outW = Math.min(region.w, region.showW * 2); // 2× for sharp phones, never upscaled
     return PHOTON + parsed.hostname + parsed.pathname + '?crop=' + region.x + 'px,' + region.y + 'px,' + region.w + 'px,' + region.h + 'px&w=' + outW + '&ssl=1';
+  }
+
+  // The editor's small crop preview. At 100% and above it is the plain CSS crop
+  // (cover + focal point + scale). Below 100% it lays the photo out exactly as
+  // the email does (cropRegion): more of the photo, centred, on a soft band.
+  function paintCropPreview(img, crop) {
+    if (!img) return;
+    crop = U.photoCrop(crop);
+    img.dataset.cropX = crop.focalX; img.dataset.cropY = crop.focalY; img.dataset.cropZoom = crop.zoom;
+    const frame = img.parentElement;
+    const W = frame ? frame.clientWidth : 0, H = frame ? frame.clientHeight : 0;
+    const style = img.style;
+    if (crop.zoom >= 1 || !img.naturalWidth || !img.naturalHeight || !W || !H) {
+      ['position', 'left', 'top', 'width', 'height', 'maxWidth'].forEach(function (key) { style[key] = ''; });
+      style.objectPosition = crop.focalX + '% ' + crop.focalY + '%';
+      style.transform = 'scale(' + Math.max(1, crop.zoom) + ')';
+      style.transformOrigin = crop.focalX + '% ' + crop.focalY + '%';
+      return;
+    }
+    const size = { w: img.naturalWidth, h: img.naturalHeight };
+    const region = cropRegion(size, W, H, crop);
+    const scale = Math.max(W / size.w, H / size.h) * crop.zoom;
+    style.position = 'absolute'; style.maxWidth = 'none'; style.transform = 'none'; style.objectPosition = '50% 50%';
+    style.width = (size.w * scale) + 'px'; style.height = (size.h * scale) + 'px';
+    style.left = ((W - region.showW) / 2 - region.x * scale) + 'px';
+    style.top = ((H - region.showH) / 2 - region.y * scale) + 'px';
   }
 
   function croppedImage(photo, width, height, alt, wrapStyle, fill) {
@@ -2752,6 +2778,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     resolveDelivery: resolveDelivery,
     theme: theme,
     renderEmail: renderEmail,
+    paintCropPreview: paintCropPreview,
     renderWeb: renderWeb,
     renderWordPressBlocks: renderWordPressBlocks,
     renderWordPressPattern: renderWordPressPattern
@@ -3128,7 +3155,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       + '<p class="focal-help">Tap or drag on the photo to choose what stays in view. Arrow keys fine-tune the position.</p>'
       + '<button type="button" class="focal-surface" aria-label="Choose photo focal point. Use arrow keys to adjust."><img src="' + U.escapeAttr(src) + '" alt="Photo for choosing focus" draggable="false"><span class="focal-dot" style="left:' + x + '%;top:' + y + '%;"></span></button>'
       + '<div class="focal-footer"><output aria-live="polite">' + x + '% across · ' + y + '% down</output><button type="button" class="small-button" data-focal-center>Center</button></div>'
-      + '<div class="focal-crop' + (portrait ? ' portrait' : '') + '"><img src="' + U.escapeAttr(src) + '" alt="Crop preview" style="object-position:' + x + '% ' + y + '%;transform:scale(' + zoom + ');transform-origin:' + U.cropOrigin({ focalX: x, focalY: y, zoom: zoom }) + ';"></div><small class="focal-help">Crop preview. The newsletter updates when you release. Natural-height photos show the whole image.</small></div>';
+      + '<div class="focal-crop' + (portrait ? ' portrait' : '') + '"><img src="' + U.escapeAttr(src) + '" alt="Crop preview" data-crop-x="' + x + '" data-crop-y="' + y + '" data-crop-zoom="' + zoom + '" style="object-position:' + x + '% ' + y + '%;transform:scale(' + Math.max(1, zoom) + ');transform-origin:' + x + '% ' + y + '%;"></div><small class="focal-help">Crop preview. The newsletter updates when you release. Natural-height photos show the whole image.</small></div>';
   }
 
   function photoCards(block, collectionPath) {
@@ -4426,7 +4453,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         const crop = U.photoCrop(U.getPath(block, prefix));
         Array.from(elements.inspectorBody.querySelectorAll('.focal-picker')).filter(function (picker) { return picker.dataset.focalXPath === prefix + '.focalX'; }).forEach(function (picker) {
           picker.dataset.focalX = crop.focalX; picker.dataset.focalY = crop.focalY;
-          const image = picker.querySelector('.focal-crop img'); image.style.objectPosition = crop.focalX + '% ' + crop.focalY + '%'; image.style.transform = 'scale(' + crop.zoom + ')'; image.style.transformOrigin = U.cropOrigin(crop);
+          root.Renderer.paintCropPreview(picker.querySelector('.focal-crop img'), crop);
           const dot = picker.querySelector('.focal-dot'); dot.style.left = crop.focalX + '%'; dot.style.top = crop.focalY + '%';
           picker.querySelector('output').textContent = crop.focalX + '% across · ' + crop.focalY + '% down';
         });
@@ -5135,7 +5162,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         title.textContent = story.title;
         const meta = document.createElement('span');
         meta.className = 'import-meta';
-        meta.textContent = [story.sectionLabel, importShortDate(story.date), story.uploadedAt ? 'Added ' + importAddedDate(story.uploadedAt) : ''].filter(Boolean).join(' · ');
+        meta.textContent = [story.sectionLabel, importShortDate(story.date), story.uploadedAt ? (story.draft ? 'Received ' : 'Added ') + importAddedDate(story.uploadedAt) : ''].filter(Boolean).join(' · ');
         text.appendChild(title);
         text.appendChild(meta);
         const flags = [];
@@ -5644,13 +5671,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
   function initFocalTools() {
     const container = elements.inspectorBody;
     let drag = null;
+    // A zoomed-out preview needs the photo's natural size, so it is laid out once the image has loaded (load does not bubble).
+    container.addEventListener('load', function (event) {
+      const img = event.target;
+      if (img && img.matches && img.matches('.focal-crop img')) root.Renderer.paintCropPreview(img, { focalX: Number(img.dataset.cropX), focalY: Number(img.dataset.cropY), zoom: Number(img.dataset.cropZoom) });
+    }, true);
     function paint(picker, x, y) {
       x = Math.max(0, Math.min(100, Math.round(x))); y = Math.max(0, Math.min(100, Math.round(y)));
       picker.dataset.focalX = x; picker.dataset.focalY = y;
       const dot = picker.querySelector('.focal-dot'); dot.style.left = x + '%'; dot.style.top = y + '%';
-      picker.querySelector('.focal-crop img').style.objectPosition = x + '% ' + y + '%';
       const cropImg = picker.querySelector('.focal-crop img');
-      if (!/scale\(0\./.test(cropImg.style.transform)) cropImg.style.transformOrigin = x + '% ' + y + '%'; // zoomed out stays centred
+      root.Renderer.paintCropPreview(cropImg, { focalX: x, focalY: y, zoom: Number(cropImg.dataset.cropZoom) || 1 });
       picker.querySelector('output').textContent = x + '% across · ' + y + '% down';
     }
     function commit(picker) {
