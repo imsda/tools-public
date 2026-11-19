@@ -482,7 +482,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
 .focal-surface > img { width:100%; height:auto; display:block; pointer-events:none; }
 .focal-dot { position:absolute; width:22px; height:22px; border:3px solid white; background:rgba(8,126,139,.7); border-radius:50%; box-shadow:0 0 0 2px #087e8b,0 2px 8px #0008; transform:translate(-50%,-50%); pointer-events:none; }
 .focal-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:8px 0; font-size:12px; }
-.focal-crop { height:130px; border-radius:9px; overflow:hidden; background:#e8ecee; }
+.focal-crop { position:relative; height:130px; border-radius:9px; overflow:hidden; background:#e8ecee; }
 .focal-crop img { width:100%; height:100%; object-fit:cover; display:block; }
 .focal-crop.portrait { width:96px; height:96px; border-radius:50%; }
 
@@ -737,7 +737,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         <div data-conn="import"></div>
         <p id="importStatus" class="publish-status" role="status" aria-live="polite"></p>
         <div id="importList" hidden>
-          <div class="field"><label for="importSection">Section</label><select id="importSection"></select></div>
+          <div class="field-row"><div class="field"><label for="importSection">Section</label><select id="importSection"></select></div>
+          <div class="field"><label for="importSort">Order</label><select id="importSort"><option value="uploaded">Newest added to the site</option><option value="date">Newest story date</option></select></div></div>
           <div id="importRows"></div>
           <div class="publish-actions"><button type="button" class="primary-button" id="importAddBtn">Add ticked stories</button></div>
         </div>
@@ -1054,7 +1055,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     truncate: truncate,
     photoCrop: function (photo) {
       const read = function (key, min, max, fallback) { const v = photo && photo[key]; return typeof v === 'number' && Number.isFinite(v) ? Math.round(Math.max(min, Math.min(max, v)) * 100) / 100 : fallback; };
-      return { focalX: read('focalX', 0, 100, 50), focalY: read('focalY', 0, 100, 50), zoom: read('zoom', 1, 3, 1) };
+      return { focalX: read('focalX', 0, 100, 50), focalY: read('focalY', 0, 100, 50), zoom: read('zoom', 0.5, 3, 1) };
     },
     blockLabel: blockLabel,
     blockSummary: blockSummary
@@ -2235,17 +2236,93 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     return '<img src="' + U.escapeAttr(U.normalizeUrl(src)) + '" width="' + width + '" alt="' + U.escapeAttr(alt || '') + '" style="display:block;width:100%;max-width:' + width + 'px;height:auto;border:0;' + (style || '') + '" />';
   }
 
-  // Email-safe crop. The image itself keeps its natural proportions (Gmail and
-  // Outlook ignore object-fit, which used to squash photos). A wrapper with
-  // max-height + overflow:hidden trims it; a negative top margin aims the trim at
-  // the vertical focal point. Clients that support object-fit get an exact cover
-  // crop from the separate @supports style block in renderEmail.
+  // Email-safe crop. Gmail, Outlook and Yahoo drop object-fit, @supports and
+  // negative margins, so a CSS crop there shows the TOP of a tall phone photo
+  // instead of the chosen focal point. When the photo's natural size is known
+  // and it is a public https image, the email instead uses an exact, already
+  // cropped copy from WordPress's free image CDN (Photon, i0.wp.com: crop and
+  // resize in the URL, nothing is uploaded or stored by Studio). That copy has
+  // the frame's exact proportions, so every client shows the same framing as
+  // the preview. Otherwise the older CSS crop below is the fallback.
   const CROP_HEIGHTS = [120, 170, 180, 260, 350];
-  function croppedImage(photo, width, height, alt, wrapStyle) {
+  const PHOTON = 'https://i0.wp.com/';
+
+  // The part of the source photo inside a width×height frame, matching the
+  // editor preview (object-fit:cover + object-position at the focal point, then
+  // scale(zoom) around it). Zoom below 1 shows more of the photo than fits; the
+  // shown size then shrinks inside the frame and is centred.
+  function cropRegion(size, width, height, crop) {
+    const cover = Math.max(width / size.w, height / size.h);
+    const baseW = width / cover, baseH = height / cover; // source px visible at zoom 1
+    const fx = crop.focalX / 100, fy = crop.focalY / 100, zoom = crop.zoom;
+    const cw = Math.min(size.w, baseW / zoom), ch = Math.min(size.h, baseH / zoom);
+    const clamp = function (v, max) { return Math.max(0, Math.min(max, v)); };
+    const x = clamp((size.w - baseW) * fx + baseW * fx * (1 - 1 / zoom), size.w - cw);
+    const y = clamp((size.h - baseH) * fy + baseH * fy * (1 - 1 / zoom), size.h - ch);
+    const scale = cover * zoom; // frame px per source px
+    return { x: Math.round(x), y: Math.round(y), w: Math.max(1, Math.round(cw)), h: Math.max(1, Math.round(ch)), showW: Math.min(width, Math.round(cw * scale)), showH: Math.min(height, Math.round(ch * scale)) };
+  }
+
+  function photonUrl(src, region) {
+    let parsed;
+    try { parsed = new URL(src); } catch (error) { return ''; }
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) return '';
+    const host = parsed.hostname.toLowerCase();
+    if (parsed.port || /^i[0-3]\.wp\.com$/.test(host) || host.indexOf('.') < 0 || host.indexOf(':') >= 0 || host.charAt(0) === '['
+      || /^\d+(\.\d+){3}$/.test(host) || /\.(local|localhost|internal|lan|home|test|example|invalid)$/.test(host)) return ''; // Photon can only fetch public names on 443
+    if (!/\.(jpe?g|png|webp|gif)$/i.test(parsed.pathname)) return ''; // Photon does not convert AVIF or HEIC originals
+    const outW = Math.min(region.w, region.showW * 2); // 2× for sharp phones, never upscaled
+    return PHOTON + parsed.hostname + parsed.pathname + '?crop=' + region.x + 'px,' + region.y + 'px,' + region.w + 'px,' + region.h + 'px&w=' + outW + '&ssl=1';
+  }
+
+  // The editor's small crop preview. At 100% and above it is the plain CSS crop
+  // (cover + focal point + scale). Below 100% it lays the photo out exactly as
+  // the email does (cropRegion): more of the photo, centred, on a soft band.
+  function paintCropPreview(img, crop) {
+    if (!img) return;
+    crop = U.photoCrop(crop);
+    img.dataset.cropX = crop.focalX; img.dataset.cropY = crop.focalY; img.dataset.cropZoom = crop.zoom;
+    const frame = img.parentElement;
+    const W = frame ? frame.clientWidth : 0, H = frame ? frame.clientHeight : 0;
+    const style = img.style;
+    if (crop.zoom >= 1 || !img.naturalWidth || !img.naturalHeight || !W || !H) {
+      ['position', 'left', 'top', 'width', 'height', 'maxWidth'].forEach(function (key) { style[key] = ''; });
+      style.objectPosition = crop.focalX + '% ' + crop.focalY + '%';
+      style.transform = 'scale(' + Math.max(1, crop.zoom) + ')';
+      style.transformOrigin = crop.focalX + '% ' + crop.focalY + '%';
+      return;
+    }
+    const size = { w: img.naturalWidth, h: img.naturalHeight };
+    const region = cropRegion(size, W, H, crop);
+    // The email can only zoom out through the pre-cropped copy; when it can't use one, show the 100% crop it will send.
+    if (!photonUrl(img.getAttribute('src') || '', region)) { paintCropPreview(img, { focalX: crop.focalX, focalY: crop.focalY, zoom: 1 }); img.dataset.cropZoom = crop.zoom; return; }
+    const scale = Math.max(W / size.w, H / size.h) * crop.zoom;
+    style.position = 'absolute'; style.maxWidth = 'none'; style.transform = 'none'; style.objectPosition = '50% 50%';
+    style.width = (size.w * scale) + 'px'; style.height = (size.h * scale) + 'px';
+    style.left = ((W - region.showW) / 2 - region.x * scale) + 'px';
+    style.top = ((H - region.showH) / 2 - region.y * scale) + 'px';
+  }
+
+  function croppedImage(photo, width, height, alt, wrapStyle, fill) {
     const src = U.normalizeUrl(photo && photo.url, { allowBareDomain: false });
     if (!src) return '';
-    const crop = U.photoCrop(photo), fx = crop.focalX, fy = crop.focalY, zoom = crop.zoom;
+    const crop = U.photoCrop(photo);
     const size = ImageSizes.get(photo.url);
+    const cropped = size ? photonUrl(src, cropRegion(size, width, height, crop)) : '';
+    if (cropped) {
+      const region = cropRegion(size, width, height, crop);
+      const altAttr = ' alt="' + U.escapeAttr(alt || '') + '"';
+      if (region.showW >= width - 1 && region.showH >= height - 1) {
+        return '<div style="overflow:hidden;' + (wrapStyle || '') + '"><img src="' + U.escapeAttr(cropped) + '" width="' + width + '" height="' + height + '"' + altAttr + ' style="display:block;width:100%;max-width:' + width + 'px;height:auto;border:0;" /></div>';
+      }
+      // Zoomed out: the whole shown photo sits centred on a soft band the size of the frame.
+      const bg = /^#[0-9a-f]{6}$/i.test(String(fill || '')) ? fill : '#E8ECEE';
+      const pct = Math.round(region.showW / width * 1000) / 10;
+      return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;"><tr><td align="center" valign="middle" height="' + height + '" bgcolor="' + bg + '" style="height:' + height + 'px;background:' + bg + ';' + (wrapStyle || '') + '">'
+        + '<img src="' + U.escapeAttr(cropped) + '" width="' + region.showW + '" height="' + region.showH + '"' + altAttr + ' style="display:block;margin:0 auto;width:' + pct + '%;max-width:' + region.showW + 'px;height:auto;border:0;" /></td></tr></table>';
+    }
+    // Fallback (size not measured yet, or an image Photon can't fetch): CSS crop.
+    const fx = crop.focalX, fy = crop.focalY, zoom = Math.max(1, crop.zoom);
     const offset = size ? Math.max(0, Math.round((width * zoom * size.h / size.w - height) * fy / 100)) : 0;
     return '<div class="em-crop em-h' + height + '" style="max-height:' + height + 'px;overflow:hidden;' + (wrapStyle || '') + '">'
       + '<img src="' + U.escapeAttr(U.normalizeUrl(src)) + '" width="' + Math.round(width * zoom) + '" alt="' + U.escapeAttr(alt || '') + '" style="display:block;width:' + (zoom * 100) + '%;max-width:' + Math.round(width * zoom) + 'px;height:auto;border:0;margin-left:-' + ((zoom - 1) * fx) + '%;' + (offset ? 'margin-top:-' + offset + 'px;' : '') + 'object-position:' + fx + '% ' + fy + '%;--photo-zoom:' + zoom + ';--photo-x:' + fx + '%;--photo-y:' + fy + '%;" />'
@@ -2366,17 +2443,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       const top = firstRow ? S.cardRadius : 0;
       const radius = top ? 'border-radius:' + top + 'px ' + top + 'px 0 0;' : '';
       return (height
-        ? croppedImage(p, fullWidth, height, alt(p), radius)
+        ? croppedImage(p, fullWidth, height, alt(p), radius, C.light)
         : image(p.url, fullWidth, alt(p), radius)) + photoCaption(p.caption);
     };
     const wide = function (p) {
       const style = 'border-radius:' + r + ';' + shadow;
       return (height
-        ? croppedImage(p, insetWidth, height, alt(p), style)
+        ? croppedImage(p, insetWidth, height, alt(p), style, C.light)
         : image(p.url, insetWidth, alt(p), style)) + photoCaption(p.caption);
     };
     const thumb = function (p) {
-      return croppedImage(p, thumbWidth, 170, alt(p), 'border-radius:' + r + ';' + shadow) + photoCaption(p.caption);
+      return croppedImage(p, thumbWidth, 170, alt(p), 'border-radius:' + r + ';' + shadow, C.light) + photoCaption(p.caption);
     };
     const pairRow = function (pair, padding) {
       return '<tr><td class="em-pad-in" style="padding:' + padding + ';"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
@@ -2484,7 +2561,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         return '<tr>' + row.map(function (p) {
           const width = columns === 3 ? 32 : 48;
           return '<td width="' + width + '%" valign="top" style="padding:4px;">'
-            + croppedImage(p, columns === 3 ? 166 : 258, columns === 3 ? 120 : 170, p.alt || p.caption || '', 'border-radius:9px;')
+            + croppedImage(p, columns === 3 ? 166 : 258, columns === 3 ? 120 : 170, p.alt || p.caption || '', 'border-radius:9px;', C.light)
             + photoCaption(p.caption) + '</td>';
         }).join('') + (row.length < columns ? new Array(columns - row.length + 1).join('<td></td>') : '') + '</tr>';
       }).join('');
@@ -2703,6 +2780,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     resolveDelivery: resolveDelivery,
     theme: theme,
     renderEmail: renderEmail,
+    paintCropPreview: paintCropPreview,
     renderWeb: renderWeb,
     renderWordPressBlocks: renderWordPressBlocks,
     renderWordPressPattern: renderWordPressPattern
@@ -3079,7 +3157,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       + '<p class="focal-help">Tap or drag on the photo to choose what stays in view. Arrow keys fine-tune the position.</p>'
       + '<button type="button" class="focal-surface" aria-label="Choose photo focal point. Use arrow keys to adjust."><img src="' + U.escapeAttr(src) + '" alt="Photo for choosing focus" draggable="false"><span class="focal-dot" style="left:' + x + '%;top:' + y + '%;"></span></button>'
       + '<div class="focal-footer"><output aria-live="polite">' + x + '% across · ' + y + '% down</output><button type="button" class="small-button" data-focal-center>Center</button></div>'
-      + '<div class="focal-crop' + (portrait ? ' portrait' : '') + '"><img src="' + U.escapeAttr(src) + '" alt="Crop preview" style="object-position:' + x + '% ' + y + '%;transform:scale(' + zoom + ');transform-origin:' + x + '% ' + y + '%;"></div><small class="focal-help">Crop preview. The newsletter updates when you release. Natural-height photos show the whole image.</small></div>';
+      + '<div class="focal-crop' + (portrait ? ' portrait' : '') + '"><img src="' + U.escapeAttr(src) + '" alt="Crop preview" data-crop-x="' + x + '" data-crop-y="' + y + '" data-crop-zoom="' + zoom + '" style="object-position:' + x + '% ' + y + '%;transform:scale(' + Math.max(1, zoom) + ');transform-origin:' + x + '% ' + y + '%;"></div><small class="focal-help">Crop preview. The newsletter updates when you release. Natural-height photos show the whole image.</small></div>';
   }
 
   function photoCards(block, collectionPath) {
@@ -3092,7 +3170,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         + '<button type="button" class="small-button danger" data-array-action="remove" data-array-path="' + collectionPath + '" data-array-index="' + index + '">Remove</button></div></div>'
         + imageField('Image', 'block', base + '.url', photo.url, { hidePreview: true })
         + focalPicker(block, photo.url, base + '.focalX', base + '.focalY', photo.focalX, photo.focalY, false, U.photoCrop(photo).zoom)
-        + field('Zoom (1×–3×)', 'block', base + '.zoom', U.photoCrop(photo).zoom, { type: 'range', min: 1, max: 3, step: 0.01, kind: 'number', help: '100–300%. Natural-height photos show the original framing.' })
+        + field('Zoom (0.5×–3×)', 'block', base + '.zoom', U.photoCrop(photo).zoom, { type: 'range', min: 0.5, max: 3, step: 0.01, kind: 'number', help: '50–300%. Below 100% zooms out and shows more of the photo, with a soft band around it in the email (JPEG, PNG, WebP or GIF photos on a public https address). The website keeps 100% as its smallest zoom. Natural-height photos show the original framing.' })
         + '<output data-photo-zoom-path="' + base + '.zoom">' + Math.round(U.photoCrop(photo).zoom * 100) + '%</output>'
         + toggle('Use story title for alt text', 'block', base + '.autoAlt', !!photo.autoAlt, 'Follows the headline and photo order. Typing a description turns this off.')
         + field('Alt text', 'block', base + '.alt', photo.alt, { help: 'Describe the meaningful visual content.' })
@@ -4377,7 +4455,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         const crop = U.photoCrop(U.getPath(block, prefix));
         Array.from(elements.inspectorBody.querySelectorAll('.focal-picker')).filter(function (picker) { return picker.dataset.focalXPath === prefix + '.focalX'; }).forEach(function (picker) {
           picker.dataset.focalX = crop.focalX; picker.dataset.focalY = crop.focalY;
-          const image = picker.querySelector('.focal-crop img'); image.style.objectPosition = crop.focalX + '% ' + crop.focalY + '%'; image.style.transform = 'scale(' + crop.zoom + ')'; image.style.transformOrigin = crop.focalX + '% ' + crop.focalY + '%';
+          root.Renderer.paintCropPreview(picker.querySelector('.focal-crop img'), crop);
           const dot = picker.querySelector('.focal-dot'); dot.style.left = crop.focalX + '%'; dot.style.top = crop.focalY + '%';
           picker.querySelector('output').textContent = crop.focalX + '% across · ' + crop.focalY + '% down';
         });
@@ -4829,7 +4907,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         body: String(block.body || ''),
         quote: String(block.quote || ''),
         attribution: String(block.attribution || ''),
-        photos: (block.photos || []).filter(function (item) { return item && item.url; }).map(function (item) { return Object.assign({ url: item.url, alt: item.alt || '', caption: item.caption || '' }, U.photoCrop(item)); }),
+        photos: (block.photos || []).filter(function (item) { return item && item.url; }).map(function (item) { const crop = U.photoCrop(item); crop.zoom = Math.max(1, crop.zoom); return Object.assign({ url: item.url, alt: item.alt || '', caption: item.caption || '' }, crop); }), // the site's smallest zoom is 1
         photoLayout: publishPhotoLayout(block.layout)
       };
       if (section.areas) story.area = area;
@@ -4895,7 +4973,9 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
 
 
   // ---- Import from IMConnected (GET /api/stories; reuses the publish settings, token, request and URL checks) ----
-  const IMPORT_PATH = '/api/stories?limit=50';
+  // sort=uploaded: the most recently added stories (first time live), not the newest story dates. An older site ignores it
+  // and Studio sorts the list itself.
+  const IMPORT_PATH = '/api/stories?limit=100&sort=uploaded';
   const IMPORT_IMAGE_HOSTS = ['https://stories.imadventist.org']; // extra https image origins accepted besides the site itself
   const IMPORT_STATUS = { 'new': 'New', 'in_review': 'In review' };
   let importStories = [];
@@ -4946,6 +5026,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
       sectionLabel: importText(item.sectionLabel || item.section, 80),
       areaLabel: importText(item.areaLabel, 80),
       date: /^\d{4}-\d{2}-\d{2}/.test(String(item.date || '')) ? String(item.date).slice(0, 10) : '',
+      uploadedAt: /^\d{4}-\d{2}-\d{2}T/.test(String(item.uploadedAt || '')) && !/^1970-/.test(item.uploadedAt) ? String(item.uploadedAt).slice(0, 30) : '',
       status: isDraft ? (IMPORT_STATUS[item.status] ? item.status : '') : '',
       agent: !!isDraft && item.source === 'agent',
       url: '', linkDropped: false, image: '', imageAlt: importText(item.imageAlt, 300), credit: importText(item.photoCredit, 200), imageDropped: false,
@@ -5025,8 +5106,26 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     try { return U.formatDate(value); } catch (error) { return value; }
   }
 
+  // The day a story was added, in the conference's time zone (the site works in America/Chicago days).
+  function importAddedDate(value) {
+    try { return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' }); } catch (error) { return ''; }
+  }
+
+  // Reorders the list in place. Ticks are list positions, so the ticked stories are carried over by identity.
+  function sortImportStories(order) {
+    const ticked = new Set(Array.from(importTicks).map(function (index) { return importStories[index]; }));
+    const key = function (story) { return order === 'date' ? story.date : (story.uploadedAt || story.date); };
+    const live = importStories.filter(function (story) { return !story.draft; });
+    const drafts = importStories.filter(function (story) { return story.draft; });
+    live.sort(function (a, b) { const ka = key(a), kb = key(b); return ka < kb ? 1 : (ka > kb ? -1 : (a.date < b.date ? 1 : (a.date > b.date ? -1 : 0))); });
+    importStories = live.concat(drafts);
+    importTicks.clear();
+    importStories.forEach(function (story, index) { if (ticked.has(story)) importTicks.add(index); });
+  }
+
   function renderImportRows() {
     const filter = importEl('importSection').value;
+    sortImportStories(importEl('importSort').value);
     const host = importEl('importRows');
     host.innerHTML = '';
     const linked = importLinkedUrls();
@@ -5065,7 +5164,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         title.textContent = story.title;
         const meta = document.createElement('span');
         meta.className = 'import-meta';
-        meta.textContent = [story.sectionLabel, importShortDate(story.date)].filter(Boolean).join(' · ');
+        meta.textContent = [story.sectionLabel, importShortDate(story.date), story.uploadedAt ? (story.draft ? 'Received ' : 'Added ') + importAddedDate(story.uploadedAt) : ''].filter(Boolean).join(' · ');
         text.appendChild(title);
         text.appendChild(meta);
         const flags = [];
@@ -5117,8 +5216,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         setPublishStatus(publishFailure(result, token), 'error', 'importStatus');
         return;
       }
-      const live = result.data.stories.map(function (item) { return importNormalize(item, siteUrl, false); }).filter(Boolean)
-        .sort(function (a, b) { return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
+      const live = result.data.stories.map(function (item) { return importNormalize(item, siteUrl, false); }).filter(Boolean); // sorted by renderImportRows
       const drafts = (Array.isArray(result.data.drafts) ? result.data.drafts : []).map(function (item) { return importNormalize(item, siteUrl, true); }).filter(Boolean);
       // Ticks are list positions, so a fresh list starts with none.
       importTicks.clear();
@@ -5303,6 +5401,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     importEl('importForgetBtn').addEventListener('click', forgetPublishToken);
     importEl('importAddBtn').addEventListener('click', addImportedStories);
     importEl('importSection').addEventListener('change', renderImportRows);
+    importEl('importSort').addEventListener('change', renderImportRows);
     importEl('importRows').addEventListener('change', function (event) {
       const box = event.target;
       if (!box || !box.dataset || box.dataset.importIndex === undefined) return;
@@ -5574,12 +5673,17 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
   function initFocalTools() {
     const container = elements.inspectorBody;
     let drag = null;
+    // A zoomed-out preview needs the photo's natural size, so it is laid out once the image has loaded (load does not bubble).
+    container.addEventListener('load', function (event) {
+      const img = event.target;
+      if (img && img.matches && img.matches('.focal-crop img')) root.Renderer.paintCropPreview(img, { focalX: Number(img.dataset.cropX), focalY: Number(img.dataset.cropY), zoom: Number(img.dataset.cropZoom) });
+    }, true);
     function paint(picker, x, y) {
       x = Math.max(0, Math.min(100, Math.round(x))); y = Math.max(0, Math.min(100, Math.round(y)));
       picker.dataset.focalX = x; picker.dataset.focalY = y;
       const dot = picker.querySelector('.focal-dot'); dot.style.left = x + '%'; dot.style.top = y + '%';
-      picker.querySelector('.focal-crop img').style.objectPosition = x + '% ' + y + '%';
-      picker.querySelector('.focal-crop img').style.transformOrigin = x + '% ' + y + '%';
+      const cropImg = picker.querySelector('.focal-crop img');
+      root.Renderer.paintCropPreview(cropImg, { focalX: x, focalY: y, zoom: Number(cropImg.dataset.cropZoom) || 1 });
       picker.querySelector('output').textContent = x + '% across · ' + y + '% down';
     }
     function commit(picker) {
