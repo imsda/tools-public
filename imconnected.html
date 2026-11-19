@@ -2294,6 +2294,8 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
     }
     const size = { w: img.naturalWidth, h: img.naturalHeight };
     const region = cropRegion(size, W, H, crop);
+    // The email can only zoom out through the pre-cropped copy; when it can't use one, show the 100% crop it will send.
+    if (!photonUrl(img.getAttribute('src') || '', region)) { paintCropPreview(img, { focalX: crop.focalX, focalY: crop.focalY, zoom: 1 }); img.dataset.cropZoom = crop.zoom; return; }
     const scale = Math.max(W / size.w, H / size.h) * crop.zoom;
     style.position = 'absolute'; style.maxWidth = 'none'; style.transform = 'none'; style.objectPosition = '50% 50%';
     style.width = (size.w * scale) + 'px'; style.height = (size.h * scale) + 'px';
@@ -3168,7 +3170,7 @@ body.preview-only .preview-stage { padding-left: 12px; padding-right: 12px; }
         + '<button type="button" class="small-button danger" data-array-action="remove" data-array-path="' + collectionPath + '" data-array-index="' + index + '">Remove</button></div></div>'
         + imageField('Image', 'block', base + '.url', photo.url, { hidePreview: true })
         + focalPicker(block, photo.url, base + '.focalX', base + '.focalY', photo.focalX, photo.focalY, false, U.photoCrop(photo).zoom)
-        + field('Zoom (0.5×–3×)', 'block', base + '.zoom', U.photoCrop(photo).zoom, { type: 'range', min: 0.5, max: 3, step: 0.01, kind: 'number', help: '50–300%. Below 100% zooms out and shows more of the photo, with a soft band around it in the email. The website keeps 100% as its smallest zoom. Natural-height photos show the original framing.' })
+        + field('Zoom (0.5×–3×)', 'block', base + '.zoom', U.photoCrop(photo).zoom, { type: 'range', min: 0.5, max: 3, step: 0.01, kind: 'number', help: '50–300%. Below 100% zooms out and shows more of the photo, with a soft band around it in the email (JPEG, PNG, WebP or GIF photos on a public https address). The website keeps 100% as its smallest zoom. Natural-height photos show the original framing.' })
         + '<output data-photo-zoom-path="' + base + '.zoom">' + Math.round(U.photoCrop(photo).zoom * 100) + '%</output>'
         + toggle('Use story title for alt text', 'block', base + '.autoAlt', !!photo.autoAlt, 'Follows the headline and photo order. Typing a description turns this off.')
         + field('Alt text', 'block', base + '.alt', photo.alt, { help: 'Describe the meaningful visual content.' })
